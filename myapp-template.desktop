@@ -1,0 +1,10 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Name=myapp-template
+Comment=myapp-template
+#Exec=winetricks
+Exec=myapp-template
+Icon=myapp-template
+Terminal=false
+Type=Application
+Categories=Game

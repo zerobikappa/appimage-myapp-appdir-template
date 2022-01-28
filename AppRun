@@ -1,0 +1,311 @@
+#!/bin/bash
+
+# last update at 
+# Tue Sep 21 06:46:10 AM CST 2021
+
+
+#############################################
+# env settings
+SELF=$(readlink -f "$0")
+HERE=${SELF%/*}
+export PATH="${HERE}/usr/bin/:${HERE}/usr/sbin/:${HERE}/usr/games/:${HERE}/bin/:${HERE}/sbin/${PATH:+:$PATH}"
+export LD_LIBRARY_PATH="${HERE}/usr/lib/:${HERE}/usr/lib/i386-linux-gnu/:${HERE}/usr/lib/x86_64-linux-gnu/:${HERE}/usr/lib32/:${HERE}/usr/lib64/:${HERE}/lib/:${HERE}/lib/i386-linux-gnu/:${HERE}/lib/x86_64-linux-gnu/:${HERE}/lib32/:${HERE}/lib64/${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export PYTHONPATH="${HERE}/usr/share/pyshared/${PYTHONPATH:+:$PYTHONPATH}"
+export XDG_DATA_DIRS="${HERE}/usr/share/${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
+export PERLLIB="${HERE}/usr/share/perl5/:${HERE}/usr/lib/perl5/${PERLLIB:+:$PERLLIB}"
+export GSETTINGS_SCHEMA_DIR="${HERE}/usr/share/glib-2.0/schemas/${GSETTINGS_SCHEMA_DIR:+:$GSETTINGS_SCHEMA_DIR}"
+export QT_PLUGIN_PATH="${HERE}/usr/lib/qt4/plugins/:${HERE}/usr/lib/i386-linux-gnu/qt4/plugins/:${HERE}/usr/lib/x86_64-linux-gnu/qt4/plugins/:${HERE}/usr/lib32/qt4/plugins/:${HERE}/usr/lib64/qt4/plugins/:${HERE}/usr/lib/qt5/plugins/:${HERE}/usr/lib/i386-linux-gnu/qt5/plugins/:${HERE}/usr/lib/x86_64-linux-gnu/qt5/plugins/:${HERE}/usr/lib32/qt5/plugins/:${HERE}/usr/lib64/qt5/plugins/${QT_PLUGIN_PATH:+:$QT_PLUGIN_PATH}"
+#EXEC=$(grep -e '^Exec=.*' "${HERE}"/*.desktop | head -n 1 | cut -d "=" -f 2 | cut -d " " -f 1)
+#exec "${EXEC}" "$@"
+
+
+##############################################
+SAVEDATA_FLAG=0
+WALKTHROUGH_FLAG=0
+
+function print_help(){
+	cat << EOF
+game option:
+
+-s, --savedata
+	load the full-completed savedata
+
+-w, --walkthrough
+	open walkthrough with browser
+
+--browser[=BROWSER_COMMAND]
+	only effect when -w is set.
+	using another browser application to open
+	walkthrough. for example, "--browser=firefox"
+	means using firefox to open walkthrough.html
+
+--test-winetricks
+	open winetricks in temporary directory,
+	use this option to test to install windows game.
+	when this option set, -s and -w will be ignored.
+
+-h, --help
+	show this help
+
+
+appimage option:
+
+--appimage-help
+	show help about appimage function
+
+--appimage-extract
+	extract all files from appimage
+
+EOF
+}
+
+#parameters=$(getopt -o swth --long save-data,walkthrough,browser:,test-winetricks,help -n "$0" -- "$@")	# $(getopt) cannot ignore unknown options
+parameters=$(echo "$@"|tr "=" " ")
+eval set -- "$parameters"
+
+function is_option(){
+	if [[ ${1::1} == "-" ]];
+	then
+		return 0
+	else
+		return 1
+	fi
+}
+#while true ; do
+while [[ -n "$1" ]] ; do
+	case "$1" in
+		-h| --help)
+			print_help
+			exit ;;
+		-s| --savedata)
+			SAVEDATA_FLAG=1
+			shift ;;
+		-w| --walkthrough)
+			WALKTHROUGH_FLAG=1
+			shift ;;
+		--browser)
+			#i3-sensible-browser will choose $BROWSER to open walkthrough first
+			is_option $2 && echo "invalid option $1" >&2 && exit 1
+			BROWSER="$2"
+			shift 2;;
+		-t| --test-winetricks)
+			TEST_WINETRICKS_FLAG=1
+			shift ;;
+		--)
+			shift
+			next_parameters="$next_parameters $@"	# then $next_parameters will be passed to wine
+			break ;;
+		*) 
+			next_parameters="$next_parameters $1"
+			shift ;;
+	esac
+done
+eval set -- "$next_parameters"
+
+if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];	# if --test-winetricks is set, then -s and -w will be ignored.
+then
+	[[ $SAVEDATA_FLAG -eq 1 ]] && SAVEDATA_FLAG=0 && echo "--save-data option ignored"
+	[[ $WALKTHROUGH_FLAG -eq 1 ]] && WALKTHROUGH_FLAG=0 && echo "--walkthrough option ignored"
+fi
+
+
+##############################################
+# setup unionfs temp directory for this app
+RO_ALLWINESTORGE="$HERE/usr/share/" # Use the location where contain $WINEPREFIX, both win32 and win64 WINEPREFIX directory are here.
+MNT_ALLWINESTORGE="/tmp/.myapp.unionfs" # Use the name of the app
+TMP_ALLWINESTORGE_OVERLAY="/tmp/myapp" # Use the name of the app
+#export LD_LIBRARY_PATH=./lib32/:./usr./lib32/:./lib/i386-linux-gnu/:./usr/lib/i386-linux-gnu/:$LD_LIBRARY_PATH
+#WINEPREFIX="$MNT_ALLWINESTORGE" wine "$MNT_ALLWINESTORGE/drive_d/app_location/app.exe" "$@"
+EXENAME="myapp.exe"	# Use the .exe filename
+
+#before setup unionfs temp directory, check if exe is already running
+if [[ -n "$(pgrep -fi $EXENAME)" ]];
+then 
+	echo "seems $EXENAME is already launched and is still running, plsease kill the process if the application encountered error" >&2
+	exit 1
+fi
+
+mkdir -p "$MNT_ALLWINESTORGE" "$TMP_ALLWINESTORGE_OVERLAY"
+#$HERE/usr/bin/unionfs -o use_ino,nonempty,uid=$UID -ocow "$TMP_ALLWINESTORGE_OVERLAY"=RW:"$RO_ALLWINESTORGE"=RO "$MNT_ALLWINESTORGE" || exit 1
+$HERE/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_ALLWINESTORGE_OVERLAY"=RW:"$RO_ALLWINESTORGE"=RO "$MNT_ALLWINESTORGE" || exit 1
+##############################################
+
+
+##############################################
+# show the game walkthrough, you can see this info when using commandline to launch this app.
+#function walkthrough_commandline(){
+#	if [[ -f "$MNT_ALLWINESTORGE/drive_d/walkthrough.html" ]];
+#	then
+#		echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+#		echo "@"
+#		echo "@"
+#		echo "  please click below html file to show game walkthrough:"
+#		echo "@"
+#		echo "  file://$MNT_ALLWINESTORGE/drive_d/walkthrough.html"
+#		echo "@"
+#		echo "@"
+#		echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+#	fi
+#}
+
+function walkthrough_browser(){
+	cat << EOF
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+@
+@
+  you can also click below html file to show game walkthrough:
+@
+  file://$MNT_ALLWINESTORGE/drive_d/walkthrough.html"
+@
+@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+
+EOF
+	#todo: failed to using xdg-open to open html file.
+	i3-sensible-browser "$MNT_ALLWINESTORGE/drive_d/walkthrough.html"
+}
+
+[[ $WALKTHROUGH_FLAG -eq 1 ]] && walkthrough_browser
+
+##############################################
+
+
+##############################################
+# setup WINE env
+if [[ "$WINEARCH" == "win32" ]];
+then
+	export WINEARCH=win32
+else
+	export WINEARCH=win64	# default to run win64
+fi
+echo "*****using $WINEARCH"
+export WINEPREFIX="$MNT_ALLWINESTORGE/$WINEARCH"
+
+if [[ -z $WINEDEBUG ]];
+then
+	export WINEDEBUG=-all	# default to prevent wine showing "fixeme" message.
+fi
+
+export WINEDLLOVERRIDES=winemenubuilder.exe=d	# prevent wine setup application menu
+##############################################
+
+
+##############################################
+# copy game savedata, no need to use if the game savedata was save at the game installed folder.
+function copysavedata() {	# use if the game savedata was in windows user folder
+	mkdir -p "$MNT_ALLWINESTORGE/$WINEARCH/myapp_savedata_location"	# use the path where the savedata is.
+	cp -rfv "$HERE/usr/share/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$WINEARCH/myapp_savedata_location"	# use the path where the savedata is in. if the savedata was in drive_c/users/your_username/, you can use $USER to replace your username.
+}
+
+function copysavedata1() {	# use if the game savedata was in game installation folder
+	cp -rfv "$HERE/usr/share/drive_d/savedata"/* "$MNT_ALLWINESTORGE/myapp_savedata_location"	# use the path where the savedata is in. if the savedata was in drive_c/users/your_username/, you can use $USER to replace your username.
+}
+
+if [[ $SAVEDATA_FLAG -eq 1 ]];
+then
+	###only choose one of them to run
+	#copysavedata	# uncomment to run this function.
+	copysavedata1	# uncomment to run this function.
+fi
+
+##############################################
+
+
+##############################################
+# launch app
+
+export LANG=ja_JP.UTF-8
+
+#echo "TEST_WINETRICKS_FLAG = $TEST_WINETRICKS_FLAG"
+if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
+then
+	EXENAME="$HERE/usr/bin/winetricks"
+	$HERE/usr/bin/winetricks "$@"
+	$HERE/usr/bin/winetricks sandbox
+	echo "disable" > $WINEPREFIX/.update-timestamp
+	rm -fv $WINEPREFIX/dosdevices/*
+	ln -sfnv ../drive_c $WINEPREFIX/dosdevices/c:
+	ln -sfnv ../../drive_d $WINEPREFIX/dosdevices/d:
+else
+	cd "$MNT_ALLWINESTORGE/drive_d/myapp_install_location" # Use the app installed location. Some .exe may not run if not cd into excute directory
+	winetricks sandbox >/dev/null 2>&1 && wine "d:\\myapp_install_location\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path because winetricks sandbox was set.
+fi
+
+##############################################
+
+
+##############################################
+# monitor if the .exe is still running
+# however, if the .exe file is only a launcher to launch other .exe files. pls change below code to monitor other the correct *.exe files.
+function monitor_exe_running(){
+	if [[ -n "$(pgrep -fi $EXENAME)" ]];
+	then
+		echo $(pgrep -fai $EXENAME) '-------- running'
+	fi
+
+	while true
+	do
+		sleep 5
+		if [[ -z "$(pgrep -fi $EXENAME)" ]];
+		then
+			echo "$EXENAME was ended"
+			break	# the $EXENAME exe is no longer running
+		fi
+	done
+}
+#function monitor_winetricks_running(){
+#	if [[ -n "$(pgrep -fai $(basename $EXENAME)|grep -i "$EXENAME" |grep -v grep 2>/dev/null)" ]];
+#	then
+#		echo "$EXENAME -------- running"
+#	fi
+#
+#	while true
+#	do
+#		sleep 5
+#		if [[ -z "$(pgrep -fai $(basename $EXENAME)|grep -i $EXENAME |grep -v grep 2>/dev/null)" ]];
+#		then
+#			echo "$EXENAME was ended"
+#			break	# the $EXENAME exe is no longer running
+#		fi
+#	done
+#}
+#[[ $TEST_WINETRICKS_FLAG -eq 0 ]] && monitor_exe_running || monitor_winetricks_running
+monitor_exe_running
+
+##############################################
+
+
+##############################################
+# cleanup temp file
+function savedata_show_location(){
+cat << EOF
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@
+@
+@
+  your savedata will be saved at file://$TMP_ALLWINESTORGE_OVERLAY/
+@
+@
+@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+EOF
+}
+savedata_show_location
+
+
+function atexit() {
+	cd $HERE	#go back to $HERE, then remove temp file
+	echo "killing $HERE/usr/bin/unionfs"
+	killall $HERE/usr/bin/unionfs
+	sleep 1
+	echo "Removing $MNT_ALLWINESTORGE"
+	rm -r "$MNT_ALLWINESTORGE"
+}
+#set -e
+#trap atexit EXIT	#NOT USED: due to some .exe(as game launcher) would exit after it completed to launch other .exe files. 
+atexit
+
+
+##############################################
+
+

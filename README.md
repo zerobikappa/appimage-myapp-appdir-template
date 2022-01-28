@@ -1,0 +1,1 @@
+# appimage-myapp-appdir-template
