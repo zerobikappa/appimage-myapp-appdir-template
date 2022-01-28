@@ -226,6 +226,7 @@ then
 	rm -fv $WINEPREFIX/dosdevices/*
 	ln -sfnv ../drive_c $WINEPREFIX/dosdevices/c:
 	ln -sfnv ../../drive_d $WINEPREFIX/dosdevices/d:
+	cp -fv "$HERE/usr/share/drive_d/Fonts"/* $WINEPREFIX/drive_c/windows/Fonts/
 else
 	cd "$MNT_ALLWINESTORGE/drive_d/myapp_install_location" # Use the app installed location. Some .exe may not run if not cd into excute directory
 	winetricks sandbox >/dev/null 2>&1 && wine "d:\\myapp_install_location\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path because winetricks sandbox was set.
