@@ -5,7 +5,7 @@
 
 
 #############################################
-# env settings
+## env settings
 SELF=$(readlink -f "$0")
 HERE=${SELF%/*}
 export PATH="${HERE}/usr/bin/:${HERE}/usr/sbin/:${HERE}/usr/games/:${HERE}/bin/:${HERE}/sbin/${PATH:+:$PATH}"
@@ -20,46 +20,56 @@ export QT_PLUGIN_PATH="${HERE}/usr/lib/qt4/plugins/:${HERE}/usr/lib/i386-linux-g
 
 
 ##############################################
+## test runtime env
+echo APPIMAGE=$APPIMAGE
+echo APPDIR=$APPDIR
+echo OWD=$OWD
+echo ARGV0=$ARGV0
+##############################################
+
+
+##############################################
 SAVEDATA_FLAG=0
 WALKTHROUGH_FLAG=0
 
 function print_help(){
 	cat << EOF
-game option:
+option:
 
--s, --savedata
+  -s, --savedata
 	load the full-completed savedata
 
--w, --walkthrough
+  -w, --walkthrough
 	open walkthrough with browser
 
---browser[=BROWSER_COMMAND]
+  --browser[=BROWSER_COMMAND]
 	only effect when -w is set.
 	using another browser application to open
 	walkthrough. for example, "--browser=firefox"
 	means using firefox to open walkthrough.html
 
---test-winetricks
+  --test-winetricks
 	open winetricks in temporary directory,
 	use this option to test to install windows game.
 	when this option set, -s and -w will be ignored.
 
--h, --help
+  -h, --help
 	show this help
 
 
 appimage option:
 
---appimage-help
+  --appimage-help
 	show help about appimage function
 
---appimage-extract
-	extract all files from appimage
+  --appimage-extract [<pattern>]
+	Extract content from embedded filesystem image
+	If pattern is passed, only extract matching files
 
 EOF
 }
 
-#parameters=$(getopt -o swth --long save-data,walkthrough,browser:,test-winetricks,help -n "$0" -- "$@")	# $(getopt) cannot ignore unknown options
+#parameters=$(getopt -o swth --long save-data,walkthrough,browser:,test-winetricks,help -n "$0" -- "$@")	# NOT USED: because $(getopt) cannot ignore unknown options
 parameters=$(echo "$@"|tr "=" " ")
 eval set -- "$parameters"
 
@@ -104,17 +114,61 @@ eval set -- "$next_parameters"
 
 if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];	# if --test-winetricks is set, then -s and -w will be ignored.
 then
-	[[ $SAVEDATA_FLAG -eq 1 ]] && SAVEDATA_FLAG=0 && echo "--save-data option ignored"
+	[[ $SAVEDATA_FLAG -eq 1 ]] && SAVEDATA_FLAG=0 && echo "--savedata option ignored"
 	[[ $WALKTHROUGH_FLAG -eq 1 ]] && WALKTHROUGH_FLAG=0 && echo "--walkthrough option ignored"
 fi
 
 
+
 ##############################################
-# setup unionfs temp directory for this app
+## check *.config directory
+if [[ -n ${APPIMAGE} ]];	# if run from .appimage
+then
+	if [[ ! -d ${APPIMAGE}.config ]];
+	then
+		echo "directory  ${APPIMAGE}.config/ not exist."
+		echo "all data will be saved in /tmp/$(basename ${APPIMAGE}).config/ , which will be deleted after restart computer."
+		echo "to keep your data, please run:"
+		echo ""
+		echo "  $ARGV0 --appimage-portable-config"
+		echo ""
+		echo "to create a config directory."
+		mkdir -p /tmp/$(basename ${APPIMAGE}).config/
+		export APPIMAGE_CONFIG_DIR=/tmp/$(basename ${APPIMAGE}).config
+	fi
+
+else	# if run directly from AppDir
+	export APPIMAGE="/tmp/myapp"
+	mkdir -p /tmp/$(basename ${APPIMAGE}).config/
+	export APPIMAGE_CONFIG_DIR=/tmp/$(basename ${APPIMAGE}).config
+fi
+
+export XDG_CONFIG_HOME=$APPIMAGE_CONFIG_DIR
+
+## setup standalone $HOME directory
+if [[ ! -d ${APPIMAGE_CONFIG_DIR}/home/public_user ]];
+then
+	mkdir -p ${APPIMAGE_CONFIG_DIR}/home/public_user/
+	export HOME=${APPIMAGE_CONFIG_DIR}/home/public_user
+fi
+if [[ -d ${APPIMAGE}.home ]];
+then
+	echo "${APPIMAGE}.home exists but is not necessary."
+	echo "Because we default to use $APPIMAGE_CONFIG_DIR/home/public_user/ to save related files."
+	export HOME=${APPIMAGE_CONFIG_DIR}/home/public_user
+fi
+
+
+echo HOME=$HOME
+echo APPIMAGE_CONFIG_DIR=$APPIMAGE_CONFIG_DIR
+echo XDG_CONFIG_HOME=$XDG_CONFIG_HOME
+
+##############################################
+## setup unionfs temp directory for this app
 RO_ALLWINESTORGE="$HERE/usr/share/" # Use the location where contain $WINEPREFIX, both win32 and win64 WINEPREFIX directory are here.
-MNT_ALLWINESTORGE="/tmp/.myapp.unionfs" # Use the name of the app
-TMP_ALLWINESTORGE_OVERLAY="/tmp/myapp" # Use the name of the app
-#export LD_LIBRARY_PATH=./lib32/:./usr./lib32/:./lib/i386-linux-gnu/:./usr/lib/i386-linux-gnu/:$LD_LIBRARY_PATH
+MNT_ALLWINESTORGE="/tmp/.$(basename $APPIMAGE).unionfs" # Use the name of the app
+#TMP_ALLWINESTORGE_OVERLAY="/tmp/myapp" # Use the name of the app
+TMP_ALLWINESTORGE_OVERLAY="$APPIMAGE_CONFIG_DIR"
 #WINEPREFIX="$MNT_ALLWINESTORGE" wine "$MNT_ALLWINESTORGE/drive_d/app_location/app.exe" "$@"
 EXENAME="myapp.exe"	# Use the .exe filename
 
@@ -132,7 +186,7 @@ $HERE/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_ALLW
 
 
 ##############################################
-# show the game walkthrough, you can see this info when using commandline to launch this app.
+## show the game walkthrough, you can see this info when using commandline to launch this app.
 #function walkthrough_commandline(){
 #	if [[ -f "$MNT_ALLWINESTORGE/drive_d/walkthrough.html" ]];
 #	then
@@ -171,7 +225,7 @@ EOF
 
 
 ##############################################
-# setup WINE env
+## setup WINE env
 if [[ "$WINEARCH" == "win32" ]];
 then
 	export WINEARCH=win32
@@ -191,7 +245,7 @@ export WINEDLLOVERRIDES=winemenubuilder.exe=d	# prevent wine setup application m
 
 
 ##############################################
-# copy game savedata, no need to use if the game savedata was save at the game installed folder.
+## copy game savedata, no need to use if the game savedata was save at the game installed folder.
 function copysavedata() {	# use if the game savedata was in windows user folder
 	mkdir -p "$MNT_ALLWINESTORGE/$WINEARCH/myapp_savedata_location"	# use the path where the savedata is.
 	cp -rfv "$HERE/usr/share/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$WINEARCH/myapp_savedata_location"	# use the path where the savedata is in. if the savedata was in drive_c/users/your_username/, you can use $USER to replace your username.
@@ -212,7 +266,7 @@ fi
 
 
 ##############################################
-# launch app
+## launch app
 
 export LANG=ja_JP.UTF-8
 
@@ -277,7 +331,7 @@ monitor_exe_running
 
 
 ##############################################
-# cleanup temp file
+## cleanup temp file
 function savedata_show_location(){
 cat << EOF
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
