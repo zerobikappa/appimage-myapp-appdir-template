@@ -149,8 +149,10 @@ export XDG_CONFIG_HOME=$APPIMAGE_CONFIG_DIR
 if [[ ! -d ${APPIMAGE_CONFIG_DIR}/home/public_user ]];
 then
 	mkdir -p ${APPIMAGE_CONFIG_DIR}/home/public_user/
-	export HOME=${APPIMAGE_CONFIG_DIR}/home/public_user
 fi
+
+export HOME=${APPIMAGE_CONFIG_DIR}/home/public_user
+
 if [[ -d ${APPIMAGE}.home ]];
 then
 	echo "${APPIMAGE}.home exists but is not necessary."
