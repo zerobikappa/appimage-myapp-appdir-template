@@ -1,2 +1,4 @@
 /.DirIcon
 /home
+/usr/share/drive_d/savedata/
+!/usr/share/drive_d/savedata/.gitkeep

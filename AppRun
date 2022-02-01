@@ -31,12 +31,15 @@ export QT_PLUGIN_PATH="${HERE}/usr/lib/qt4/plugins/:${HERE}/usr/lib/i386-linux-g
 
 ##############################################
 ## test runtime env
-cat << EOF
+function debug_show(){
+	cat << EOF
 APPIMAGE=$APPIMAGE
 APPDIR=$APPDIR
 OWD=$OWD
 ARGV0=$ARGV0
 EOF
+}
+[[ MYAPPDEBUG -eq 1 ]] && debug_show
 ##############################################
 
 
@@ -116,11 +119,13 @@ while [[ -n "$1" ]] ; do
 		--exeinfo-gen)
 			EXEINFO_GEN_FLAG=1
 			shift ;;
-		--appimage-portable-config)
-			# here this option will only effect when directly run the AppRun script.
-			# if run the .appimage with --appimage-portable-config option,
-			# the "--appimage-portable-config" will be handled by .appimage itself and will not pass to AppRun
-			mkdir -p $HERE/../"$(basename $HERE).config"
+		--portable-cache)
+			if [[ -n $APPIMAGE ]];
+			then
+				mkdir -p "${APPIMAGE}".cache/home/public_user/.cache	# run from .appimage
+			else
+				mkdir -p "$HERE"/../"$(basename $HERE)".cache/home/public_user/.cache	# run directly from AppDir
+			fi
 			exit ;;
 		--)
 			shift
@@ -135,28 +140,27 @@ eval set -- "$next_parameters"
 
 
 ##############################################
-## check *.config directory
+## check *.cache directory
 if [[ -z ${APPIMAGE} ]];	# if run directly from AppDir
 then
 	export APPIMAGE="$HERE"
 fi
 
-if [[ -d ${APPIMAGE}.config ]];
+if [[ -d ${APPIMAGE}.cache ]];
 then
-	APPIMAGE_CONFIG_DIR="${APPIMAGE}.config"
+	APPIMAGE_CACHE_DIR="${APPIMAGE}.cache"
 else
-	echo "directory  ${APPIMAGE}.config/ not exist."
-	echo "all data will be saved in /tmp/$(basename ${APPIMAGE}).config/ , which will be deleted after restart computer."
+	echo "directory  ${APPIMAGE}.cache/ not exist."
+	echo "all data will be saved in /tmp/$(basename ${APPIMAGE}).cache/ , which will be deleted after restart computer."
 	echo "to keep your data, please run:"
 	echo ""
-	echo "  $ARGV0 --appimage-portable-config"
+	echo "  $ARGV0 --portable-cache"
 	echo ""
-	echo "to create a config directory."
-	mkdir -p /tmp/$(basename ${APPIMAGE}).config/
-	APPIMAGE_CONFIG_DIR="/tmp/$(basename ${APPIMAGE}).config"
+	echo "to create a cache directory."
+	mkdir -p "/tmp/$(basename ${APPIMAGE}).cache"
+	APPIMAGE_CACHE_DIR="/tmp/$(basename ${APPIMAGE}).cache"
 fi
 
-export XDG_CONFIG_HOME=$APPIMAGE_CONFIG_DIR
 
 ##############################################
 
@@ -166,38 +170,43 @@ export XDG_CONFIG_HOME=$APPIMAGE_CONFIG_DIR
 RO_ALLWINESTORGE="$HERE/usr/share/" # Use the location where contain $WINEPREFIX, both win32 and win64 WINEPREFIX directory are here.
 MNT_ALLWINESTORGE="/tmp/.$(basename $APPIMAGE).unionfs/usr/share" # Use the name of the app
 #TMP_ALLWINESTORGE_OVERLAY="/tmp/myapp" # Use the name of the app
-TMP_ALLWINESTORGE_OVERLAY="$APPIMAGE_CONFIG_DIR/usr/share"
+TMP_ALLWINESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share"
 #WINEPREFIX="$MNT_ALLWINESTORGE" wine "$MNT_ALLWINESTORGE/drive_d/app_location/app.exe" "$@"
 
 RO_HOMESTORGE="/home/$USER/"
 MNT_HOMESTORGE="/tmp/.$(basename $APPIMAGE).unionfs/home/public_user"
-TMP_HOMESTORGE_OVERLAY="$APPIMAGE_CONFIG_DIR/home/public_user"
+TMP_HOMESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/home/public_user"
 ##############################################
 
 
 ##############################################
-## setup standalone $HOME directory
-if [[ ! -d ${APPIMAGE_CONFIG_DIR}/home/public_user ]];
+## setup standalone $HOME and $XDG_CONFIG_HOME directory
+if [[ ! -d ${APPIMAGE_CACHE_DIR}/home/public_user/.config ]];
 then
-	mkdir -p ${APPIMAGE_CONFIG_DIR}/home/public_user/
+	mkdir -p "${APPIMAGE_CACHE_DIR}/home/public_user/.config"
 fi
-
-export HOME=$MNT_HOMESTORGE
 
 if [[ -d ${APPIMAGE}.home ]];
 then
 	echo "${APPIMAGE}.home exists but is not necessary."
-	echo "Because we default to use $APPIMAGE_CONFIG_DIR/home/public_user/ to save related files."
-	export HOME=${APPIMAGE_CONFIG_DIR}/home/public_user
+	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/ to save related files."
 fi
+export HOME=$MNT_HOMESTORGE
 
-##############################################
-
-
-##############################################
-if [[ -f $APPIMAGE_CONFIG_DIR/usr/share/exeinfo_profile ]];
+if [[ -d ${APPIMAGE}.config ]];
 then
-	. $APPIMAGE_CONFIG_DIR/usr/share/exeinfo_profile
+	echo "${APPIMAGE}.config exists but is not necessary."
+	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/.config to save related files."
+fi
+export XDG_CONFIG_HOME="$MNT_HOMESTORGE/.config"
+
+##############################################
+
+
+##############################################
+if [[ -f $APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile ]];
+then
+	. $APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile
 elif [[ -f $HERE/usr/share/exeinfo_profile ]];
 then
 	. $HERE/usr/share/exeinfo_profile
@@ -209,17 +218,15 @@ then
 	TEST_WINETRICKS_FLAG=1
 fi
 
-if [[ $EXEINFO_GEN_FLAG -eq 1 ]];
-then
-	TEST_WINETRICKS_FLAG=0
-	SAVEDATA_FLAG=0
-	WALKTHROUGH_FLAG=0
-fi
-
-if [[ $TEST_WINETRICKS_FLAG -eq 1 && $EXEINFO_GEN_FLAG -eq 1 ]];	# if --test-winetricks is set, then -s and -w will be ignored.
+if [[ $TEST_WINETRICKS_FLAG -eq 1 || $EXEINFO_GEN_FLAG -eq 1 ]];	# if --exeinfo-gen or --test-winetricks is set, then -s and -w will be ignored.
 then
 	[[ $SAVEDATA_FLAG -eq 1 ]] && SAVEDATA_FLAG=0 && echo "--savedata option ignored"
 	[[ $WALKTHROUGH_FLAG -eq 1 ]] && WALKTHROUGH_FLAG=0 && echo "--walkthrough option ignored"
+fi
+
+if [[ $EXEINFO_GEN_FLAG -eq 1 ]];	# if --exeinfo-gen is set, then -t will be ignored.
+then
+	[[ $TEST_WINETRICKS_FLAG -eq 1 ]] && TEST_WINETRICKS_FLAG=0 && echo "--test-winetricks option ignored"
 fi
 
 #before setup unionfs temp directory, check if exe is already running
@@ -284,21 +291,29 @@ export WINEDLLOVERRIDES=winemenubuilder.exe=d	# prevent wine setup application m
 
 ##############################################
 ## copy game savedata, no need to use if the game savedata was save at the game installed folder.
-function copysavedata() {	# use if the game savedata was in windows user folder
-	mkdir -p "$MNT_ALLWINESTORGE/$WINEARCH/myapp_savedata_location"	# use the path where the savedata is.
-	cp -rfv "$HERE/usr/share/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$WINEARCH/myapp_savedata_location"	# use the path where the savedata is in. if the savedata was in drive_c/users/your_username/, you can use $USER to replace your username.
-}
+#function copysavedata1() {	# use if the game savedata was in windows user folder
+#	mkdir -p "$MNT_ALLWINESTORGE/$WINEARCH/myapp_savedata_location"	# use the path where the savedata is.
+#	cp -rfv "$HERE/usr/share/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$WINEARCH/myapp_savedata_location"	# use the path where the savedata is in. if the savedata was in drive_c/users/your_username/, you can use $USER to replace your username.
+#}
+#
+#function copysavedata2() {	# use if the game savedata was in game installation folder
+#	cp -rfv "$HERE/usr/share/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"	# use the path where the savedata is in. if the savedata was in drive_c/users/your_username/, you can use $USER to replace your username.
+#}
 
-function copysavedata1() {	# use if the game savedata was in game installation folder
-	cp -rfv "$HERE/usr/share/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"	# use the path where the savedata is in. if the savedata was in drive_c/users/your_username/, you can use $USER to replace your username.
+function copysavedata(){
+	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
+	then
+		mkdir -p "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+		cp -rfv "$HERE/usr/share/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+		cp -rfv "$APPIMAGE_CACHE_DIR/usr/share/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+	elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
+	then
+		mkdir -p "$MNT_HOMESTORGE/$SAVEDATA_DIR"
+		cp -rfv "$HERE/usr/share/drive_d/savedata"/* "$MNT_HOMESTORGE/$SAVEDATA_DIR"
+		cp -rfv "$APPIMAGE_CACHE_DIR/usr/share/drive_d/savedata"/* "$MNT_HOMESTORGE/$SAVEDATA_DIR"
+	fi
 }
-
-if [[ $SAVEDATA_FLAG -eq 1 ]];
-then
-	###only choose one of them to run
-	#copysavedata	# uncomment to run this function.
-	copysavedata1	# uncomment to run this function.
-fi
+[[ $SAVEDATA_FLAG -eq 1 ]] && copysavedata
 
 ##############################################
 
@@ -331,12 +346,12 @@ function apprun_realpath(){
 	        result="../$result"
 	    fi
 	done
-	
+
 	if [[ $common_part == "/" ]]; then
 	    # special case for root (no common path)
 	    result="$result/"
 	fi
-	
+
 	# since we now have identified the common part,
 	# compute the non-common part
 	forward_part="${target#$common_part}"
@@ -358,14 +373,14 @@ function setting_list(){
 }
 
 function exe_location(){
-	EXEPATH="$(kdialog --title "select the .exe file" --getopenfilename $APPIMAGE_CONFIG_DIR)"
+	EXEPATH="$(kdialog --title "select the .exe file" --getopenfilename $APPIMAGE_CACHE_DIR)"
 	if [[ $? -eq 0 ]];	# clicked "ok"
 	then
-		# check if .exe file in appdir or in appdir.config
-		if [[ -n $(echo $EXEPATH | grep "${APPIMAGE}.config") ]];
+		# check if .exe file in appdir or in appdir.cache
+		if [[ -n $(echo $EXEPATH | grep "$(basename ${APPIMAGE_CACHE_DIR})") ]];
 		then
-			EXE_LROOT=${APPIMAGE}.config/usr/share	# .exe file in AppDir.config or in *.appimage.config directory
-		elif [[ -n $(echo $EXEPATH | grep "${APPIMAGE}") ]];
+			EXE_LROOT=${APPIMAGE_CACHE_DIR}/usr/share	# .exe file in AppDir.cache or in *.appimage.cache directory
+		elif [[ -n $(echo $EXEPATH | grep "$(basename ${APPIMAGE})") ]];
 		then
 			EXE_LROOT=$HERE/usr/share	# .exe file in AppDir, running AppRun directly from AppDir at this moment.
 		else
@@ -377,7 +392,6 @@ function exe_location(){
 		TEMP="$(dirname $EXEPATH)"
 		TEMP_END=""
 		while [[ -n $TEMP && $TEMP != "/" ]] ; do
-			echo TEMP=$TEMP
 			case "$(basename $TEMP)" in
 				drive_d)
 					export EXE_WROOT="d"
@@ -405,28 +419,41 @@ function exe_location(){
 
 
 function savedata_location(){
-	SAVEDATAPATH=$(kdialog --title "select the directory where to save the savedata files" --getexistingdirectory $APPIMAGE_CONFIG_DIR)
+	SAVEDATAPATH=$(kdialog --title "select the directory where to save the savedata files" --getexistingdirectory $APPIMAGE_CACHE_DIR)
 	if [[ $? -eq 0 ]];
 	then
-		# check if .exe file in appdir or in appdir.config
-		if [[ -n $(echo $SAVEDATAPATH | grep "${APPIMAGE}.config") ]];
+		TEMP=$SAVEDATAPATH
+		SAVEDATA_IN_HOME=0	# 0: in game installation directory; 1: in user home.
+		while [[ -n $TEMP && $TEMP != "/" ]] ; do
+			[[ "$(basename $TEMP)" == "public_user" ]] && SAVEDATA_HOME=1
+			TEMP="$(dirname $TEMP)"
+		done
+
+		# check if .exe file in appdir or in appdir.cache
+		if [[ $SAVEDATA_IN_HOME -eq 0 && -n $(echo "$SAVEDATAPATH" | grep "$(basename ${APPIMAGE_CACHE_DIR})") ]];
 		then
-			SAVEDATA_LROOT=${APPIMAGE}.config	# directory in AppDir.config or in *.appimage.config directory
-		elif [[ -n $(echo $SAVEDATAPATH | grep "${APPIMAGE}") ]];
+			SAVEDATA_LROOT=$APPIMAGE_CACHE_DIR	# directory in AppDir.cache or in *.appimage.cache directory
+		elif [[ $SAVEDATA_IN_HOME -eq 0 && -n $(echo "$SAVEDATAPATH" | grep "$(basename ${APPIMAGE})") ]];
 		then
-			SAVEDATA_LROOT=$HERE	# directory in AppDir
+			SAVEDATA_LROOT=$HERE	# directory in AppDir. running AppRun directly from AppDir at this moment.
 		else
 			kdialog --error "savedata directory outside of appimage dir."	# outside of AppDir and *.appimage.
 			SAVEDATAPATH=""
 			return
 		fi
 
-		TEMP=$SAVEDATAPATH
-		SAVEDATA_HOME=0	# 0: in game installation directory; 1: in user home.
-		while [[ -n $TEMP && $TEMP != "/" ]] ; do
-			[[ "$(basename $TEMP)" == "public_user" ]] && SAVEDATA_HOME=1
-			TEMP="$(dirname $TEMP)"
-		done
+
+		if [[ SAVEDATA_IN_HOME -eq 0 ]];
+		then
+			SAVEDATA_DIR=$(apprun_realpath "${SAVEDATA_LROOT}/usr/share" "$SAVEDATAPATH")
+		elif [[ SAVEDATA_IN_HOME -eq 1 ]];
+		then
+			SAVEDATA_DIR=$(apprun_realpath "${SAVEDATA_LROOT}/home/public_user" "$SAVEDATAPATH")
+		else
+			echo "[AppRun:savedata_location] error: unknown SAVEDATA_IN_HOME, SAVEDATA_IN_HOME=$SAVEDATA_IN_HOME"
+			exit
+		fi
+
 	fi
 }
 
@@ -456,6 +483,23 @@ function exeinfo_gen(){
 
 
 ##############################################
+## test runtime env
+function debug_show(){
+	cat << EOF
+ready.
+
+HOME=$HOME
+XDG_CONFIG_HOME=$XDG_CONFIG_HOME
+APPIMAGE=$APPIMAGE
+APPDIR=$APPDIR
+OWD=$OWD
+ARGV0=$ARGV0
+EOF
+}
+##############################################
+
+
+##############################################
 ## launch app
 
 export LANG=ja_JP.UTF-8
@@ -468,6 +512,9 @@ then
 	echo EXE_WROOT=$EXE_WROOT >> $MNT_ALLWINESTORGE/exeinfo_profile
 	echo EXE_WDIR=$EXE_WDIR >> $MNT_ALLWINESTORGE/exeinfo_profile
 	echo EXENAME=$EXENAME >> $MNT_ALLWINESTORGE/exeinfo_profile
+	echo SAVEDATA_IN_HOME=$SAVEDATA_IN_HOME >> $MNT_ALLWINESTORGE/exeinfo_profile
+	echo SAVEDATA_DIR=$SAVEDATA_DIR >> $MNT_ALLWINESTORGE/exeinfo_profile
+
 elif [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
 then
 	EXENAME="$HERE/usr/bin/winetricks"
@@ -559,7 +606,7 @@ function atexit() {
 	rm -r "/tmp/.$(basename $APPIMAGE).unionfs"
 }
 #set -e
-#trap atexit EXIT	#NOT USED: due to some .exe(as game launcher) would exit after it completed to launch other .exe files. 
+#trap atexit EXIT	#NOT USED: due to some .exe(as game launcher) would pass EXIT signal after it completed to launch other .exe files. 
 atexit
 
 
