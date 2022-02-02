@@ -49,7 +49,7 @@ WALKTHROUGH_FLAG=0
 
 function print_help(){
 	cat << EOF
-option:
+run option:
 
   -s, --savedata
 	load the full-completed savedata
@@ -57,19 +57,33 @@ option:
   -w, --walkthrough
 	open walkthrough with browser
 
-  --browser[=BROWSER_COMMAND]
+  --browser=BROWSER_COMMAND
 	only effect when -w is set.
 	using another browser application to open
 	walkthrough. for example, "--browser=firefox"
 	means using firefox to open walkthrough.html
 
-  --test-winetricks
-	open winetricks in temporary directory,
-	use this option to test to install windows game.
-	when this option set, -s and -w will be ignored.
+  --portable-cache
+	create \${APPIMAGE}.cache directory then exit.
+	when running appimage, \$HOME and \$XDG_CONFIG_HOME
+	will be redirect to this directory to prevent
+	changing files in local \$HOME.
 
   -h, --help
-	show this help
+	show this help then exit
+
+
+test option:
+
+  -t, --test-winetricks
+	open winetricks in temporary directory,
+	use this option to test or install windows application.
+	when this option set, -s and -w will be ignored.
+
+  --exeinfo-gen
+	after install windows application in AppDir,
+	run ./AppRun with this option to generate
+	exeinfo_profile.
 
 
 appimage option:
@@ -154,7 +168,7 @@ else
 	echo "all data will be saved in /tmp/$(basename ${APPIMAGE}).cache/ , which will be deleted after restart computer."
 	echo "to keep your data, please run:"
 	echo ""
-	echo "  $ARGV0 --portable-cache"
+	[[ -n $ARGV0 ]] && echo "  $ARGV0 --portable-cache" || echo "  ${APPIMAGE}/AppRun --portable-cache"
 	echo ""
 	echo "to create a cache directory."
 	mkdir -p "/tmp/$(basename ${APPIMAGE}).cache"
