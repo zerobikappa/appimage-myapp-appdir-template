@@ -532,8 +532,8 @@ then
 elif [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
 then
 	EXENAME="$HERE/usr/bin/winetricks"
-	$HERE/usr/bin/winetricks "$@"
 	$HERE/usr/bin/winetricks sandbox
+	$HERE/usr/bin/winetricks "$@"
 	echo "disable" > $WINEPREFIX/.update-timestamp
 	rm -fv $WINEPREFIX/dosdevices/*
 	ln -sfnv ../drive_c $WINEPREFIX/dosdevices/c:
