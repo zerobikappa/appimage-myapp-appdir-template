@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1643894024
+MYAPPRUN_VERSION=1643896880
 
 #############################################
 ## prevent running by root/sudo
@@ -177,11 +177,30 @@ while [[ -n "$1" ]] ; do
 			exit ;;
 		--)
 			shift
-			next_parameters="$next_parameters $@"	# then $next_parameters will be passed to wine
-			break ;;
+			if [[ -z "$@" && -z "$next_parameters" ]];
+			then
+				break
+			elif [[ ! $MYAPPDEBUG -eq 1 ]];
+			then
+				echo "[AppRun] error: not MYAPPDEBUG mode now. prevent to pass any unknown option." >&2
+				echo "[AppRun] error: unknown options: $next_parameters $@" >&2
+				exit
+			else
+				next_parameters="$next_parameters $@"	# then $next_parameters will be passed to wine
+				break
+			fi
+			;;
 		*) 
-			next_parameters="$next_parameters $1"
-			shift ;;
+			if [[ $MYAPPDEBUG -eq 1 ]];
+			then
+				next_parameters="$next_parameters $1"
+				shift
+			else
+				echo "[AppRun] error: not MYAPPDEBUG mode now. prevent to pass any unknow option." >&2
+				echo "[AppRun] error: unknown options: $1" >&2
+				exit
+			fi
+			;;
 	esac
 done
 eval set -- "$next_parameters"
