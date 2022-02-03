@@ -37,6 +37,7 @@ APPIMAGE=$APPIMAGE
 APPDIR=$APPDIR
 OWD=$OWD
 ARGV0=$ARGV0
+\$0=$0
 EOF
 }
 [[ MYAPPDEBUG -eq 1 ]] && debug_show
@@ -318,14 +319,28 @@ function copysavedata(){
 	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
 	then
 		mkdir -p "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
-		cp -rfv "$HERE/usr/share/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
-		cp -rfv "$APPIMAGE_CACHE_DIR/usr/share/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+		cp -r --suffix=.myapp.$USER.backup "$MNT_ALLWINESTORGE/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
 	elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
 	then
 		mkdir -p "$MNT_HOMESTORGE/$SAVEDATA_DIR"
-		cp -rfv "$HERE/usr/share/drive_d/savedata"/* "$MNT_HOMESTORGE/$SAVEDATA_DIR"
-		cp -rfv "$APPIMAGE_CACHE_DIR/usr/share/drive_d/savedata"/* "$MNT_HOMESTORGE/$SAVEDATA_DIR"
+		cp -r --suffix=.myapp.$USER.backup "$MNT_ALLWINESTORGE/drive_d/savedata"/* "$MNT_HOMESTORGE/$SAVEDATA_DIR"
 	fi
+}
+
+function restoresavedata(){
+	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
+	then
+		FIND_DIR="$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+	elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
+	then
+		FIND_DIR="$MNT_HOMESTORGE/$SAVEDATA_DIR"
+	else
+		echo "[AppRun:restoresavedata] error: invalid FIND_DIR, cannot recover user savedata"
+	fi
+
+	for SAVEDATA_BACKUP in $(find $FIND_DIR -type f -name "*.myapp.$USER.backup"); do
+		mv -f $SAVEDATA_BACKUP ${SAVEDATA_BACKUP%".myapp.$USER.backup"}
+	done
 }
 [[ $SAVEDATA_FLAG -eq 1 ]] && copysavedata
 
@@ -534,11 +549,6 @@ then
 	EXENAME="$HERE/usr/bin/winetricks"
 	$HERE/usr/bin/winetricks sandbox
 	$HERE/usr/bin/winetricks "$@"
-	echo "disable" > $WINEPREFIX/.update-timestamp
-	rm -fv $WINEPREFIX/dosdevices/*
-	ln -sfnv ../drive_c $WINEPREFIX/dosdevices/c:
-	ln -sfnv ../../drive_d $WINEPREFIX/dosdevices/d:
-	cp -fv "$HERE/usr/share/drive_d/Fonts"/* $WINEPREFIX/drive_c/windows/Fonts/
 else
 	cd "$MNT_ALLWINESTORGE/$EXE_LDIR" # Use the app installed location. Some .exe may not run if not cd into excute directory
 	winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path because winetricks sandbox was set.
@@ -609,8 +619,14 @@ savedata_show_location
 
 function atexit() {
 	cd $HERE	#go back to $HERE, then remove temp file
+	echo "disable" > $WINEPREFIX/.update-timestamp
+	echo "restore wine drive symlink entries"
+	rm -f $WINEPREFIX/dosdevices/*
+	[[ ! -L "$HERE/usr/share/$WINEARCH/dosdevices/c:" ]] && ln -sfnv ../drive_c "$WINEPREFIX/dosdevices/c:"
+	[[ ! -L "$HERE/usr/share/$WINEARCH/dosdevices/d:" ]] && ln -sfnv ../../drive_d "$WINEPREFIX/dosdevices/d:"
+	cp -nv "$HERE/usr/share/drive_d/Fonts"/* $WINEPREFIX/drive_c/windows/Fonts/
 	echo "killing $HERE/usr/bin/unionfs"
-	killall $HERE/usr/bin/unionfs
+	killall "$HERE/usr/bin/unionfs"
 	sleep 1
 	#echo "Removing $MNT_ALLWINESTORGE"
 	#rm -r "$MNT_ALLWINESTORGE"
