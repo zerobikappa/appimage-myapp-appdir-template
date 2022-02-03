@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1643897904
+MYAPPRUN_VERSION=1643898912
 
 #############################################
 ## prevent running by root/sudo
@@ -73,6 +73,9 @@ run option:
 
   -h, --help
 	show this help then exit
+
+  --version
+	show application information and version
 
 
 test option:
