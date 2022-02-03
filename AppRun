@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# last update at 
-# Wed Feb  2 05:42:45 PM CST 2022
+# AppRun Script version
+# date -u +%s
+MYAPPRUN_VERSION=1643886588
 
 #############################################
 ## prevent running by root/sudo
@@ -99,6 +100,30 @@ appimage option:
 EOF
 }
 
+function print_version(){
+	if [[ -z $APPIMAGE ]];
+	then
+		APPIMAGEKIT_VERSION="AppImageKit Version: (empty)(directly running from AppDir)"
+	else
+		APPIMAGEKIT_VERSION="AppImageKit $($APPIMAGE --appimage-version)"
+	fi
+	if [[ -f "$HERE/usr/share/exeinfo_profile" ]];
+	then
+		. "$HERE/usr/share/exeinfo_profile"
+	fi
+	[[ -z $EXENAME ]] && EXENAME="(empty)(not set in AppDir)"
+	APPLICATION_NAME=$(cat "$HERE"/*.desktop | grep -i "name=") && APPLICATION_NAME=${APPLICATION_NAME#*"="}
+	APPLICATION_DESCRIPTION=$(cat "$HERE"/*.desktop | grep -i "comment=") && APPLICATION_DESCRIPTION=${APPLICATION_DESCRIPTION#*"="}
+	cat << EOF
+  $APPIMAGEKIT_VERSION
+  AppRun script version: $MYAPPRUN_VERSION
+  .exe name: $EXENAME
+  application name: $APPLICATION_NAME
+  application description: $APPLICATION_DESCRIPTION
+
+EOF
+}
+
 #parameters=$(getopt -o swth --long save-data,walkthrough,browser:,test-winetricks,help -n "$0" -- "$@")	# NOT USED: because $(getopt) cannot ignore unknown options
 parameters=$(echo "$@"|tr "=" " ")
 eval set -- "$parameters"
@@ -116,6 +141,9 @@ while [[ -n "$1" ]] ; do
 	case "$1" in
 		-h| --help)
 			print_help
+			exit ;;
+		--version)
+			print_version
 			exit ;;
 		-s| --savedata)
 			SAVEDATA_FLAG=1
