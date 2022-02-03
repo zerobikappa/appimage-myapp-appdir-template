@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1643896880
+MYAPPRUN_VERSION=1643897904
 
 #############################################
 ## prevent running by root/sudo
@@ -684,8 +684,8 @@ function atexit() {
 	#rm -r "$MNT_ALLWINESTORGE"
 	#echo "Removing $MNT_HOMESTORGE"
 	#rm -r "$MNT_HOMESTORGE"
-	echo "Removing /tmp/.$(basename $HERE).unionfs"
-	rm -r "/tmp/.$(basename $HERE).unionfs"
+	echo "Removing /tmp/$(basename $HERE).unionfs"
+	rm -r "/tmp/$(basename $HERE).unionfs"
 }
 #set -e
 #trap atexit EXIT	#NOT USED: due to some .exe(as game launcher) would pass EXIT signal after it completed to launch other .exe files. 
