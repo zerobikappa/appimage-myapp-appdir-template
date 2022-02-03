@@ -203,6 +203,7 @@ now you can check the `myapp-template.cache/` directory again, to confirm what f
 before bundle your application, you may want to remove some unnecessary file.
 
 ```bash
+# please stop the application/game first
 rm -rf myapp-template/home	#will be create everytime, no need to bundle into appimage
 # please also check other directories
 ```
@@ -212,12 +213,12 @@ you may also need to modify the *.desktop file and *.png file:
 ```bash
 mv myapp-template/myapp-template.desktop myapp-template/other-name.desktop
 mv myapp-template/myapp-template.png myapp-template/other-name.png
-vim myapp-template.desktop	# then modify the content of *.desktop file
+vim myapp-template/other-name.desktop	# then modify the content of *.desktop file
 ```
 
-for more information, please refer below project to learning how to bundle your *.appimage:
+for more information, please refer below project to learn about how to bundle your *.appimage:
 
-[AppImageKit](https://github.com/AppImage/AppImageKit)
+[AppImageKit](https://github.com/AppImage/AppImageKit)  
 [Wine_Appimage](https://github.com/Hackerl/Wine_Appimage)
 
 now you can run:
