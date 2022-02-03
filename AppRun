@@ -183,13 +183,12 @@ fi
 ##############################################
 ## setup unionfs temp directory for this app
 RO_ALLWINESTORGE="$HERE/usr/share/" # Use the location where contain $WINEPREFIX, both win32 and win64 WINEPREFIX directory are here.
-MNT_ALLWINESTORGE="/tmp/.$(basename $APPIMAGE).unionfs/usr/share" # Use the name of the app
-#TMP_ALLWINESTORGE_OVERLAY="/tmp/myapp" # Use the name of the app
+#MNT_ALLWINESTORGE="/tmp/.$(basename $APPIMAGE).unionfs/usr/share" # Use the name of the app
+MNT_ALLWINESTORGE="/tmp/$(basename $HERE).unionfs/usr/share" # Use $HERE instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
 TMP_ALLWINESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share"
-#WINEPREFIX="$MNT_ALLWINESTORGE" wine "$MNT_ALLWINESTORGE/drive_d/app_location/app.exe" "$@"
 
 RO_HOMESTORGE="/home/$USER/"
-MNT_HOMESTORGE="/tmp/.$(basename $APPIMAGE).unionfs/home/public_user"
+MNT_HOMESTORGE="/tmp/$(basename $HERE).unionfs/home/public_user" # Use $HERE instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
 TMP_HOMESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/home/public_user"
 ##############################################
 
@@ -614,6 +613,7 @@ cat << EOF
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 EOF
 }
+restoresavedata
 savedata_show_location
 
 
@@ -621,7 +621,7 @@ function atexit() {
 	cd $HERE	#go back to $HERE, then remove temp file
 	echo "disable" > $WINEPREFIX/.update-timestamp
 	echo "restore wine drive symlink entries"
-	rm -f $WINEPREFIX/dosdevices/*
+	rm -f "$WINEPREFIX/dosdevices"/*
 	[[ ! -L "$HERE/usr/share/$WINEARCH/dosdevices/c:" ]] && ln -sfnv ../drive_c "$WINEPREFIX/dosdevices/c:"
 	[[ ! -L "$HERE/usr/share/$WINEARCH/dosdevices/d:" ]] && ln -sfnv ../../drive_d "$WINEPREFIX/dosdevices/d:"
 	cp -nv "$HERE/usr/share/drive_d/Fonts"/* $WINEPREFIX/drive_c/windows/Fonts/
@@ -632,8 +632,8 @@ function atexit() {
 	#rm -r "$MNT_ALLWINESTORGE"
 	#echo "Removing $MNT_HOMESTORGE"
 	#rm -r "$MNT_HOMESTORGE"
-	echo "Removing /tmp/.$(basename $APPIMAGE).unionfs"
-	rm -r "/tmp/.$(basename $APPIMAGE).unionfs"
+	echo "Removing /tmp/.$(basename $HERE).unionfs"
+	rm -r "/tmp/.$(basename $HERE).unionfs"
 }
 #set -e
 #trap atexit EXIT	#NOT USED: due to some .exe(as game launcher) would pass EXIT signal after it completed to launch other .exe files. 
