@@ -173,9 +173,9 @@ while [[ -n "$1" ]] ; do
 		--portable-cache)
 			if [[ -n $APPIMAGE ]];
 			then
-				mkdir -p "${APPIMAGE}".cache/home/public_user/.cache	# run from .appimage
+				mkdir -p "$APPIMAGE".cache/home/public_user/.cache	# run from .appimage
 			else
-				mkdir -p "$HERE"/../"$(basename $HERE)".cache/home/public_user/.cache	# run directly from AppDir
+				mkdir -p "$HERE"/../"$(basename "$HERE")".cache/home/public_user/.cache	# run directly from AppDir
 			fi
 			exit ;;
 		--)
@@ -221,14 +221,14 @@ then
 	APPIMAGE_CACHE_DIR="${APPIMAGE}.cache"
 else
 	echo "directory  ${APPIMAGE}.cache/ not exist."
-	echo "all data will be saved in /tmp/$(basename ${APPIMAGE}).cache/ , which will be deleted after restart computer."
+	echo "all data will be saved in /tmp/$(basename "$APPIMAGE").cache/ , which will be deleted after restart computer."
 	echo "to keep your data, please run:"
 	echo ""
 	[[ -n $ARGV0 ]] && echo "  $ARGV0 --portable-cache" || echo "  ${APPIMAGE}/AppRun --portable-cache"
 	echo ""
 	echo "to create a cache directory."
-	mkdir -p "/tmp/$(basename ${APPIMAGE}).cache"
-	APPIMAGE_CACHE_DIR="/tmp/$(basename ${APPIMAGE}).cache"
+	mkdir -p "/tmp/$(basename "$APPIMAGE").cache"
+	APPIMAGE_CACHE_DIR="/tmp/$(basename "$APPIMAGE").cache"
 fi
 
 
@@ -456,14 +456,14 @@ function setting_list(){
 }
 
 function exe_location(){
-	EXEPATH="$(kdialog --title "select the .exe file" --getopenfilename $APPIMAGE_CACHE_DIR)"
+	EXEPATH="$(kdialog --title "select the .exe file" --getopenfilename "$APPIMAGE_CACHE_DIR")"
 	if [[ $? -eq 0 ]];	# clicked "ok"
 	then
 		# check if .exe file in appdir or in appdir.cache
-		if [[ -n $(echo $EXEPATH | grep "$(basename ${APPIMAGE_CACHE_DIR})") ]];
+		if [[ -n $(echo $EXEPATH | grep "$(basename "$APPIMAGE_CACHE_DIR")") ]];
 		then
 			EXE_LROOT=${APPIMAGE_CACHE_DIR}/usr/share	# .exe file in AppDir.cache or in *.appimage.cache directory
-		elif [[ -n $(echo $EXEPATH | grep "$(basename ${APPIMAGE})") ]];
+		elif [[ -n $(echo $EXEPATH | grep "$(basename "$APPIMAGE")") ]];
 		then
 			EXE_LROOT=$HERE/usr/share	# .exe file in AppDir, running AppRun directly from AppDir at this moment.
 		else
@@ -472,10 +472,10 @@ function exe_location(){
 			return
 		fi
 
-		TEMP="$(dirname $EXEPATH)"
+		TEMP="$(dirname "$EXEPATH")"
 		TEMP_END=""
 		while [[ -n $TEMP && $TEMP != "/" ]] ; do
-			case "$(basename $TEMP)" in
+			case "$(basename "$TEMP")" in
 				drive_d)
 					export EXE_WROOT="d"
 					#EXE_WDIR=$(apprun_realpath "$MNT_ALLWINESTORGE/drive_d" "$(dirname $EXEPATH)")
@@ -489,15 +489,15 @@ function exe_location(){
 					break
 					;;
 				*)
-					TEMP_END="$(basename $TEMP)"'\\'"$TEMP_END"
-					TEMP=$(dirname $TEMP)
+					TEMP_END="$(basename "$TEMP")"'\\'"$TEMP_END"
+					TEMP=$(dirname "$TEMP")
 					;;
 			esac
 		done
 		EXE_WDIR=${TEMP_END%'\\'}
 	fi
-	[[ -n $EXE_LROOT && -n $EXEPATH ]] && EXE_LDIR=$(apprun_realpath "$EXE_LROOT" "$(dirname $EXEPATH)")
-	[[ -n $EXEPATH ]] && EXENAME=$(basename $EXEPATH)
+	[[ -n $EXE_LROOT && -n $EXEPATH ]] && EXE_LDIR=$(apprun_realpath "$EXE_LROOT" "$(dirname "$EXEPATH")")
+	[[ -n $EXEPATH ]] && EXENAME=$(basename "$EXEPATH")
 }
 
 
@@ -508,15 +508,15 @@ function savedata_location(){
 		TEMP=$SAVEDATAPATH
 		SAVEDATA_IN_HOME=0	# 0: in game installation directory; 1: in user home.
 		while [[ -n $TEMP && $TEMP != "/" ]] ; do
-			[[ "$(basename $TEMP)" == "public_user" ]] && SAVEDATA_HOME=1
-			TEMP="$(dirname $TEMP)"
+			[[ "$(basename "$TEMP")" == "public_user" ]] && SAVEDATA_HOME=1
+			TEMP="$(dirname "$TEMP")"
 		done
 
 		# check if .exe file in appdir or in appdir.cache
-		if [[ $SAVEDATA_IN_HOME -eq 0 && -n $(echo "$SAVEDATAPATH" | grep "$(basename ${APPIMAGE_CACHE_DIR})") ]];
+		if [[ $SAVEDATA_IN_HOME -eq 0 && -n $(echo "$SAVEDATAPATH" | grep "$(basename "$APPIMAGE_CACHE_DIR")") ]];
 		then
 			SAVEDATA_LROOT=$APPIMAGE_CACHE_DIR	# directory in AppDir.cache or in *.appimage.cache directory
-		elif [[ $SAVEDATA_IN_HOME -eq 0 && -n $(echo "$SAVEDATAPATH" | grep "$(basename ${APPIMAGE})") ]];
+		elif [[ $SAVEDATA_IN_HOME -eq 0 && -n $(echo "$SAVEDATAPATH" | grep "$(basename "$APPIMAGE")") ]];
 		then
 			SAVEDATA_LROOT=$HERE	# directory in AppDir. running AppRun directly from AppDir at this moment.
 		else
@@ -591,12 +591,12 @@ if [[ $EXEINFO_GEN_FLAG -eq 1 ]];
 then
 	exeinfo_gen
 	echo "" > $MNT_ALLWINESTORGE/exeinfo_profile
-	echo EXE_LDIR=$EXE_LDIR >> $MNT_ALLWINESTORGE/exeinfo_profile
-	echo EXE_WROOT=$EXE_WROOT >> $MNT_ALLWINESTORGE/exeinfo_profile
-	echo EXE_WDIR=$EXE_WDIR >> $MNT_ALLWINESTORGE/exeinfo_profile
-	echo EXENAME=$EXENAME >> $MNT_ALLWINESTORGE/exeinfo_profile
-	echo SAVEDATA_IN_HOME=$SAVEDATA_IN_HOME >> $MNT_ALLWINESTORGE/exeinfo_profile
-	echo SAVEDATA_DIR=$SAVEDATA_DIR >> $MNT_ALLWINESTORGE/exeinfo_profile
+	echo EXE_LDIR=\"$EXE_LDIR\" >> $MNT_ALLWINESTORGE/exeinfo_profile
+	echo EXE_WROOT=\"$EXE_WROOT\" >> $MNT_ALLWINESTORGE/exeinfo_profile
+	echo EXE_WDIR=\"$EXE_WDIR\" >> $MNT_ALLWINESTORGE/exeinfo_profile
+	echo EXENAME=\"$EXENAME\" >> $MNT_ALLWINESTORGE/exeinfo_profile
+	echo SAVEDATA_IN_HOME=\"$SAVEDATA_IN_HOME\" >> $MNT_ALLWINESTORGE/exeinfo_profile
+	echo SAVEDATA_DIR=\"$SAVEDATA_DIR\" >> $MNT_ALLWINESTORGE/exeinfo_profile
 
 elif [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
 then
@@ -616,15 +616,15 @@ fi
 # monitor if the .exe is still running
 # however, if the .exe file is only a launcher to launch other .exe files. pls change below code to monitor other the correct *.exe files.
 function monitor_exe_running(){
-	if [[ -n "$(pgrep -fi $EXENAME)" ]];
+	if [[ -n "$(pgrep -fi "$EXENAME")" ]];
 	then
-		echo $(pgrep -fai $EXENAME) '-------- running'
+		echo $(pgrep -fai "$EXENAME") '-------- running'
 	fi
 
 	while true
 	do
 		sleep 5
-		if [[ -z "$(pgrep -fi $EXENAME)" ]];
+		if [[ -z "$(pgrep -fi "$EXENAME")" ]];
 		then
 			echo "$EXENAME was ended"
 			break	# the $EXENAME exe is no longer running
@@ -688,7 +688,7 @@ function atexit() {
 	#echo "Removing $MNT_HOMESTORGE"
 	#rm -r "$MNT_HOMESTORGE"
 	echo "Removing /tmp/$(basename $HERE).unionfs"
-	rm -r "/tmp/$(basename $HERE).unionfs"
+	rm -r "/tmp/$(basename "$HERE").unionfs"
 	rm -r "$APPIMAGE_CACHE_DIR/usr/share"/.unionfs* >/dev/null 2>&1
 	rm -r "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
 }
