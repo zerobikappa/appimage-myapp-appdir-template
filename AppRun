@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1643886588
+MYAPPRUN_VERSION=1643894024
 
 #############################################
 ## prevent running by root/sudo
@@ -103,9 +103,13 @@ EOF
 function print_version(){
 	if [[ -z $APPIMAGE ]];
 	then
-		APPIMAGEKIT_VERSION="AppImageKit Version: (empty)(directly running from AppDir)"
+		#APPIMAGEKIT_VERSION="AppImageKit Version: (empty)(directly running from AppDir)"
+		echo "***AppImageKit Version***"
+		echo "(empty)(directly running from AppDir)"
 	else
-		APPIMAGEKIT_VERSION="AppImageKit $($APPIMAGE --appimage-version)"
+		#APPIMAGEKIT_VERSION="AppImageKit $($APPIMAGE --appimage-version)"
+		echo "***AppImageKit Version***"	# fix printout format error
+		$APPIMAGE --appimage-version
 	fi
 	if [[ -f "$HERE/usr/share/exeinfo_profile" ]];
 	then
@@ -115,7 +119,8 @@ function print_version(){
 	APPLICATION_NAME=$(cat "$HERE"/*.desktop | grep -i "name=") && APPLICATION_NAME=${APPLICATION_NAME#*"="}
 	APPLICATION_DESCRIPTION=$(cat "$HERE"/*.desktop | grep -i "comment=") && APPLICATION_DESCRIPTION=${APPLICATION_DESCRIPTION#*"="}
 	cat << EOF
-  $APPIMAGEKIT_VERSION
+
+  ***Application Info***
   AppRun script version: $MYAPPRUN_VERSION
   .exe name: $EXENAME
   application name: $APPLICATION_NAME
