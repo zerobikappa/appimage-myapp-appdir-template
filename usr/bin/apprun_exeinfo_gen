@@ -1,0 +1,347 @@
+#!/bin/bash
+
+
+##############################################
+function apprun_realpath(){
+	# both $1 and $2 are absolute paths beginning with /
+	# returns relative path to $2/$target from $1/$source
+	source=${1%/}
+	target=${2%/}	# remove the "/" character at the end
+	
+	if [[ -z $1 || -z $2 ]];
+	then
+		echo "[apprun_realpath] error: please inpute two variables." >&2
+		exit 1
+	fi
+	
+	common_part=$source # for now
+	result="" # for now
+	
+	while [[ "${target#$common_part}" == "${target}" ]]; do
+	    # no match, means that candidate common part is not correct
+	    # go up one level (reduce common part)
+	    common_part="$(dirname $common_part)"
+	    # and record that we went back, with correct / handling
+	    if [[ -z $result ]]; then
+	        result=".."
+	    else
+	        result="../$result"
+	    fi
+	done
+
+	if [[ $common_part == "/" ]]; then
+	    # special case for root (no common path)
+	    result="$result/"
+	fi
+
+	# since we now have identified the common part,
+	# compute the non-common part
+	forward_part="${target#$common_part}"
+	
+	# and now stick all parts together
+	if [[ -n $result ]] && [[ -n $forward_part ]]; then
+	    result="$result$forward_part"
+	elif [[ -n $forward_part ]]; then
+	    # extra slash removal
+	    result="${forward_part:1}"
+	fi
+	
+	echo $result
+
+}
+
+function temp_exeinfo(){
+	TEMP_EXE_LDIR=$EXE_LDIR
+	TEMP_EXE_WROOT=$EXE_WROOT
+	TEMP_EXE_WDIR=$EXE_WDIR
+	TEMP_EXENAME=$EXENAME
+	TEMP_SAVEDATA_IN_HOME=$SAVEDATA_IN_HOME
+	TEMP_SAVEDATA_DIR=$SAVEDATA_DIR
+}
+
+function test_gui(){
+	if [[ $EXEINFO_GEN_METHOD == "gui" ]];
+	then
+		if [[ $(command -v kdialog) ]];
+		then
+			EXEINFO_GEN_METHOD="kdialog"
+		else
+			echo "kdialog not found, using commandline to read input."
+			EXEINFO_GEN_METHOD="read"
+		fi
+	elif [[ $EXEINFO_GEN_METHOD == "cli" ]];
+	then
+		EXEINFO_GEN_METHOD="read"
+	else
+		echo "unknow option $EXEINFO_GEN_METHOD" >&2
+		exit
+	fi
+
+}
+
+function exeinfo_main_menu(){
+	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
+	then
+		MENU_SELECT_ITEM=$(kdialog --title "exe info setting" --menu "select one of items to go" 1 "1. set exe file location($TEMP_EXENAME)" 2 "2. set savedata directory location($TEMP_SAVEDATA_DIR)" 3 "3. ***write into exeinfo_profile" 4 "4. ***cancel and exit without saving into exeinfo_profile" --ok-label "go" --cancel-label "close")
+		# result:
+		# $? return 0: click ok, also echo item tag(1/2/3/4)
+		# $? return 1: click cancel
+		[[ $? -eq 1 ]] && MENU_SELECT_ITEM=4
+
+	elif [[ $EXEINFO_GEN_METHOD == "read" ]];
+	then
+		while true; do
+			cat << EOF
+  current EXENAME=$TEMP_EXENAME
+  current SAVEDATA_DIR=$TEMP_SAVEDATA_DIR
+  please select one of below items:
+  1. set .exe file location
+  2. set savedata directory location
+  3. ***write into exeinfo_profile
+  4. ***cancel and exit without saving into exeinfo_profile
+EOF
+			read -p "select item (1/2/3/4):" MENU_SELECT_ITEM
+			case "$MENU_SELECT_ITEM" in
+				1| 2| 3| 4)
+					break
+					;;
+				*)
+					clear
+					echo "invalid number. please input again!"
+					;;
+			esac
+		done
+	fi
+}
+
+function handle_exe_location(){
+	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
+	then
+		TEMP_EXEPATH="$(kdialog --title "select the .exe file" --getopenfilename "$APPIMAGE_CACHE_DIR")"
+	else
+		clear
+		echo "  to go back to previous menu, please <backspace> to earse all words then push <enter>"
+		echo ""
+		echo ""
+		echo "  select .exe file location(use <tab> key for prompt)"
+		echo "  it should be under"
+		echo "  ${APPIMAGE_CACHE_DIR%.cache}/usr/share/"
+		echo "  or"
+		echo "  $APPIMAGE_CACHE_DIR/usr/share/"
+		echo ""
+		read -e -p "input .exe file path: " -i "$APPIMAGE_CACHE_DIR" TEMP_EXEPATH
+		if [[ ! -f $TEMP_EXEPATH ]];
+		then
+			echo "invalid file name: $TEMP_EXEPATH"
+			TEMP_EXEPATH=""
+			return
+		fi
+	fi
+
+	if [[ $? -eq 0 ]];	# clicked "ok"
+	then
+		# check if .exe file in appdir or in appdir.cache
+		if [[ -n $(echo $TEMP_EXEPATH | grep "$(basename "$APPIMAGE_CACHE_DIR")") ]];
+		then
+			TEMP_EXE_LROOT=${APPIMAGE_CACHE_DIR}/usr/share	# .exe file in AppDir.cache or in *.appimage.cache directory
+		elif [[ -n $(echo $TEMP_EXEPATH | grep "$(basename "$APPIMAGE")") ]];
+		then
+			TEMP_EXE_LROOT=$HERE/usr/share	# .exe file in AppDir, running AppRun directly from AppDir at this moment.
+		else
+			echo ".exe file outside of appimage dir." >&2	# outside of AppDir and *.cache. Should not install .exe outside of AppDir or *.cache.
+			TEMP_EXEPATH=""
+			return
+		fi
+
+		TEMP="$(dirname "$TEMP_EXEPATH")"
+		TEMP_END=""
+		while [[ -n $TEMP && $TEMP != "/" ]] ; do
+			case "$(basename "$TEMP")" in
+				drive_d)
+					export TEMP_EXE_WROOT="d"
+					#EXE_WDIR=$(apprun_realpath "$MNT_ALLWINESTORGE/drive_d" "$(dirname $TEMP_EXEPATH)")
+					TEMP_EXE_WDIR="$TEMP_END"
+					break
+					;;
+				drive_c)
+					export TEMP_EXE_WROOT="c"
+					#EXE_WDIR=$(apprun_realpath "$MNT_ALLWINESTORGE/$WINEARCH/drive_c" "$(dirname $TEMP_EXEPATH)")
+					TEMP_EXE_WDIR="$TEMP_END"
+					break
+					;;
+				*)
+					TEMP_END="$(basename "$TEMP")"'\\'"$TEMP_END"
+					TEMP=$(dirname "$TEMP")
+					;;
+			esac
+		done
+		TEMP_EXE_WDIR=${TEMP_END%'\\'}
+	fi
+	[[ -n $TEMP_EXE_LROOT && -n $TEMP_EXEPATH ]] && TEMP_EXE_LDIR=$(apprun_realpath "$TEMP_EXE_LROOT" "$(dirname "$TEMP_EXEPATH")")
+	[[ -n $TEMP_EXEPATH ]] && TEMP_EXENAME=$(basename "$TEMP_EXEPATH")
+}
+
+
+function handle_savedata_location(){
+	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
+	then
+		TEMP_SAVEDATAPATH=$(kdialog --title "select the directory where to save the savedata files" --getexistingdirectory $APPIMAGE_CACHE_DIR)
+	else
+		clear
+		echo "  to go back to previous menu, please <backspace> to earse all words then push <enter>"
+		echo ""
+		echo ""
+		echo "  select savedata directory location(use <tab> key for prompt)"
+		read -e -p "input savedata directory path: " -i "$APPIMAGE_CACHE_DIR" TEMP_SAVEDATAPATH
+		if [[ ! -d $TEMP_SAVEDATAPATH ]];
+		then
+			echo "invalid directory name: $TEMP_SAVEDATAPATH"
+			TEMP_SAVEDATAPATH=""
+			return
+		fi
+	fi
+
+	if [[ $? -eq 0 ]];
+	then
+		TEMP=$SAVEDATAPATH
+		TEMP_SAVEDATA_IN_HOME=0	# 0: in game installation directory; 1: in user home.
+		while [[ -n $TEMP && $TEMP != "/" ]] ; do
+			[[ "$(basename "$TEMP")" == "public_user" ]] && TEMP_SAVEDATA_HOME=1
+			TEMP="$(dirname "$TEMP")"
+		done
+
+		# check if .exe file in appdir or in appdir.cache
+		if [[ $TEMP_SAVEDATA_IN_HOME -eq 0 && -n $(echo "$TEMP_SAVEDATAPATH" | grep "$(basename "$APPIMAGE_CACHE_DIR")") ]];
+		then
+			TEMP_SAVEDATA_LROOT=$APPIMAGE_CACHE_DIR	# directory in AppDir.cache or in *.appimage.cache directory
+		elif [[ $TEMP_SAVEDATA_IN_HOME -eq 0 && -n $(echo "$TEMP_SAVEDATAPATH" | grep "$(basename "$APPIMAGE")") ]];
+		then
+			TEMP_SAVEDATA_LROOT=$HERE	# directory in AppDir. running AppRun directly from AppDir at this moment.
+		else
+			kdialog --error "savedata directory outside of appimage dir."	# outside of AppDir and *.appimage.
+			TEMP_SAVEDATAPATH=""
+			return
+		fi
+
+
+		if [[ TEMP_SAVEDATA_IN_HOME -eq 0 ]];
+		then
+			TEMP_SAVEDATA_DIR=$(apprun_realpath "${TEMP_SAVEDATA_LROOT}/usr/share" "$TEMP_SAVEDATAPATH")
+		elif [[ TEMP_SAVEDATA_IN_HOME -eq 1 ]];
+		then
+			TEMP_SAVEDATA_DIR=$(apprun_realpath "${TEMP_SAVEDATA_LROOT}/home/public_user" "$TEMP_SAVEDATAPATH")
+		else
+			echo "[AppRun:savedata_location] error: unknown SAVEDATA_IN_HOME, SAVEDATA_IN_HOME=$TEMP_SAVEDATA_IN_HOME"
+			exit
+		fi
+
+	fi
+}
+
+function write_exeinfo(){
+	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
+	then
+		kdialog --warningcontinuecancel "write into exeinfo_profile?"
+		RETURN_NUMBER=$?
+	elif [[ $EXEINFO_GEN_METHOD == "read" ]];
+	then
+		while true; do
+			read -p "write into exeinfo_profile?(y/n): " RETURN_NUMBER
+			case $RETURN_NUMBER in
+				y| Y| yes| YES)
+					RETURN_NUMBER=0
+					break
+					;;
+				n| N| no| NO)
+					RETURN_NUMBER=1
+					break
+					;;
+				*)
+					;;
+			esac
+		done
+	else
+		return
+	fi
+
+	if [[ ! $RETURN_NUMBER -eq 0 ]];
+	then
+		$RETURN_NUMBER=""
+		return
+	fi
+
+	echo "" > "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
+	echo EXE_LDIR=\"$TEMP_EXE_LDIR\" >> "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
+	echo EXE_WROOT=\"$TEMP_EXE_WROOT\" >> "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
+	echo EXE_WDIR=\"$TEMP_EXE_WDIR\" >> "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
+	echo EXENAME=\"$TEMP_EXENAME\" >> "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
+	echo SAVEDATA_IN_HOME=\"$TEMP_SAVEDATA_IN_HOME\" >> "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
+	echo SAVEDATA_DIR=\"$TEMP_SAVEDATA_DIR\" >> "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
+
+	echo "saved into $APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
+	exit
+
+}
+
+function exeinfo_confirm_exit(){
+	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
+	then
+		kdialog --yesno "exit exeinfo setting?"
+		RETURN_NUMBER=$?
+	elif [[ $EXEINFO_GEN_METHOD == "read" ]];
+	then
+		while true; do
+			read -p "exit exeinfo setting?(y/n): " RETURN_NUMBER
+			case $RETURN_NUMBER in
+				y| Y| yes| YES)
+					RETURN_NUMBER=0
+					break
+					;;
+				n| N| no| NO)
+					RETURN_NUMBER=1
+					break
+					;;
+				*)
+					;;
+			esac
+		done
+	else
+		return
+	fi
+
+	if [[ $RETURN_NUMBER -eq 0 ]];
+	then
+		exit
+	elif [[ $RETURN_NUMBER -eq 1 ]];
+	then
+		return
+	else
+		echo "[AppRun_exeinfo_gen:exeinfo_confirm_exit] unknow error"
+		exit
+	fi
+}
+
+clear
+temp_exeinfo
+test_gui
+while true; do
+	exeinfo_main_menu
+	clear
+	if [[ $MENU_SELECT_ITEM -eq 1 ]];
+	then 
+		handle_exe_location
+	elif [[ $MENU_SELECT_ITEM -eq 2 ]];
+	then
+		handle_savedata_location
+	elif [[ $MENU_SELECT_ITEM -eq 3 ]];
+	then
+		write_exeinfo
+	elif [[ $MENU_SELECT_ITEM -eq 4 ]];
+	then
+		exeinfo_confirm_exit
+	fi
+done
+##############################################
+
+
+

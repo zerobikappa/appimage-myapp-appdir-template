@@ -85,7 +85,7 @@ test option:
 	use this option to test or install windows application.
 	when this option set, -s and -w will be ignored.
 
-  --exeinfo-gen
+  --exeinfo-gen[=gui|cli]
 	after install windows application in AppDir,
 	run ./AppRun with this option to generate
 	exeinfo_profile.
@@ -169,7 +169,19 @@ while [[ -n "$1" ]] ; do
 			shift ;;
 		--exeinfo-gen)
 			EXEINFO_GEN_FLAG=1
-			shift ;;
+			if [[ $2 == "gui" ]];
+			then
+				EXEINFO_GEN_METHOD="gui"
+				shift 2
+			elif [[ $2 == "cli" ]];
+			then
+				EXEINFO_GEN_METHOD="cli"
+				shift 2
+			else
+				EXEINFO_GEN_METHOD="gui"
+				shift
+			fi
+			;;
 		--portable-cache)
 			if [[ -n $APPIMAGE ]];
 			then
@@ -281,10 +293,17 @@ then
 	. $HERE/usr/share/exeinfo_profile
 fi
 
+if [[ $EXEINFO_GEN_FLAG -eq 1 ]];
+then
+	. $HERE/usr/bin/apprun_exeinfo_gen
+	exit
+fi
+
 if [[ -z $EXENAME ]];
 then
 	echo "EXENAME not found in config file. auto set --test-winetricks , redirect to launch winetricks"
 	TEST_WINETRICKS_FLAG=1
+	EXENAME="$HERE/usr/bin/winetricks"
 fi
 
 if [[ $TEST_WINETRICKS_FLAG -eq 1 || $EXEINFO_GEN_FLAG -eq 1 ]];	# if --exeinfo-gen or --test-winetricks is set, then -s and -w will be ignored.
@@ -403,169 +422,6 @@ function restoresavedata(){
 
 
 ##############################################
-function apprun_realpath(){
-	# both $1 and $2 are absolute paths beginning with /
-	# returns relative path to $2/$target from $1/$source
-	source=${1%/}
-	target=${2%/}	# remove the "/" character at the end
-	
-	if [[ -z $1 || -z $2 ]];
-	then
-		echo "[apprun_realpath] error: please inpute two variables." >&2
-		exit 1
-	fi
-	
-	common_part=$source # for now
-	result="" # for now
-	
-	while [[ "${target#$common_part}" == "${target}" ]]; do
-	    # no match, means that candidate common part is not correct
-	    # go up one level (reduce common part)
-	    common_part="$(dirname $common_part)"
-	    # and record that we went back, with correct / handling
-	    if [[ -z $result ]]; then
-	        result=".."
-	    else
-	        result="../$result"
-	    fi
-	done
-
-	if [[ $common_part == "/" ]]; then
-	    # special case for root (no common path)
-	    result="$result/"
-	fi
-
-	# since we now have identified the common part,
-	# compute the non-common part
-	forward_part="${target#$common_part}"
-	
-	# and now stick all parts together
-	if [[ -n $result ]] && [[ -n $forward_part ]]; then
-	    result="$result$forward_part"
-	elif [[ -n $forward_part ]]; then
-	    # extra slash removal
-	    result="${forward_part:1}"
-	fi
-	
-	echo $result
-
-}
-
-function setting_list(){
-	kdialog --title "exe info setting" --menu "select one of items to go" 1 "set exe file location($EXENAME)" 2 "set savedata directory location($SAVEDATA_DIR)" --ok-label "go" --cancel-label "close" 
-}
-
-function exe_location(){
-	EXEPATH="$(kdialog --title "select the .exe file" --getopenfilename "$APPIMAGE_CACHE_DIR")"
-	if [[ $? -eq 0 ]];	# clicked "ok"
-	then
-		# check if .exe file in appdir or in appdir.cache
-		if [[ -n $(echo $EXEPATH | grep "$(basename "$APPIMAGE_CACHE_DIR")") ]];
-		then
-			EXE_LROOT=${APPIMAGE_CACHE_DIR}/usr/share	# .exe file in AppDir.cache or in *.appimage.cache directory
-		elif [[ -n $(echo $EXEPATH | grep "$(basename "$APPIMAGE")") ]];
-		then
-			EXE_LROOT=$HERE/usr/share	# .exe file in AppDir, running AppRun directly from AppDir at this moment.
-		else
-			kdialog --error ".exe file outside of appimage dir."	# outside of AppDir and *.appimage. Should not install .exe outside of AppDir or *.appimage.
-			EXEPATH=""
-			return
-		fi
-
-		TEMP="$(dirname "$EXEPATH")"
-		TEMP_END=""
-		while [[ -n $TEMP && $TEMP != "/" ]] ; do
-			case "$(basename "$TEMP")" in
-				drive_d)
-					export EXE_WROOT="d"
-					#EXE_WDIR=$(apprun_realpath "$MNT_ALLWINESTORGE/drive_d" "$(dirname $EXEPATH)")
-					EXE_WDIR="$TEMP_END"
-					break
-					;;
-				drive_c)
-					export EXE_WROOT="c"
-					#EXE_WDIR=$(apprun_realpath "$MNT_ALLWINESTORGE/$WINEARCH/drive_c" "$(dirname $EXEPATH)")
-					EXE_WDIR="$TEMP_END"
-					break
-					;;
-				*)
-					TEMP_END="$(basename "$TEMP")"'\\'"$TEMP_END"
-					TEMP=$(dirname "$TEMP")
-					;;
-			esac
-		done
-		EXE_WDIR=${TEMP_END%'\\'}
-	fi
-	[[ -n $EXE_LROOT && -n $EXEPATH ]] && EXE_LDIR=$(apprun_realpath "$EXE_LROOT" "$(dirname "$EXEPATH")")
-	[[ -n $EXEPATH ]] && EXENAME=$(basename "$EXEPATH")
-}
-
-
-function savedata_location(){
-	SAVEDATAPATH=$(kdialog --title "select the directory where to save the savedata files" --getexistingdirectory $APPIMAGE_CACHE_DIR)
-	if [[ $? -eq 0 ]];
-	then
-		TEMP=$SAVEDATAPATH
-		SAVEDATA_IN_HOME=0	# 0: in game installation directory; 1: in user home.
-		while [[ -n $TEMP && $TEMP != "/" ]] ; do
-			[[ "$(basename "$TEMP")" == "public_user" ]] && SAVEDATA_HOME=1
-			TEMP="$(dirname "$TEMP")"
-		done
-
-		# check if .exe file in appdir or in appdir.cache
-		if [[ $SAVEDATA_IN_HOME -eq 0 && -n $(echo "$SAVEDATAPATH" | grep "$(basename "$APPIMAGE_CACHE_DIR")") ]];
-		then
-			SAVEDATA_LROOT=$APPIMAGE_CACHE_DIR	# directory in AppDir.cache or in *.appimage.cache directory
-		elif [[ $SAVEDATA_IN_HOME -eq 0 && -n $(echo "$SAVEDATAPATH" | grep "$(basename "$APPIMAGE")") ]];
-		then
-			SAVEDATA_LROOT=$HERE	# directory in AppDir. running AppRun directly from AppDir at this moment.
-		else
-			kdialog --error "savedata directory outside of appimage dir."	# outside of AppDir and *.appimage.
-			SAVEDATAPATH=""
-			return
-		fi
-
-
-		if [[ SAVEDATA_IN_HOME -eq 0 ]];
-		then
-			SAVEDATA_DIR=$(apprun_realpath "${SAVEDATA_LROOT}/usr/share" "$SAVEDATAPATH")
-		elif [[ SAVEDATA_IN_HOME -eq 1 ]];
-		then
-			SAVEDATA_DIR=$(apprun_realpath "${SAVEDATA_LROOT}/home/public_user" "$SAVEDATAPATH")
-		else
-			echo "[AppRun:savedata_location] error: unknown SAVEDATA_IN_HOME, SAVEDATA_IN_HOME=$SAVEDATA_IN_HOME"
-			exit
-		fi
-
-	fi
-}
-
-
-function exeinfo_gen(){
-	while true; do
-		SELECT_RETURN=$(setting_list)
-		SETTING_LIST_STATUS_RETURN=$?
-		if [[ $SETTING_LIST_STATUS_RETURN -eq 0 ]];
-		then
-			if [[ $SELECT_RETURN -eq 1 ]];
-			then 
-				exe_location
-			elif [[ $SELECT_RETURN -eq 2 ]];
-			then
-				savedata_location
-			else
-				kdialog --msgbox "No item was selected.\n Please select one of items to go."
-			fi
-		else
-			break
-		fi
-	done
-}
-##############################################
-
-
-
-##############################################
 ## test runtime env
 function debug_show(){
 	cat << EOF
@@ -587,20 +443,8 @@ EOF
 
 export LANG=ja_JP.UTF-8
 
-if [[ $EXEINFO_GEN_FLAG -eq 1 ]];
+if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
 then
-	exeinfo_gen
-	echo "" > $MNT_ALLWINESTORGE/exeinfo_profile
-	echo EXE_LDIR=\"$EXE_LDIR\" >> $MNT_ALLWINESTORGE/exeinfo_profile
-	echo EXE_WROOT=\"$EXE_WROOT\" >> $MNT_ALLWINESTORGE/exeinfo_profile
-	echo EXE_WDIR=\"$EXE_WDIR\" >> $MNT_ALLWINESTORGE/exeinfo_profile
-	echo EXENAME=\"$EXENAME\" >> $MNT_ALLWINESTORGE/exeinfo_profile
-	echo SAVEDATA_IN_HOME=\"$SAVEDATA_IN_HOME\" >> $MNT_ALLWINESTORGE/exeinfo_profile
-	echo SAVEDATA_DIR=\"$SAVEDATA_DIR\" >> $MNT_ALLWINESTORGE/exeinfo_profile
-
-elif [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
-then
-	EXENAME="$HERE/usr/bin/winetricks"
 	$HERE/usr/bin/winetricks sandbox
 	$HERE/usr/bin/winetricks "$@"
 else
