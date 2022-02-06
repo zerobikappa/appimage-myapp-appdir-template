@@ -131,7 +131,7 @@ function handle_exe_location(){
 		echo "  it should be under"
 		echo "  (cache dir:) $APPIMAGE_CACHE_DIR/usr/share/"
 		echo "  or"
-		echo "  (app dir:) ${HERE}/usr/share/"
+		echo "  (app dir:) ${APPDIR}/usr/share/"
 		echo "##################################################"
 		echo ""
 		read -e -p "input .exe file path: " -i "$APPIMAGE_CACHE_DIR" TEMP_EXEPATH
@@ -155,9 +155,9 @@ function handle_exe_location(){
 		then
 			TEMP_EXE_LROOT=${APPIMAGE_CACHE_DIR}/usr/share	# .exe file in AppDir.cache or in *.appimage.cache directory
 		#elif [[ -n $(echo $TEMP_EXEPATH | grep "$(basename "$APPIMAGE")") ]];
-		elif [[ "${TEMP_EXEPATH#"$HERE/usr/share"}" != "$TEMP_EXEPATH" ]];
+		elif [[ "${TEMP_EXEPATH#"$APPDIR/usr/share"}" != "$TEMP_EXEPATH" ]];
 		then
-			TEMP_EXE_LROOT=$HERE/usr/share	# .exe file in AppDir, running AppRun directly from AppDir at this moment.
+			TEMP_EXE_LROOT=$APPDIR/usr/share	# .exe file in AppDir, running AppRun directly from AppDir at this moment.
 		else
 			clear
 			echo "########################################"
@@ -212,7 +212,7 @@ function handle_savedata_location(){
 		echo "  it should be under:"
 		echo "  (game folder under cache dir:) ${APPIMAGE_CACHE_DIR}/usr/share/"
 		echo "  or"
-		echo "  (game folder under app dir:) ${HERE}/usr/share/"
+		echo "  (game folder under app dir:) ${APPDIR}/usr/share/"
 		echo "  or"
 		echo "  (fake home:) ${APPIMAGE_CACHE_DIR}/home/public_user/"
 		echo "##################################################"
@@ -245,7 +245,7 @@ function handle_savedata_location(){
 			TEMP_SAVEDATA_LROOT=$APPIMAGE_CACHE_DIR	# directory in AppDir.cache or in *.appimage.cache directory
 		elif [[ $TEMP_SAVEDATA_IN_HOME -eq 0 && -n $(echo "$TEMP_SAVEDATAPATH" | grep "$(basename "$APPIMAGE")") ]];
 		then
-			TEMP_SAVEDATA_LROOT=$HERE	# directory in AppDir. running AppRun directly from AppDir at this moment.
+			TEMP_SAVEDATA_LROOT=$APPDIR	# directory in AppDir. running AppRun directly from AppDir at this moment.
 		else
 			clear
 			echo "########################################"

@@ -1,0 +1,553 @@
+#!/bin/bash
+
+# AppRun Script version
+# date -u +%s
+MYAPPRUN_VERSION=1644167047
+
+#############################################
+## prevent running by root/sudo
+if [[ $(id -u) -eq 0 ]];
+then
+	echo "[AppRun]: prevent running by root/sudo"
+	echo "[AppRun]: you should not using root/sudo to run this application"
+	exit
+fi
+#############################################
+
+
+#############################################
+## env settings
+SELF=$(readlink -f "$0")
+#HERE=${SELF%/*}
+[[ -z $APPDIR ]] && APPDIR=${SELF%/usr/bin/*}	# moved script from HERE(AppDir) to HERE/usr/bin, therefore use $APPDIR to replace $HERE
+export PATH="${APPDIR}/usr/bin/:${APPDIR}/usr/sbin/:${APPDIR}/usr/games/:${APPDIR}/bin/:${APPDIR}/sbin/${PATH:+:$PATH}"
+export LD_LIBRARY_PATH="${APPDIR}/usr/lib/:${APPDIR}/usr/lib/i386-linux-gnu/:${APPDIR}/usr/lib/x86_64-linux-gnu/:${APPDIR}/usr/lib32/:${APPDIR}/usr/lib64/:${APPDIR}/lib/:${APPDIR}/lib/i386-linux-gnu/:${APPDIR}/lib/x86_64-linux-gnu/:${APPDIR}/lib32/:${APPDIR}/lib64/${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export PYTHONPATH="${APPDIR}/usr/share/pyshared/${PYTHONPATH:+:$PYTHONPATH}"
+export XDG_DATA_DIRS="${APPDIR}/usr/share/${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
+export PERLLIB="${APPDIR}/usr/share/perl5/:${APPDIR}/usr/lib/perl5/${PERLLIB:+:$PERLLIB}"
+export GSETTINGS_SCHEMA_DIR="${APPDIR}/usr/share/glib-2.0/schemas/${GSETTINGS_SCHEMA_DIR:+:$GSETTINGS_SCHEMA_DIR}"
+export QT_PLUGIN_PATH="${APPDIR}/usr/lib/qt4/plugins/:${APPDIR}/usr/lib/i386-linux-gnu/qt4/plugins/:${APPDIR}/usr/lib/x86_64-linux-gnu/qt4/plugins/:${APPDIR}/usr/lib32/qt4/plugins/:${APPDIR}/usr/lib64/qt4/plugins/:${APPDIR}/usr/lib/qt5/plugins/:${APPDIR}/usr/lib/i386-linux-gnu/qt5/plugins/:${APPDIR}/usr/lib/x86_64-linux-gnu/qt5/plugins/:${APPDIR}/usr/lib32/qt5/plugins/:${APPDIR}/usr/lib64/qt5/plugins/${QT_PLUGIN_PATH:+:$QT_PLUGIN_PATH}"
+#EXEC=$(grep -e '^Exec=.*' "${APPDIR}"/*.desktop | head -n 1 | cut -d "=" -f 2 | cut -d " " -f 1)
+#exec "${EXEC}" "$@"
+#############################################
+
+
+##############################################
+## setup WINE env
+if [[ "$WINEARCH" == "win32" ]];
+then
+	export WINEARCH=win32
+else
+	export WINEARCH=win64	# default to run win64
+fi
+echo "*****using $WINEARCH"
+export WINEPREFIX="$MNT_ALLWINESTORGE/$WINEARCH"
+
+if [[ -z $WINEDEBUG ]];
+then
+	export WINEDEBUG=-all	# default to prevent wine showing "fixeme" message.
+fi
+
+export WINEDLLOVERRIDES=winemenubuilder.exe=d	# prevent wine setup application menu
+##############################################
+
+
+##############################################
+## test runtime env
+function debug_show(){
+	cat << EOF
+APPIMAGE=$APPIMAGE
+APPDIR=$APPDIR
+OWD=$OWD
+ARGV0=$ARGV0
+\$0=$0
+EOF
+}
+[[ MYAPPDEBUG -eq 1 ]] && debug_show
+##############################################
+
+
+##############################################
+function print_help(){
+	cat << EOF
+run option:
+
+  -s, --savedata
+	load the full-completed savedata
+
+  -w, --walkthrough
+	open walkthrough with browser
+
+  --browser=BROWSER_COMMAND
+	only effect when -w is set.
+	using another browser application to open
+	walkthrough. for example, "--browser=firefox"
+	means using firefox to open walkthrough.html
+
+  --portable-cache
+	create \${APPIMAGE}.cache directory then exit.
+	when running appimage, \$HOME and \$XDG_CONFIG_HOME
+	will be redirect to this directory to prevent
+	changing files in local \$HOME.
+
+  -h, --help
+	show this help then exit
+
+  --version
+	show application information and version
+
+
+test option:
+
+  -t, --test-winetricks
+	open winetricks in temporary directory,
+	use this option to test or install windows application.
+	when this option set, -s and -w will be ignored.
+
+  --exeinfo-gen[=gui|cli]
+	after install windows application in AppDir,
+	run ./AppRun with this option to generate
+	exeinfo_profile.
+
+
+appimage option:
+
+  --appimage-help
+	show help about appimage function
+
+  --appimage-extract [<pattern>]
+	Extract content from embedded filesystem image
+	If pattern is passed, only extract matching files
+
+EOF
+}
+
+function print_version(){
+	if [[ -z $APPIMAGE ]];
+	then
+		#APPIMAGEKIT_VERSION="AppImageKit Version: (empty)(directly running from AppDir)"
+		echo "***AppImageKit Version***"
+		echo "(empty)(directly running from AppDir)"
+	else
+		#APPIMAGEKIT_VERSION="AppImageKit $($APPIMAGE --appimage-version)"
+		echo "***AppImageKit Version***"	# fix printout format error
+		$APPIMAGE --appimage-version
+	fi
+	if [[ -f "$APPDIR/usr/share/exeinfo_profile" ]];
+	then
+		. "$APPDIR/usr/share/exeinfo_profile"
+	fi
+	[[ -z $EXENAME ]] && EXENAME="(empty)(not set in AppDir)"
+	APPLICATION_NAME=$(cat "$APPDIR"/*.desktop | grep -i "name=") && APPLICATION_NAME=${APPLICATION_NAME#*"="}
+	APPLICATION_DESCRIPTION=$(cat "$APPDIR"/*.desktop | grep -i "comment=") && APPLICATION_DESCRIPTION=${APPLICATION_DESCRIPTION#*"="}
+	cat << EOF
+
+  ***Application Info***
+  AppRun script version: $MYAPPRUN_VERSION
+  .exe name: $EXENAME
+  application name: $APPLICATION_NAME
+  application description: $APPLICATION_DESCRIPTION
+
+EOF
+}
+
+#parameters=$(getopt -o swth --long save-data,walkthrough,browser:,test-winetricks,help -n "$0" -- "$@")	# NOT USED: because $(getopt) cannot ignore unknown options
+parameters=$(echo "$@"|tr "=" " ")
+eval set -- "$parameters"
+
+function is_option(){
+	if [[ ${1::1} == "-" ]];
+	then
+		return 0
+	else
+		return 1
+	fi
+}
+
+
+function handle_option(){
+	while [[ -n "$1" ]] ; do
+		case "$1" in
+			-h| --help)
+				print_help
+				exit ;;
+			--version)
+				print_version
+				exit ;;
+			-s| --savedata)
+				SAVEDATA_FLAG=1
+				shift ;;
+			-w| --walkthrough)
+				WALKTHROUGH_FLAG=1
+				shift ;;
+			--browser)
+				#i3-sensible-browser will choose $BROWSER to open walkthrough first
+				is_option $2 && echo "invalid option $1" >&2 && exit 1
+				BROWSER="$2"
+				shift 2;;
+			-t| --test-winetricks)
+				TEST_WINETRICKS_FLAG=1
+				shift ;;
+			--exeinfo-gen)
+				EXEINFO_GEN_FLAG=1
+				if [[ $2 == "gui" ]];
+				then
+					EXEINFO_GEN_METHOD="gui"
+					shift 2
+				elif [[ $2 == "cli" ]];
+				then
+					EXEINFO_GEN_METHOD="cli"
+					shift 2
+				else
+					EXEINFO_GEN_METHOD="gui"
+					shift
+				fi
+				;;
+			--portable-cache)
+				if [[ -n $APPIMAGE ]];
+				then
+					mkdir -p "$APPIMAGE".cache/home/public_user/.cache	# run from .appimage
+				else
+					mkdir -p "$APPDIR"/../"$(basename "$APPDIR")".cache/home/public_user/.cache	# run directly from AppDir
+				fi
+				exit ;;
+			--)
+				shift
+				if [[ -z "$@" && -z "$next_parameters" ]];
+				then
+					break
+				elif [[ ! $MYAPPDEBUG -eq 1 ]];
+				then
+					echo "[AppRun] error: not MYAPPDEBUG mode now. prevent to pass any unknown option." >&2
+					echo "[AppRun] error: unknown options: $next_parameters $@" >&2
+					exit
+				else
+					next_parameters="$next_parameters $@"	# then $next_parameters will be passed to wine
+					break
+				fi
+				;;
+			*) 
+				if [[ $MYAPPDEBUG -eq 1 ]];
+				then
+					next_parameters="$next_parameters $1"
+					shift
+				else
+					echo "[AppRun] error: not MYAPPDEBUG mode now. prevent to pass any unknow option." >&2
+					echo "[AppRun] error: unknown options: $1" >&2
+					exit
+				fi
+				;;
+		esac
+	done
+	eval set -- "$next_parameters"
+}
+
+
+##############################################
+## check *.cache directory
+if [[ -z ${APPIMAGE} ]];	# if run directly from AppDir
+then
+	export APPIMAGE="$APPDIR"
+fi
+
+if [[ -d ${APPIMAGE}.cache ]];
+then
+	APPIMAGE_CACHE_DIR="${APPIMAGE}.cache"
+else
+	echo "directory  ${APPIMAGE}.cache/ not exist."
+	echo "all data will be saved in /tmp/$(basename "$APPIMAGE").cache/ , which will be deleted after restart computer."
+	echo "to keep your data, please run:"
+	echo ""
+	[[ -n $ARGV0 ]] && echo "  $ARGV0 --portable-cache" || echo "  ${APPIMAGE}/AppRun --portable-cache"
+	echo ""
+	echo "to create a cache directory."
+	mkdir -p "/tmp/$(basename "$APPIMAGE").cache"
+	APPIMAGE_CACHE_DIR="/tmp/$(basename "$APPIMAGE").cache"
+fi
+##############################################
+
+
+##############################################
+## setup unionfs temp directory for this app
+RO_ALLWINESTORGE="$APPDIR/usr/share/" # Use the location where contain $WINEPREFIX, both win32 and win64 WINEPREFIX directory are here.
+#MNT_ALLWINESTORGE="/tmp/.$(basename $APPIMAGE).unionfs/usr/share" # Use the name of the app
+MNT_ALLWINESTORGE="/tmp/$(basename $APPDIR).unionfs/usr/share" # Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
+TMP_ALLWINESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share"
+
+RO_HOMESTORGE="/home/$USER/"
+MNT_HOMESTORGE="/tmp/$(basename $APPDIR).unionfs/home/public_user" # Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
+TMP_HOMESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/home/public_user"
+##############################################
+
+
+##############################################
+## setup standalone $HOME and $XDG_CONFIG_HOME directory
+if [[ ! -d ${APPIMAGE_CACHE_DIR}/home/public_user/.config ]];
+then
+	mkdir -p "${APPIMAGE_CACHE_DIR}/home/public_user/.config"
+fi
+
+if [[ -d ${APPIMAGE}.home ]];
+then
+	echo "${APPIMAGE}.home exists but is not necessary."
+	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/ to save related files."
+fi
+export HOME=$MNT_HOMESTORGE
+
+if [[ -d ${APPIMAGE}.config ]];
+then
+	echo "${APPIMAGE}.config exists but is not necessary."
+	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/.config to save related files."
+fi
+export XDG_CONFIG_HOME="$MNT_HOMESTORGE/.config"
+
+##############################################
+
+
+##############################################
+if [[ -f $APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile ]];
+then
+	. $APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile
+elif [[ -f $APPDIR/usr/share/exeinfo_profile ]];
+then
+	. $APPDIR/usr/share/exeinfo_profile
+fi
+
+if [[ $EXEINFO_GEN_FLAG -eq 1 && $EXEINFO_GEN_METHOD == "cli" ]];
+then
+	. $APPDIR/usr/bin/myapp-plugin-exeinfo-gen
+	exit
+fi
+
+if [[ -z $EXENAME ]];
+then
+	echo "EXENAME not found in config file. auto set --test-winetricks , redirect to launch winetricks"
+	TEST_WINETRICKS_FLAG=1
+	EXENAME="$APPDIR/usr/bin/winetricks"
+fi
+
+if [[ $TEST_WINETRICKS_FLAG -eq 1 || $EXEINFO_GEN_FLAG -eq 1 ]];	# if --exeinfo-gen or --test-winetricks is set, then -s and -w will be ignored.
+then
+	[[ $SAVEDATA_FLAG -eq 1 ]] && SAVEDATA_FLAG=0 && echo "--savedata option ignored"
+	[[ $WALKTHROUGH_FLAG -eq 1 ]] && WALKTHROUGH_FLAG=0 && echo "--walkthrough option ignored"
+fi
+
+if [[ $EXEINFO_GEN_FLAG -eq 1 ]];	# if --exeinfo-gen is set, then -t will be ignored.
+then
+	[[ $TEST_WINETRICKS_FLAG -eq 1 ]] && TEST_WINETRICKS_FLAG=0 && echo "--test-winetricks option ignored"
+fi
+
+#before setup unionfs temp directory, check if exe is already running
+if [[ -n "$(pgrep -fi $EXENAME)" ]];
+then 
+	echo "seems $EXENAME has been launched and is still running, plsease kill the process if the application encountered error" >&2
+	exit 1
+fi
+
+mkdir -p "$MNT_ALLWINESTORGE" "$TMP_ALLWINESTORGE_OVERLAY"
+#$APPDIR/usr/bin/unionfs -o use_ino,nonempty,uid=$UID -ocow "$TMP_ALLWINESTORGE_OVERLAY"=RW:"$RO_ALLWINESTORGE"=RO "$MNT_ALLWINESTORGE" || exit 1
+$APPDIR/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_ALLWINESTORGE_OVERLAY"=RW:"$RO_ALLWINESTORGE"=RO "$MNT_ALLWINESTORGE" || exit 1
+
+mkdir -p "$MNT_HOMESTORGE" "$TMP_HOMESTORGE_OVERLAY"
+$APPDIR/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_HOMESTORGE_OVERLAY"=RW:"$RO_HOMESTORGE"=RO "$MNT_HOMESTORGE" || exit 1
+##############################################
+
+
+##############################################
+## show the game walkthrough, you can see this info when using commandline to launch this app.
+function walkthrough_browser(){
+	cat << EOF
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+@
+@
+  you can also click below html file to show game walkthrough:
+@
+  file://$MNT_ALLWINESTORGE/drive_d/walkthrough.html"
+@
+@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+
+EOF
+	#todo: failed to using xdg-open to open html file.
+	i3-sensible-browser "$MNT_ALLWINESTORGE/drive_d/walkthrough.html"
+}
+
+[[ $WALKTHROUGH_FLAG -eq 1 ]] && walkthrough_browser
+
+##############################################
+
+
+##############################################
+## copy game savedata, no need to use if the game savedata was save at the game installed folder.
+#function copysavedata1() {	# use if the game savedata was in windows user folder
+#	mkdir -p "$MNT_ALLWINESTORGE/$WINEARCH/myapp_savedata_location"	# use the path where the savedata is.
+#	cp -rfv "$APPDIR/usr/share/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$WINEARCH/myapp_savedata_location"	# use the path where the savedata is in. if the savedata was in drive_c/users/your_username/, you can use $USER to replace your username.
+#}
+#
+#function copysavedata2() {	# use if the game savedata was in game installation folder
+#	cp -rfv "$APPDIR/usr/share/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"	# use the path where the savedata is in. if the savedata was in drive_c/users/your_username/, you can use $USER to replace your username.
+#}
+
+function copysavedata(){
+	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
+	then
+		mkdir -p "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+		cp -r --suffix=.myapp.$USER.backup "$MNT_ALLWINESTORGE/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+	elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
+	then
+		mkdir -p "$MNT_HOMESTORGE/$SAVEDATA_DIR"
+		cp -r --suffix=.myapp.$USER.backup "$MNT_ALLWINESTORGE/drive_d/savedata"/* "$MNT_HOMESTORGE/$SAVEDATA_DIR"
+	fi
+}
+
+function restoresavedata(){
+	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
+	then
+		FIND_DIR="$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+	elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
+	then
+		FIND_DIR="$MNT_HOMESTORGE/$SAVEDATA_DIR"
+	else
+		echo "[AppRun:restoresavedata] error: invalid FIND_DIR, cannot recover user savedata"
+	fi
+
+	for SAVEDATA_BACKUP in $(find $FIND_DIR -type f -name "*.myapp.$USER.backup"); do
+		mv -f $SAVEDATA_BACKUP ${SAVEDATA_BACKUP%".myapp.$USER.backup"}
+	done
+}
+[[ $SAVEDATA_FLAG -eq 1 ]] && copysavedata
+
+##############################################
+
+
+
+##############################################
+## test runtime env
+function debug_show(){
+	cat << EOF
+ready.
+
+HOME=$HOME
+XDG_CONFIG_HOME=$XDG_CONFIG_HOME
+APPIMAGE=$APPIMAGE
+APPDIR=$APPDIR
+OWD=$OWD
+ARGV0=$ARGV0
+EOF
+}
+##############################################
+
+
+##############################################
+## launch app
+
+#export LANG=ja_JP.UTF-8
+export LANG=zh_CN.UTF-8
+
+if [[ $EXEINFO_GEN_FLAG -eq 1 && $EXEINFO_GEN_METHOD == "gui" ]];
+then
+	. $APPDIR/usr/bin/myapp-plugin-exeinfo-gen
+	exit
+fi
+
+if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
+then
+	$APPDIR/usr/bin/winetricks sandbox
+	$APPDIR/usr/bin/winetricks "$@"
+else
+	cd "$MNT_ALLWINESTORGE/$EXE_LDIR" # Use the app installed location. Some .exe may not run if not cd into excute directory
+	winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path because winetricks sandbox was set.
+fi
+
+
+##############################################
+
+
+##############################################
+# monitor if the .exe is still running
+# however, if the .exe file is only a launcher to launch other .exe files. pls change below code to monitor other the correct *.exe files.
+function monitor_exe_running(){
+	if [[ -n "$(pgrep -fi "$EXENAME")" ]];
+	then
+		echo $(pgrep -fai "$EXENAME") '-------- running'
+	fi
+
+	while true
+	do
+		sleep 5
+		if [[ -z "$(pgrep -fi "$EXENAME")" ]];
+		then
+			echo "$EXENAME was ended"
+			break	# the $EXENAME exe is no longer running
+		fi
+	done
+}
+#function monitor_winetricks_running(){
+#	if [[ -n "$(pgrep -fai $(basename $EXENAME)|grep -i "$EXENAME" |grep -v grep 2>/dev/null)" ]];
+#	then
+#		echo "$EXENAME -------- running"
+#	fi
+#
+#	while true
+#	do
+#		sleep 5
+#		if [[ -z "$(pgrep -fai $(basename $EXENAME)|grep -i $EXENAME |grep -v grep 2>/dev/null)" ]];
+#		then
+#			echo "$EXENAME was ended"
+#			break	# the $EXENAME exe is no longer running
+#		fi
+#	done
+#}
+#[[ $TEST_WINETRICKS_FLAG -eq 0 ]] && monitor_exe_running || monitor_winetricks_running
+monitor_exe_running
+
+##############################################
+
+
+##############################################
+## cleanup temp file
+function savedata_show_location(){
+cat << EOF
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@
+@
+@
+  your savedata will be saved at file://$TMP_ALLWINESTORGE_OVERLAY/
+@
+@
+@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+EOF
+}
+[[ $SAVEDATA_FLAG -eq 1 ]] && restoresavedata
+savedata_show_location
+
+
+function atexit() {
+	cd $APPDIR	#go back to $APPDIR, then remove temp file
+	echo "disable" > $WINEPREFIX/.update-timestamp
+	echo "restore wine drive symlink entries"
+	rm -f "$WINEPREFIX/dosdevices"/*
+	[[ ! -L "$APPDIR/usr/share/$WINEARCH/dosdevices/c:" ]] && ln -sfnv ../drive_c "$WINEPREFIX/dosdevices/c:"
+	[[ ! -L "$APPDIR/usr/share/$WINEARCH/dosdevices/d:" ]] && ln -sfnv ../../drive_d "$WINEPREFIX/dosdevices/d:"
+	cp -nv "$APPDIR/usr/share/drive_d/Fonts"/* $WINEPREFIX/drive_c/windows/Fonts/
+	echo "killing $APPDIR/usr/bin/unionfs"
+	killall "$APPDIR/usr/bin/unionfs"
+	sleep 1
+	#echo "Removing $MNT_ALLWINESTORGE"
+	#rm -r "$MNT_ALLWINESTORGE"
+	#echo "Removing $MNT_HOMESTORGE"
+	#rm -r "$MNT_HOMESTORGE"
+	echo "Removing /tmp/$(basename $APPDIR).unionfs"
+	rm -r "/tmp/$(basename "$APPDIR").unionfs"
+	rm -r "$APPIMAGE_CACHE_DIR/usr/share"/.unionfs* >/dev/null 2>&1
+	rm -r "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
+}
+#set -e
+#trap atexit EXIT	#NOT USED: due to some .exe(as game launcher) would pass EXIT signal after it completed to launch other .exe files. 
+atexit
+
+
+##############################################
+
+
