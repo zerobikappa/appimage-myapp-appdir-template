@@ -82,7 +82,7 @@ function test_gui(){
 function exeinfo_main_menu(){
 	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
 	then
-		MENU_SELECT_ITEM=$(kdialog --title "exe info setting" --menu "select one of items to go" 1 "1. set exe file location($TEMP_EXENAME)" 2 "2. set savedata directory location($TEMP_SAVEDATA_DIR)" 3 "3. ***write into exeinfo_profile" 4 "4. ***cancel and exit without saving into exeinfo_profile" --ok-label "go" --cancel-label "close")
+		MENU_SELECT_ITEM=$(kdialog --geometry 1000x600 --title "exe info setting" --menu "select one of items to go" 1 "1. set exe file location($TEMP_EXENAME)" 2 "2. set savedata directory location($TEMP_SAVEDATA_DIR)" 3 "3. ***write into exeinfo_profile" 4 "4. ***cancel and exit without saving into exeinfo_profile" --ok-label "go" --cancel-label "close")
 		# result:
 		# $? return 0: click ok, also echo item tag(1/2/3/4)
 		# $? return 1: click cancel
@@ -120,7 +120,7 @@ EOF
 function handle_exe_location(){
 	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
 	then
-		TEMP_EXEPATH="$(kdialog --title "select the .exe file" --getopenfilename "$APPIMAGE_CACHE_DIR")"
+		TEMP_EXEPATH="$(kdialog --geometry 1000x600 --title "select the .exe file" --getopenfilename "$APPIMAGE_CACHE_DIR")"
 	else
 		clear
 		echo "  to go back to previous menu, please <backspace> to earse all words then push <enter>"
@@ -150,10 +150,12 @@ function handle_exe_location(){
 	if [[ $? -eq 0 ]];	# clicked "ok"
 	then
 		# check if .exe file in appdir or in appdir.cache
-		if [[ -n $(echo $TEMP_EXEPATH | grep "$(basename "$APPIMAGE_CACHE_DIR")") ]];
+		#if [[ -n $(echo $TEMP_EXEPATH | grep "$(basename "$APPIMAGE_CACHE_DIR")") ]];
+		if [[ "${TEMP_EXEPATH#"$APPIMAGE_CACHE_DIR/usr/share"}" != "$TEMP_EXEPATH" ]];
 		then
 			TEMP_EXE_LROOT=${APPIMAGE_CACHE_DIR}/usr/share	# .exe file in AppDir.cache or in *.appimage.cache directory
-		elif [[ -n $(echo $TEMP_EXEPATH | grep "$(basename "$APPIMAGE")") ]];
+		#elif [[ -n $(echo $TEMP_EXEPATH | grep "$(basename "$APPIMAGE")") ]];
+		elif [[ "${TEMP_EXEPATH#"$HERE/usr/share"}" != "$TEMP_EXEPATH" ]];
 		then
 			TEMP_EXE_LROOT=$HERE/usr/share	# .exe file in AppDir, running AppRun directly from AppDir at this moment.
 		else
@@ -192,13 +194,14 @@ function handle_exe_location(){
 	fi
 	[[ -n $TEMP_EXE_LROOT && -n $TEMP_EXEPATH ]] && TEMP_EXE_LDIR=$(apprun_realpath "$TEMP_EXE_LROOT" "$(dirname "$TEMP_EXEPATH")")
 	[[ -n $TEMP_EXEPATH ]] && TEMP_EXENAME=$(basename "$TEMP_EXEPATH")
+	clear
 }
 
 
 function handle_savedata_location(){
 	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
 	then
-		TEMP_SAVEDATAPATH=$(kdialog --title "select the directory where to save the savedata files" --getexistingdirectory $APPIMAGE_CACHE_DIR)
+		TEMP_SAVEDATAPATH=$(kdialog --geometry 1000x600 --title "select the directory where to save the savedata files" --getexistingdirectory $APPIMAGE_CACHE_DIR)
 	else
 		clear
 		echo "  to go back to previous menu, please <backspace> to earse all words then push <enter>"
@@ -271,11 +274,48 @@ function handle_savedata_location(){
 function write_exeinfo(){
 	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
 	then
-		kdialog --warningcontinuecancel "write into exeinfo_profile?"
+		kdialog --geometry 1000x600 --warningcontinuecancel \
+"old:
+EXE_LDIR=\"$EXE_LDIR\"
+EXE_WROOT=\"$EXE_WROOT\"
+EXE_WDIR=\"$EXE_WDIR\"
+EXENAME=\"$EXENAME\"
+SAVEDATA_IN_HOME=\"$SAVEDATA_IN_HOME\"
+SAVEDATA_DIR=\"$SAVEDATA_DIR\"
+
+new:
+EXE_LDIR=\"$TEMP_EXE_LDIR\"
+EXE_WROOT=\"$TEMP_EXE_WROOT\"
+EXE_WDIR=\"$TEMP_EXE_WDIR\"
+EXENAME=\"$TEMP_EXENAME\"
+SAVEDATA_IN_HOME=\"$TEMP_SAVEDATA_IN_HOME\"
+SAVEDATA_DIR=\"$TEMP_SAVEDATA_DIR\"
+
+write into exeinfo_profile?
+"
 		RETURN_NUMBER=$?
 	elif [[ $EXEINFO_GEN_METHOD == "read" ]];
 	then
 		while true; do
+			clear
+			cat << EOF
+old:
+EXE_LDIR="$EXE_LDIR"
+EXE_WROOT="$EXE_WROOT"
+EXE_WDIR="$EXE_WDIR"
+EXENAME="$EXENAME"
+SAVEDATA_IN_HOME="$SAVEDATA_IN_HOME"
+SAVEDATA_DIR="$SAVEDATA_DIR"
+
+new:
+EXE_LDIR="$TEMP_EXE_LDIR"
+EXE_WROOT="$TEMP_EXE_WROOT"
+EXE_WDIR="$TEMP_EXE_WDIR"
+EXENAME="$TEMP_EXENAME"
+SAVEDATA_IN_HOME="$TEMP_SAVEDATA_IN_HOME"
+SAVEDATA_DIR="$TEMP_SAVEDATA_DIR"
+
+EOF
 			read -p "write into exeinfo_profile?(y/n): " RETURN_NUMBER
 			case $RETURN_NUMBER in
 				y| Y| yes| YES)
@@ -297,6 +337,7 @@ function write_exeinfo(){
 	if [[ ! $RETURN_NUMBER -eq 0 ]];
 	then
 		RETURN_NUMBER=""
+		clear
 		return
 	fi
 
@@ -344,6 +385,7 @@ function exeinfo_confirm_exit(){
 		exit
 	elif [[ $RETURN_NUMBER -eq 1 ]];
 	then
+		clear
 		return
 	else
 		echo "[AppRun_exeinfo_gen:exeinfo_confirm_exit] unknow error"
