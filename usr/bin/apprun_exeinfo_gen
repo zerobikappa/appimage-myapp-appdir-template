@@ -92,13 +92,16 @@ function exeinfo_main_menu(){
 	then
 		while true; do
 			cat << EOF
+##################################################
   current EXENAME=$TEMP_EXENAME
   current SAVEDATA_DIR=$TEMP_SAVEDATA_DIR
+##################################################
   please select one of below items:
   1. set .exe file location
   2. set savedata directory location
   3. ***write into exeinfo_profile
   4. ***cancel and exit without saving into exeinfo_profile
+##################################################
 EOF
 			read -p "select item (1/2/3/4):" MENU_SELECT_ITEM
 			case "$MENU_SELECT_ITEM" in
@@ -123,16 +126,22 @@ function handle_exe_location(){
 		echo "  to go back to previous menu, please <backspace> to earse all words then push <enter>"
 		echo ""
 		echo ""
+		echo "##################################################"
 		echo "  select .exe file location(use <tab> key for prompt)"
 		echo "  it should be under"
-		echo "  ${APPIMAGE_CACHE_DIR%.cache}/usr/share/"
+		echo "  (cache dir:) $APPIMAGE_CACHE_DIR/usr/share/"
 		echo "  or"
-		echo "  $APPIMAGE_CACHE_DIR/usr/share/"
+		echo "  (app dir:) ${HERE}/usr/share/"
+		echo "##################################################"
 		echo ""
 		read -e -p "input .exe file path: " -i "$APPIMAGE_CACHE_DIR" TEMP_EXEPATH
 		if [[ ! -f $TEMP_EXEPATH ]];
 		then
+			clear
+			echo "########################################"
 			echo "invalid file name: $TEMP_EXEPATH"
+			echo "########################################"
+			echo ""
 			TEMP_EXEPATH=""
 			return
 		fi
@@ -148,7 +157,11 @@ function handle_exe_location(){
 		then
 			TEMP_EXE_LROOT=$HERE/usr/share	# .exe file in AppDir, running AppRun directly from AppDir at this moment.
 		else
-			echo ".exe file outside of appimage dir." >&2	# outside of AppDir and *.cache. Should not install .exe outside of AppDir or *.cache.
+			clear
+			echo "########################################"
+			echo "ERROR: .exe file outside of appimage dir." >&2	# outside of AppDir and *.cache. Should not install .exe outside of AppDir or *.cache.
+			echo "########################################"
+			echo ""
 			TEMP_EXEPATH=""
 			return
 		fi
@@ -191,11 +204,24 @@ function handle_savedata_location(){
 		echo "  to go back to previous menu, please <backspace> to earse all words then push <enter>"
 		echo ""
 		echo ""
+		echo "##################################################"
 		echo "  select savedata directory location(use <tab> key for prompt)"
+		echo "  it should be under:"
+		echo "  (game folder under cache dir:) ${APPIMAGE_CACHE_DIR}/usr/share/"
+		echo "  or"
+		echo "  (game folder under app dir:) ${HERE}/usr/share/"
+		echo "  or"
+		echo "  (fake home:) ${APPIMAGE_CACHE_DIR}/home/public_user/"
+		echo "##################################################"
+		echo ""
 		read -e -p "input savedata directory path: " -i "$APPIMAGE_CACHE_DIR" TEMP_SAVEDATAPATH
 		if [[ ! -d $TEMP_SAVEDATAPATH ]];
 		then
+			clear
+			echo "########################################"
 			echo "invalid directory name: $TEMP_SAVEDATAPATH"
+			echo "########################################"
+			echo ""
 			TEMP_SAVEDATAPATH=""
 			return
 		fi
@@ -218,7 +244,11 @@ function handle_savedata_location(){
 		then
 			TEMP_SAVEDATA_LROOT=$HERE	# directory in AppDir. running AppRun directly from AppDir at this moment.
 		else
-			kdialog --error "savedata directory outside of appimage dir."	# outside of AppDir and *.appimage.
+			clear
+			echo "########################################"
+			echo "ERROR: savedata directory outside of appimage dir."	# outside of AppDir and *.appimage.
+			echo "########################################"
+			echo ""
 			TEMP_SAVEDATAPATH=""
 			return
 		fi
@@ -266,7 +296,7 @@ function write_exeinfo(){
 
 	if [[ ! $RETURN_NUMBER -eq 0 ]];
 	then
-		$RETURN_NUMBER=""
+		RETURN_NUMBER=""
 		return
 	fi
 
