@@ -101,7 +101,6 @@ then
 else
 	export WINEARCH=win64	# default to run win64
 fi
-echo "*****using $WINEARCH"
 export WINEPREFIX="$MNT_ALLWINESTORGE/$WINEARCH"
 
 if [[ -z $WINEDEBUG ]];
@@ -223,7 +222,11 @@ function print_version(){
 
 EOF
 }
+##############################################
 
+
+##############################################
+## option handling
 #parameters=$(getopt -o swth --long save-data,walkthrough,browser:,test-winetricks,help -n "$0" -- "$@")	# NOT USED: because $(getopt) cannot ignore unknown options
 parameters=$(echo "$@"|tr "=" " ")
 eval set -- "$parameters"
@@ -237,84 +240,78 @@ function is_option(){
 	fi
 }
 
-
-function handle_option(){
-	while [[ -n "$1" ]] ; do
-		case "$1" in
-			-h| --help)
-				print_help
-				exit ;;
-			--version)
-				print_version
-				exit ;;
-			-s| --savedata)
-				SAVEDATA_FLAG=1
-				shift ;;
-			-w| --walkthrough)
-				WALKTHROUGH_FLAG=1
-				shift ;;
-			--browser)
-				#i3-sensible-browser will choose $BROWSER to open walkthrough first
-				is_option $2 && echo "invalid option $1" >&2 && exit 1
-				BROWSER="$2"
-				shift 2;;
-			-t| --test-winetricks)
-				TEST_WINETRICKS_FLAG=1
-				shift ;;
-			--exeinfo-gen)
-				EXEINFO_GEN_FLAG=1
-				if [[ $2 == "gui" ]];
-				then
-					EXEINFO_GEN_METHOD="gui"
-					shift 2
-				elif [[ $2 == "cli" ]];
-				then
-					EXEINFO_GEN_METHOD="cli"
-					shift 2
-				else
-					EXEINFO_GEN_METHOD="gui"
-					shift
-				fi
-				;;
-			--portable-cache)
-				if [[ -n $APPIMAGE ]];
-				then
-					mkdir -p "$APPIMAGE".cache/home/public_user/.cache	# run from .appimage
-				else
-					mkdir -p "$APPDIR"/../"$(basename "$APPDIR")".cache/home/public_user/.cache	# run directly from AppDir
-				fi
-				exit ;;
-			--)
+while [[ -n "$1" ]] ; do
+	case "$1" in
+		-h| --help)
+			print_help
+			exit ;;
+		--version)
+			print_version
+			exit ;;
+		-s| --savedata)
+			SAVEDATA_FLAG=1
+			shift ;;
+		-w| --walkthrough)
+			WALKTHROUGH_FLAG=1
+			shift ;;
+		--browser)
+			#i3-sensible-browser will choose $BROWSER to open walkthrough first
+			is_option $2 && echo "invalid option $1" >&2 && exit 1
+			BROWSER="$2"
+			shift 2;;
+		-t| --test-winetricks)
+			TEST_WINETRICKS_FLAG=1
+			shift ;;
+		--exeinfo-gen)
+			EXEINFO_GEN_FLAG=1
+			if [[ $2 == "gui" ]];
+			then
+				EXEINFO_GEN_METHOD="gui"
+				shift 2
+			elif [[ $2 == "cli" ]];
+			then
+				EXEINFO_GEN_METHOD="cli"
+				shift 2
+			else
+				EXEINFO_GEN_METHOD="gui"
 				shift
-				if [[ -z "$@" && -z "$next_parameters" ]];
-				then
-					break
-				elif [[ ! $MYAPPDEBUG -eq 1 ]];
-				then
-					echo "[AppRun] error: not MYAPPDEBUG mode now. prevent to pass any unknown option." >&2
-					echo "[AppRun] error: unknown options: $next_parameters $@" >&2
-					exit
-				else
-					next_parameters="$next_parameters $@"	# then $next_parameters will be passed to wine
-					break
-				fi
-				;;
-			*) 
-				if [[ $MYAPPDEBUG -eq 1 ]];
-				then
-					next_parameters="$next_parameters $1"
-					shift
-				else
-					echo "[AppRun] error: not MYAPPDEBUG mode now. prevent to pass any unknow option." >&2
-					echo "[AppRun] error: unknown options: $1" >&2
-					exit
-				fi
-				;;
-		esac
-	done
-	eval set -- "$next_parameters"
-}
-handle_option
+			fi
+			;;
+		--portable-cache)
+			mkdir -p "$APPIMAGE".cache/home/public_user/
+			echo ""
+			echo "created cache directory: $APPIMAGE.cache"
+			exit ;;
+		--)
+			shift
+			if [[ -z "$@" && -z "$next_parameters" ]];
+			then
+				break
+			elif [[ ! $MYAPPDEBUG -eq 1 ]];
+			then
+				echo "[AppRun] error: not MYAPPDEBUG mode now. prevent to pass any unknown option." >&2
+				echo "[AppRun] error: unknown options: $next_parameters $@" >&2
+				exit
+			else
+				next_parameters="$next_parameters $@"	# then $next_parameters will be passed to wine
+				break
+			fi
+			;;
+		*) 
+			if [[ $MYAPPDEBUG -eq 1 ]];
+			then
+				next_parameters="$next_parameters $1"
+				shift
+			else
+				echo "[AppRun] error: not MYAPPDEBUG mode now. prevent to pass any unknow option." >&2
+				echo "[AppRun] error: unknown options: $1" >&2
+				exit
+			fi
+			;;
+	esac
+done
+eval set -- "$next_parameters"
+##############################################
 
 
 ##############################################
@@ -463,6 +460,7 @@ then
 	exit
 fi
 
+echo "*****using $WINEARCH"
 if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
 then
 	$APPDIR/usr/bin/winetricks sandbox
