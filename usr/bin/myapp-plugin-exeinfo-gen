@@ -74,7 +74,7 @@ function test_gui(){
 		EXEINFO_GEN_METHOD="read"
 	else
 		echo "unknow option $EXEINFO_GEN_METHOD" >&2
-		exit
+		EXIT_MAIN_MENU=1
 	fi
 
 }
@@ -265,7 +265,7 @@ function handle_savedata_location(){
 			TEMP_SAVEDATA_DIR=$(apprun_realpath "${TEMP_SAVEDATA_LROOT}/home/public_user" "$TEMP_SAVEDATAPATH")
 		else
 			echo "[AppRun:savedata_location] error: unknown SAVEDATA_IN_HOME, SAVEDATA_IN_HOME=$TEMP_SAVEDATA_IN_HOME"
-			exit
+			EXIT_MAIN_MENU=1
 		fi
 
 	fi
@@ -350,7 +350,7 @@ EOF
 	echo SAVEDATA_DIR=\"$TEMP_SAVEDATA_DIR\" >> "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
 
 	echo "saved into $APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
-	exit
+	EXIT_MAIN_MENU=1
 
 }
 
@@ -382,21 +382,22 @@ function exeinfo_confirm_exit(){
 
 	if [[ $RETURN_NUMBER -eq 0 ]];
 	then
-		exit
+		EXIT_MAIN_MENU=1
 	elif [[ $RETURN_NUMBER -eq 1 ]];
 	then
 		clear
 		return
 	else
 		echo "[AppRun_exeinfo_gen:exeinfo_confirm_exit] unknow error"
-		exit
+		EXIT_MAIN_MENU=1
 	fi
 }
 
 clear
 temp_exeinfo
 test_gui
-while true; do
+EXIT_MAIN_MENU=0
+while [[ $EXIT_MAIN_MENU -eq 0 ]];do
 	exeinfo_main_menu
 	clear
 	if [[ $MENU_SELECT_ITEM -eq 1 ]];

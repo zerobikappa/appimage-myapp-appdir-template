@@ -457,17 +457,19 @@ export LANG=ja_JP.UTF-8
 if [[ $EXEINFO_GEN_FLAG -eq 1 && $EXEINFO_GEN_METHOD == "gui" ]];
 then
 	. $APPDIR/usr/bin/myapp-plugin-exeinfo-gen
-	exit
 fi
 
-echo "*****using $WINEARCH"
-if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
+if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
 then
-	$APPDIR/usr/bin/winetricks sandbox
-	$APPDIR/usr/bin/winetricks "$@"
-else
-	cd "$MNT_ALLWINESTORGE/$EXE_LDIR" # Use the app installed location. Some .exe may not run if not cd into excute directory
-	winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path because winetricks sandbox was set.
+	echo "*****using $WINEARCH"
+	if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
+	then
+		$APPDIR/usr/bin/winetricks sandbox
+		$APPDIR/usr/bin/winetricks "$@"
+	else
+		cd "$MNT_ALLWINESTORGE/$EXE_LDIR" # Use the app installed location. Some .exe may not run if not cd into excute directory
+		winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path because winetricks sandbox was set.
+	fi
 fi
 
 
@@ -501,15 +503,18 @@ monitor_exe_running
 ##############################################
 ## cleanup temp file
 
-cd $APPDIR	#go back to $APPDIR, then remove temp file
-echo "disable" > $WINEPREFIX/.update-timestamp
-echo "restore wine drive symlink entries"
-echo "rm -f \"$WINEPREFIX/dosdevices\"/*"
-rm -f "$WINEPREFIX/dosdevices"/*
-[[ ! -L "$APPDIR/usr/share/$WINEARCH/dosdevices/c:" ]] && ln -sfnv ../drive_c "$WINEPREFIX/dosdevices/c:"
-[[ ! -L "$APPDIR/usr/share/$WINEARCH/dosdevices/d:" ]] && ln -sfnv ../../drive_d "$WINEPREFIX/dosdevices/d:"
-cp -nv "$APPDIR/usr/share/drive_d/Fonts"/* $WINEPREFIX/drive_c/windows/Fonts/
-[[ $SAVEDATA_FLAG -eq 1 ]] && restoresavedata
+if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
+then
+	cd $APPDIR	#go back to $APPDIR, then remove temp file
+	echo "disable" > $WINEPREFIX/.update-timestamp
+	echo "restore wine drive symlink entries"
+	echo "rm -f \"$WINEPREFIX/dosdevices\"/*"
+	rm -f "$WINEPREFIX/dosdevices"/*
+	[[ ! -L "$APPDIR/usr/share/$WINEARCH/dosdevices/c:" ]] && ln -sfnv ../drive_c "$WINEPREFIX/dosdevices/c:"
+	[[ ! -L "$APPDIR/usr/share/$WINEARCH/dosdevices/d:" ]] && ln -sfnv ../../drive_d "$WINEPREFIX/dosdevices/d:"
+	cp -nv "$APPDIR/usr/share/drive_d/Fonts"/* $WINEPREFIX/drive_c/windows/Fonts/
+	[[ $SAVEDATA_FLAG -eq 1 ]] && restoresavedata
+fi
 savedata_show_location
 
 
