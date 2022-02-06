@@ -33,6 +33,67 @@ export QT_PLUGIN_PATH="${APPDIR}/usr/lib/qt4/plugins/:${APPDIR}/usr/lib/i386-lin
 
 
 ##############################################
+## check *.cache directory
+if [[ -z ${APPIMAGE} ]];	# if run directly from AppDir
+then
+	export APPIMAGE="$APPDIR"
+fi
+
+if [[ -d ${APPIMAGE}.cache ]];
+then
+	APPIMAGE_CACHE_DIR="${APPIMAGE}.cache"
+else
+	echo "directory  ${APPIMAGE}.cache/ not exist."
+	echo "all data will be saved in /tmp/$(basename "$APPIMAGE").cache/ , which will be deleted after restart computer."
+	echo "to keep your data, please run:"
+	echo ""
+	[[ -n $ARGV0 ]] && echo "  $ARGV0 --portable-cache" || echo "  ${APPIMAGE}/AppRun --portable-cache"
+	echo ""
+	echo "to create a cache directory."
+	mkdir -p "/tmp/$(basename "$APPIMAGE").cache"
+	APPIMAGE_CACHE_DIR="/tmp/$(basename "$APPIMAGE").cache"
+fi
+##############################################
+
+
+##############################################
+## setup unionfs temp directory for this app
+RO_ALLWINESTORGE="$APPDIR/usr/share/" # Use the location where contain $WINEPREFIX, both win32 and win64 WINEPREFIX directory are here.
+#MNT_ALLWINESTORGE="/tmp/.$(basename $APPIMAGE).unionfs/usr/share" # Use the name of the app
+MNT_ALLWINESTORGE="/tmp/$(basename $APPDIR).unionfs/usr/share" # Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
+TMP_ALLWINESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share"
+
+RO_HOMESTORGE="/home/$USER/"
+MNT_HOMESTORGE="/tmp/$(basename $APPDIR).unionfs/home/public_user" # Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
+TMP_HOMESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/home/public_user"
+##############################################
+
+
+##############################################
+## setup standalone $HOME and $XDG_CONFIG_HOME directory
+if [[ ! -d ${APPIMAGE_CACHE_DIR}/home/public_user/.config ]];
+then
+	mkdir -p "${APPIMAGE_CACHE_DIR}/home/public_user/.config"
+fi
+
+if [[ -d ${APPIMAGE}.home ]];
+then
+	echo "${APPIMAGE}.home exists but is not necessary."
+	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/ to save related files."
+fi
+export HOME=$MNT_HOMESTORGE
+
+if [[ -d ${APPIMAGE}.config ]];
+then
+	echo "${APPIMAGE}.config exists but is not necessary."
+	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/.config to save related files."
+fi
+export XDG_CONFIG_HOME="$MNT_HOMESTORGE/.config"
+
+##############################################
+
+
+##############################################
 ## setup WINE env
 if [[ "$WINEARCH" == "win32" ]];
 then
@@ -49,6 +110,18 @@ then
 fi
 
 export WINEDLLOVERRIDES=winemenubuilder.exe=d	# prevent wine setup application menu
+##############################################
+
+
+##############################################
+## load exeinfo_profile, may depends on $WINEARCH, (if savedata in c drive,) should set the $WINEARCH first
+if [[ -f $APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile ]];
+then
+	. $APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile
+elif [[ -f $APPDIR/usr/share/exeinfo_profile ]];
+then
+	. $APPDIR/usr/share/exeinfo_profile
+fi
 ##############################################
 
 
@@ -241,78 +314,11 @@ function handle_option(){
 	done
 	eval set -- "$next_parameters"
 }
+handle_option
 
 
 ##############################################
-## check *.cache directory
-if [[ -z ${APPIMAGE} ]];	# if run directly from AppDir
-then
-	export APPIMAGE="$APPDIR"
-fi
-
-if [[ -d ${APPIMAGE}.cache ]];
-then
-	APPIMAGE_CACHE_DIR="${APPIMAGE}.cache"
-else
-	echo "directory  ${APPIMAGE}.cache/ not exist."
-	echo "all data will be saved in /tmp/$(basename "$APPIMAGE").cache/ , which will be deleted after restart computer."
-	echo "to keep your data, please run:"
-	echo ""
-	[[ -n $ARGV0 ]] && echo "  $ARGV0 --portable-cache" || echo "  ${APPIMAGE}/AppRun --portable-cache"
-	echo ""
-	echo "to create a cache directory."
-	mkdir -p "/tmp/$(basename "$APPIMAGE").cache"
-	APPIMAGE_CACHE_DIR="/tmp/$(basename "$APPIMAGE").cache"
-fi
-##############################################
-
-
-##############################################
-## setup unionfs temp directory for this app
-RO_ALLWINESTORGE="$APPDIR/usr/share/" # Use the location where contain $WINEPREFIX, both win32 and win64 WINEPREFIX directory are here.
-#MNT_ALLWINESTORGE="/tmp/.$(basename $APPIMAGE).unionfs/usr/share" # Use the name of the app
-MNT_ALLWINESTORGE="/tmp/$(basename $APPDIR).unionfs/usr/share" # Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
-TMP_ALLWINESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share"
-
-RO_HOMESTORGE="/home/$USER/"
-MNT_HOMESTORGE="/tmp/$(basename $APPDIR).unionfs/home/public_user" # Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
-TMP_HOMESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/home/public_user"
-##############################################
-
-
-##############################################
-## setup standalone $HOME and $XDG_CONFIG_HOME directory
-if [[ ! -d ${APPIMAGE_CACHE_DIR}/home/public_user/.config ]];
-then
-	mkdir -p "${APPIMAGE_CACHE_DIR}/home/public_user/.config"
-fi
-
-if [[ -d ${APPIMAGE}.home ]];
-then
-	echo "${APPIMAGE}.home exists but is not necessary."
-	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/ to save related files."
-fi
-export HOME=$MNT_HOMESTORGE
-
-if [[ -d ${APPIMAGE}.config ]];
-then
-	echo "${APPIMAGE}.config exists but is not necessary."
-	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/.config to save related files."
-fi
-export XDG_CONFIG_HOME="$MNT_HOMESTORGE/.config"
-
-##############################################
-
-
-##############################################
-if [[ -f $APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile ]];
-then
-	. $APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile
-elif [[ -f $APPDIR/usr/share/exeinfo_profile ]];
-then
-	. $APPDIR/usr/share/exeinfo_profile
-fi
-
+## option filter
 if [[ $EXEINFO_GEN_FLAG -eq 1 && $EXEINFO_GEN_METHOD == "cli" ]];
 then
 	. $APPDIR/usr/bin/myapp-plugin-exeinfo-gen
@@ -336,8 +342,12 @@ if [[ $EXEINFO_GEN_FLAG -eq 1 ]];	# if --exeinfo-gen is set, then -t will be ign
 then
 	[[ $TEST_WINETRICKS_FLAG -eq 1 ]] && TEST_WINETRICKS_FLAG=0 && echo "--test-winetricks option ignored"
 fi
+##############################################
 
-#before setup unionfs temp directory, check if exe is already running
+
+##############################################
+## mount unionfs
+# before setup unionfs temp directory, check if exe is already running
 if [[ -n "$(pgrep -fi $EXENAME)" ]];
 then 
 	echo "seems $EXENAME has been launched and is still running, plsease kill the process if the application encountered error" >&2
@@ -371,23 +381,13 @@ EOF
 	#todo: failed to using xdg-open to open html file.
 	i3-sensible-browser "$MNT_ALLWINESTORGE/drive_d/walkthrough.html"
 }
-
 [[ $WALKTHROUGH_FLAG -eq 1 ]] && walkthrough_browser
 
 ##############################################
 
 
 ##############################################
-## copy game savedata, no need to use if the game savedata was save at the game installed folder.
-#function copysavedata1() {	# use if the game savedata was in windows user folder
-#	mkdir -p "$MNT_ALLWINESTORGE/$WINEARCH/myapp_savedata_location"	# use the path where the savedata is.
-#	cp -rfv "$APPDIR/usr/share/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$WINEARCH/myapp_savedata_location"	# use the path where the savedata is in. if the savedata was in drive_c/users/your_username/, you can use $USER to replace your username.
-#}
-#
-#function copysavedata2() {	# use if the game savedata was in game installation folder
-#	cp -rfv "$APPDIR/usr/share/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"	# use the path where the savedata is in. if the savedata was in drive_c/users/your_username/, you can use $USER to replace your username.
-#}
-
+## game savedata
 function copysavedata(){
 	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
 	then
@@ -415,6 +415,20 @@ function restoresavedata(){
 		mv -f $SAVEDATA_BACKUP ${SAVEDATA_BACKUP%".myapp.$USER.backup"}
 	done
 }
+
+function savedata_show_location(){
+cat << EOF
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@
+@
+@
+  your savedata will be saved at file://$TMP_ALLWINESTORGE_OVERLAY/
+@
+@
+@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+EOF
+}
 [[ $SAVEDATA_FLAG -eq 1 ]] && copysavedata
 
 ##############################################
@@ -441,8 +455,7 @@ EOF
 ##############################################
 ## launch app
 
-#export LANG=ja_JP.UTF-8
-export LANG=zh_CN.UTF-8
+export LANG=ja_JP.UTF-8
 
 if [[ $EXEINFO_GEN_FLAG -eq 1 && $EXEINFO_GEN_METHOD == "gui" ]];
 then
@@ -482,23 +495,6 @@ function monitor_exe_running(){
 		fi
 	done
 }
-#function monitor_winetricks_running(){
-#	if [[ -n "$(pgrep -fai $(basename $EXENAME)|grep -i "$EXENAME" |grep -v grep 2>/dev/null)" ]];
-#	then
-#		echo "$EXENAME -------- running"
-#	fi
-#
-#	while true
-#	do
-#		sleep 5
-#		if [[ -z "$(pgrep -fai $(basename $EXENAME)|grep -i $EXENAME |grep -v grep 2>/dev/null)" ]];
-#		then
-#			echo "$EXENAME was ended"
-#			break	# the $EXENAME exe is no longer running
-#		fi
-#	done
-#}
-#[[ $TEST_WINETRICKS_FLAG -eq 0 ]] && monitor_exe_running || monitor_winetricks_running
 monitor_exe_running
 
 ##############################################
@@ -506,31 +502,20 @@ monitor_exe_running
 
 ##############################################
 ## cleanup temp file
-function savedata_show_location(){
-cat << EOF
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@
-@
-@
-  your savedata will be saved at file://$TMP_ALLWINESTORGE_OVERLAY/
-@
-@
-@
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-EOF
-}
+
+cd $APPDIR	#go back to $APPDIR, then remove temp file
+echo "disable" > $WINEPREFIX/.update-timestamp
+echo "restore wine drive symlink entries"
+echo "rm -f \"$WINEPREFIX/dosdevices\"/*"
+rm -f "$WINEPREFIX/dosdevices"/*
+[[ ! -L "$APPDIR/usr/share/$WINEARCH/dosdevices/c:" ]] && ln -sfnv ../drive_c "$WINEPREFIX/dosdevices/c:"
+[[ ! -L "$APPDIR/usr/share/$WINEARCH/dosdevices/d:" ]] && ln -sfnv ../../drive_d "$WINEPREFIX/dosdevices/d:"
+cp -nv "$APPDIR/usr/share/drive_d/Fonts"/* $WINEPREFIX/drive_c/windows/Fonts/
 [[ $SAVEDATA_FLAG -eq 1 ]] && restoresavedata
 savedata_show_location
 
 
 function atexit() {
-	cd $APPDIR	#go back to $APPDIR, then remove temp file
-	echo "disable" > $WINEPREFIX/.update-timestamp
-	echo "restore wine drive symlink entries"
-	rm -f "$WINEPREFIX/dosdevices"/*
-	[[ ! -L "$APPDIR/usr/share/$WINEARCH/dosdevices/c:" ]] && ln -sfnv ../drive_c "$WINEPREFIX/dosdevices/c:"
-	[[ ! -L "$APPDIR/usr/share/$WINEARCH/dosdevices/d:" ]] && ln -sfnv ../../drive_d "$WINEPREFIX/dosdevices/d:"
-	cp -nv "$APPDIR/usr/share/drive_d/Fonts"/* $WINEPREFIX/drive_c/windows/Fonts/
 	echo "killing $APPDIR/usr/bin/unionfs"
 	killall "$APPDIR/usr/bin/unionfs"
 	sleep 1
