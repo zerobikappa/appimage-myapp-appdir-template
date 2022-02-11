@@ -6,6 +6,7 @@ SELF=$(readlink -f "$0")
 HERE=${SELF%/*}
 #############################################
 
+LANG=$LANG \
 APPIMAGE=$APPIMAGE \
 APPDIR=$APPDIR \
 OWD=$OWD \
