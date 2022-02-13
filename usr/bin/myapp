@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1644763101
+MYAPPRUN_VERSION=1644780174
 
 #############################################
 ## prevent running by root/sudo
@@ -456,7 +456,8 @@ EOF
 ##############################################
 ## launch app
 
-export LANG=ja_JP.UTF-8
+#export LANG=ja_JP.UTF-8
+[[ -n $MYAPPLANG ]] && LANG=$MYAPPLANG || LANG="ja_JP.UTF-8"
 
 if [[ $EXEINFO_GEN_FLAG -eq 1 && $EXEINFO_GEN_METHOD == "gui" ]];
 then
@@ -512,11 +513,16 @@ then
 	cd "$APPDIR" || exit 2	#go back to $APPDIR, then remove temp file
 	echo "disable" > "$WINEPREFIX/.update-timestamp"
 	echo "restore wine drive symlink entries"
-	echo "rm -f \"$WINEPREFIX/dosdevices\"/*"
-	rm -f "$WINEPREFIX/dosdevices"/*
-	[[ ! -L "$APPDIR/usr/share/$WINEARCH/dosdevices/c:" ]] && ln -sfnv ../drive_c "$WINEPREFIX/dosdevices/c:"
-	[[ ! -L "$APPDIR/usr/share/$WINEARCH/dosdevices/d:" ]] && ln -sfnv ../../drive_d "$WINEPREFIX/dosdevices/d:"
-	cp -nv "$APPDIR/usr/share/drive_d/Fonts"/* "$WINEPREFIX/drive_c/windows/Fonts/"
+	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm "{}" \;
+	#[[ ! -L "$APPDIR/usr/share/$WINEARCH/dosdevices/c:" ]] && ln -sfnv ../drive_c "$WINEPREFIX/dosdevices/c:"
+	[[ ! -L "$WINEPREFIX/dosdevices/c:" ]] && ln -sfnv ../drive_c "$WINEPREFIX/dosdevices/c:"
+	#[[ ! -L "$APPDIR/usr/share/$WINEARCH/dosdevices/d:" ]] && ln -sfnv ../../drive_d "$WINEPREFIX/dosdevices/d:"
+	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfnv ../../drive_d "$WINEPREFIX/dosdevices/d:"
+	if [[ ! -L "$WINEPREFIX/drive_c/windows/Fonts" ]];
+	then
+		rm -rf "$WINEPREFIX/drive_c/windows/Fonts"
+		ln -sfnv ../../../drive_d/fonts "$WINEPREFIX/drive_c/windows/Fonts"
+	fi
 	[[ $SAVEDATA_FLAG -eq 1 ]] && restoresavedata
 fi
 savedata_show_location
