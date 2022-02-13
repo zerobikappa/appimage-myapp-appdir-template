@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1644167047
+MYAPPRUN_VERSION=1644763101
 
 #############################################
 ## prevent running by root/sudo
@@ -60,11 +60,11 @@ fi
 ## setup unionfs temp directory for this app
 RO_ALLWINESTORGE="$APPDIR/usr/share/" # Use the location where contain $WINEPREFIX, both win32 and win64 WINEPREFIX directory are here.
 #MNT_ALLWINESTORGE="/tmp/.$(basename $APPIMAGE).unionfs/usr/share" # Use the name of the app
-MNT_ALLWINESTORGE="/tmp/$(basename $APPDIR).unionfs/usr/share" # Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
+MNT_ALLWINESTORGE="/tmp/$(basename "$APPDIR").unionfs/usr/share" # Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
 TMP_ALLWINESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share"
 
 RO_HOMESTORGE="/home/$USER/"
-MNT_HOMESTORGE="/tmp/$(basename $APPDIR).unionfs/home/public_user" # Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
+MNT_HOMESTORGE="/tmp/$(basename "$APPDIR").unionfs/home/public_user" # Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
 TMP_HOMESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/home/public_user"
 ##############################################
 
@@ -114,12 +114,12 @@ export WINEDLLOVERRIDES=winemenubuilder.exe=d	# prevent wine setup application m
 
 ##############################################
 ## load exeinfo_profile, may depends on $WINEARCH, (if savedata in c drive,) should set the $WINEARCH first
-if [[ -f $APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile ]];
+if [[ -f "$APPIMAGE_CACHE_DIR"/usr/share/exeinfo_profile ]];
 then
-	. $APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile
-elif [[ -f $APPDIR/usr/share/exeinfo_profile ]];
+	source "$APPIMAGE_CACHE_DIR"/usr/share/exeinfo_profile
+elif [[ -f "$APPDIR"/usr/share/exeinfo_profile ]];
 then
-	. $APPDIR/usr/share/exeinfo_profile
+	source "$APPDIR"/usr/share/exeinfo_profile
 fi
 ##############################################
 
@@ -135,7 +135,7 @@ ARGV0=$ARGV0
 \$0=$0
 EOF
 }
-[[ MYAPPDEBUG -eq 1 ]] && debug_show
+[[ $MYAPPDEBUG -eq 1 ]] && debug_show
 ##############################################
 
 
@@ -205,9 +205,9 @@ function print_version(){
 		echo "***AppImageKit Version***"	# fix printout format error
 		$APPIMAGE --appimage-version
 	fi
-	if [[ -f "$APPDIR/usr/share/exeinfo_profile" ]];
+	if [[ -f "$APPDIR"/usr/share/exeinfo_profile ]];
 	then
-		. "$APPDIR/usr/share/exeinfo_profile"
+		source "$APPDIR"/usr/share/exeinfo_profile
 	fi
 	[[ -z $EXENAME ]] && EXENAME="(empty)(not set in AppDir)"
 	APPLICATION_NAME=$(cat "$APPDIR"/*.desktop | grep -i "name=") && APPLICATION_NAME=${APPLICATION_NAME#*"="}
@@ -256,7 +256,7 @@ while [[ -n "$1" ]] ; do
 			shift ;;
 		--browser)
 			#i3-sensible-browser will choose $BROWSER to open walkthrough first
-			is_option $2 && echo "invalid option $1" >&2 && exit 1
+			is_option "$2" && echo "invalid option $1" >&2 && exit 1
 			BROWSER="$2"
 			shift 2;;
 		-t| --test-winetricks)
@@ -284,16 +284,16 @@ while [[ -n "$1" ]] ; do
 			exit ;;
 		--)
 			shift
-			if [[ -z "$@" && -z "$next_parameters" ]];
+			if [[ -z "$*" && -z "$next_parameters" ]];
 			then
 				break
 			elif [[ ! $MYAPPDEBUG -eq 1 ]];
 			then
 				echo "[AppRun] error: not MYAPPDEBUG mode now. prevent to pass any unknown option." >&2
-				echo "[AppRun] error: unknown options: $next_parameters $@" >&2
+				echo "[AppRun] error: unknown options: $next_parameters $*" >&2
 				exit
 			else
-				next_parameters="$next_parameters $@"	# then $next_parameters will be passed to wine
+				next_parameters="$next_parameters $*"	# then $next_parameters will be passed to wine
 				break
 			fi
 			;;
@@ -316,9 +316,12 @@ eval set -- "$next_parameters"
 
 ##############################################
 ## option filter
+
+source "$APPDIR"/usr/bin/myapp-plugin-exeinfo-gen
+
 if [[ $EXEINFO_GEN_FLAG -eq 1 && $EXEINFO_GEN_METHOD == "cli" ]];
 then
-	. $APPDIR/usr/bin/myapp-plugin-exeinfo-gen
+	exeinfo_gen
 	exit
 fi
 
@@ -345,7 +348,7 @@ fi
 ##############################################
 ## mount unionfs
 # before setup unionfs temp directory, check if exe is already running
-if [[ -n "$(pgrep -fi $EXENAME)" ]];
+if [[ -n "$(pgrep -fi "$EXENAME")" ]];
 then 
 	echo "seems $EXENAME has been launched and is still running, plsease kill the process if the application encountered error" >&2
 	exit 1
@@ -353,10 +356,10 @@ fi
 
 mkdir -p "$MNT_ALLWINESTORGE" "$TMP_ALLWINESTORGE_OVERLAY"
 #$APPDIR/usr/bin/unionfs -o use_ino,nonempty,uid=$UID -ocow "$TMP_ALLWINESTORGE_OVERLAY"=RW:"$RO_ALLWINESTORGE"=RO "$MNT_ALLWINESTORGE" || exit 1
-$APPDIR/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_ALLWINESTORGE_OVERLAY"=RW:"$RO_ALLWINESTORGE"=RO "$MNT_ALLWINESTORGE" || exit 1
+"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_ALLWINESTORGE_OVERLAY"=RW:"$RO_ALLWINESTORGE"=RO "$MNT_ALLWINESTORGE" || exit 1
 
 mkdir -p "$MNT_HOMESTORGE" "$TMP_HOMESTORGE_OVERLAY"
-$APPDIR/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_HOMESTORGE_OVERLAY"=RW:"$RO_HOMESTORGE"=RO "$MNT_HOMESTORGE" || exit 1
+"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_HOMESTORGE_OVERLAY"=RW:"$RO_HOMESTORGE"=RO "$MNT_HOMESTORGE" || exit 1
 ##############################################
 
 
@@ -389,11 +392,11 @@ function copysavedata(){
 	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
 	then
 		mkdir -p "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
-		cp -r --suffix=.myapp.$USER.backup "$MNT_ALLWINESTORGE/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+		cp -r --suffix=.myapp."$USER".backup "$MNT_ALLWINESTORGE/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
 	elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
 	then
 		mkdir -p "$MNT_HOMESTORGE/$SAVEDATA_DIR"
-		cp -r --suffix=.myapp.$USER.backup "$MNT_ALLWINESTORGE/drive_d/savedata"/* "$MNT_HOMESTORGE/$SAVEDATA_DIR"
+		cp -r --suffix=.myapp."$USER".backup "$MNT_ALLWINESTORGE/drive_d/savedata"/* "$MNT_HOMESTORGE/$SAVEDATA_DIR"
 	fi
 }
 
@@ -408,8 +411,9 @@ function restoresavedata(){
 		echo "[AppRun:restoresavedata] error: invalid FIND_DIR, cannot recover user savedata"
 	fi
 
-	for SAVEDATA_BACKUP in $(find $FIND_DIR -type f -name "*.myapp.$USER.backup"); do
-		mv -f $SAVEDATA_BACKUP ${SAVEDATA_BACKUP%".myapp.$USER.backup"}
+	SAVEDATA_RESTORE_LIST="$(find "$FIND_DIR" -type f -name "*.myapp.$USER.backup")"
+	for SAVEDATA_BACKUP in $SAVEDATA_RESTORE_LIST ; do
+		mv -f "$SAVEDATA_BACKUP" "${SAVEDATA_BACKUP%".myapp.$USER.backup"}"
 	done
 }
 
@@ -456,7 +460,7 @@ export LANG=ja_JP.UTF-8
 
 if [[ $EXEINFO_GEN_FLAG -eq 1 && $EXEINFO_GEN_METHOD == "gui" ]];
 then
-	. $APPDIR/usr/bin/myapp-plugin-exeinfo-gen
+	exeinfo_gen
 fi
 
 if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
@@ -464,10 +468,10 @@ then
 	echo "*****using $WINEARCH"
 	if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
 	then
-		$APPDIR/usr/bin/winetricks sandbox
-		$APPDIR/usr/bin/winetricks "$@"
+		"$APPDIR"/usr/bin/winetricks sandbox
+		"$APPDIR"/usr/bin/winetricks "$@"
 	else
-		cd "$MNT_ALLWINESTORGE/$EXE_LDIR" # Use the app installed location. Some .exe may not run if not cd into excute directory
+		cd "$MNT_ALLWINESTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
 		winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path because winetricks sandbox was set.
 	fi
 fi
@@ -482,7 +486,7 @@ fi
 function monitor_exe_running(){
 	if [[ -n "$(pgrep -fi "$EXENAME")" ]];
 	then
-		echo $(pgrep -fai "$EXENAME") '-------- running'
+		echo "$(pgrep -fai "$EXENAME")" '-------- running'
 	fi
 
 	while true
@@ -505,14 +509,14 @@ monitor_exe_running
 
 if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
 then
-	cd $APPDIR	#go back to $APPDIR, then remove temp file
-	echo "disable" > $WINEPREFIX/.update-timestamp
+	cd "$APPDIR" || exit 2	#go back to $APPDIR, then remove temp file
+	echo "disable" > "$WINEPREFIX/.update-timestamp"
 	echo "restore wine drive symlink entries"
 	echo "rm -f \"$WINEPREFIX/dosdevices\"/*"
 	rm -f "$WINEPREFIX/dosdevices"/*
 	[[ ! -L "$APPDIR/usr/share/$WINEARCH/dosdevices/c:" ]] && ln -sfnv ../drive_c "$WINEPREFIX/dosdevices/c:"
 	[[ ! -L "$APPDIR/usr/share/$WINEARCH/dosdevices/d:" ]] && ln -sfnv ../../drive_d "$WINEPREFIX/dosdevices/d:"
-	cp -nv "$APPDIR/usr/share/drive_d/Fonts"/* $WINEPREFIX/drive_c/windows/Fonts/
+	cp -nv "$APPDIR/usr/share/drive_d/Fonts"/* "$WINEPREFIX/drive_c/windows/Fonts/"
 	[[ $SAVEDATA_FLAG -eq 1 ]] && restoresavedata
 fi
 savedata_show_location
@@ -526,7 +530,7 @@ function atexit() {
 	#rm -r "$MNT_ALLWINESTORGE"
 	#echo "Removing $MNT_HOMESTORGE"
 	#rm -r "$MNT_HOMESTORGE"
-	echo "Removing /tmp/$(basename $APPDIR).unionfs"
+	echo "Removing /tmp/$(basename "$APPDIR").unionfs"
 	rm -r "/tmp/$(basename "$APPDIR").unionfs"
 	rm -r "$APPIMAGE_CACHE_DIR/usr/share"/.unionfs* >/dev/null 2>&1
 	rm -r "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
