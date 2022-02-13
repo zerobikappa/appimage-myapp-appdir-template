@@ -195,7 +195,7 @@ EOF
 }
 
 function print_version(){
-	if [[ -z $APPIMAGE ]];
+	if [[ -d $APPIMAGE ]];
 	then
 		#APPIMAGEKIT_VERSION="AppImageKit Version: (empty)(directly running from AppDir)"
 		echo "***AppImageKit Version***"
