@@ -340,14 +340,6 @@ EOF
 		clear
 		return
 	fi
-
-	#echo "" > "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
-	#echo EXE_LDIR=\""$TEMP_EXE_LDIR"\" >> "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
-	#echo EXE_WROOT=\""$TEMP_EXE_WROOT"\" >> "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
-	#echo EXE_WDIR=\""$TEMP_EXE_WDIR"\" >> "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
-	#echo EXENAME=\""$TEMP_EXENAME"\" >> "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
-	#echo SAVEDATA_IN_HOME=\""$TEMP_SAVEDATA_IN_HOME"\" >> "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
-	#echo SAVEDATA_DIR=\""$TEMP_SAVEDATA_DIR"\" >> "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
 	cat << EOF > "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
 EXE_LDIR="$TEMP_EXE_LDIR"
 EXE_WROOT="$TEMP_EXE_WROOT"
