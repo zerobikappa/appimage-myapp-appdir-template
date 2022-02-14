@@ -239,26 +239,26 @@ function handle_savedata_location(){
 		RETURN_STATUS="$?"
 	fi
 
+	clear
 	if [[ $RETURN_STATUS -eq 0 ]];
 	then
-		if [[ "$(TEMP_SAVEDATAPATH%"${APPIMAGE_CACHE_DIR}/usr/share")" != "$TEMP_SAVEDATAPATH" ]];
+		if [[ "${TEMP_SAVEDATAPATH#"${APPIMAGE_CACHE_DIR}/usr/share"}" != "$TEMP_SAVEDATAPATH" ]];
 		then
 			TEMP_SAVEDATA_IN_HOME=0
 			TEMP_SAVEDATA_DIR=$(apprun_realpath "${APPIMAGE_CACHE_DIR}/usr/share" "$TEMP_SAVEDATAPATH")
-		elif [[ "$(TEMP_SAVEDATAPATH%"${APPDIR}/usr/share")" != "$TEMP_SAVEDATAPATH" ]];
+		elif [[ "${TEMP_SAVEDATAPATH#"${APPDIR}/usr/share"}" != "$TEMP_SAVEDATAPATH" ]];
 		then
 			TEMP_SAVEDATA_IN_HOME=0
 			TEMP_SAVEDATA_DIR=$(apprun_realpath "${APPDIR}/usr/share" "$TEMP_SAVEDATAPATH")
-		elif [[ "$(TEMP_SAVEDATAPATH%"${APPIMAGE_CACHE_DIR}/home/public_user")" != "$TEMP_SAVEDATAPATH" ]];
+		elif [[ "${TEMP_SAVEDATAPATH#"${APPIMAGE_CACHE_DIR}/home/public_user"}" != "$TEMP_SAVEDATAPATH" ]];
 		then
 			TEMP_SAVEDATA_IN_HOME=1
 			TEMP_SAVEDATA_DIR=$(apprun_realpath "${APPIMAGE_CACHE_DIR}/home/public_user" "$TEMP_SAVEDATAPATH")
-		elif [[ "$(TEMP_SAVEDATAPATH%"${APPDIR}/home/public_user")" != "$TEMP_SAVEDATAPATH" ]];
+		elif [[ "${TEMP_SAVEDATAPATH#"${APPDIR}/home/public_user"}" != "$TEMP_SAVEDATAPATH" ]];
 		then
 			TEMP_SAVEDATA_IN_HOME=1
 			TEMP_SAVEDATA_DIR=$(apprun_realpath "${APPDIR}/home/public_user" "$TEMP_SAVEDATAPATH")
 		else
-			clear
 			echo "########################################"
 			echo "ERROR: savedata directory outside of appimage dir."	# outside of AppDir and *.appimage.
 			echo "########################################"
@@ -268,7 +268,6 @@ function handle_savedata_location(){
 	fi
 	unset RETURN_STATUS
 	unset TEMP_SAVEDATAPATH
-	clear
 }
 
 function write_exeinfo(){
