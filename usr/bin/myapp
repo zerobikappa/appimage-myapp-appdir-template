@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1644780174
+MYAPPRUN_VERSION=1644858309
 
 #############################################
 ## prevent running by root/sudo
@@ -411,8 +411,12 @@ function restoresavedata(){
 		echo "[AppRun:restoresavedata] error: invalid FIND_DIR, cannot recover user savedata"
 	fi
 
-	SAVEDATA_RESTORE_LIST="$(find "$FIND_DIR" -type f -name "*.myapp.$USER.backup")"
-	for SAVEDATA_BACKUP in $SAVEDATA_RESTORE_LIST ; do
+	echo "restore user savedata..."
+	#SAVEDATA_RESTORE_LIST="$(find "$FIND_DIR" -type f -name "*.myapp.$USER.backup")"
+	#for SAVEDATA_BACKUP in $SAVEDATA_RESTORE_LIST ; do	#NOT USED: could not handle filename with whitespace
+	find "$FIND_DIR" -mindepth 1 -name "*.myapp.$USER.backup" -print0 | while read -d $'\0' SAVEDATA_BACKUP;
+	do
+		echo  "$SAVEDATA_BACKUP" ' >>to>> ' "${SAVEDATA_BACKUP%".myapp.$USER.backup"}"
 		mv -f "$SAVEDATA_BACKUP" "${SAVEDATA_BACKUP%".myapp.$USER.backup"}"
 	done
 }
