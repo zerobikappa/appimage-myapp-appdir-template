@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1644858309
+MYAPPRUN_VERSION=1644963163
 
 #############################################
 ## prevent running by root/sudo
@@ -367,7 +367,7 @@ mkdir -p "$MNT_HOMESTORGE" "$TMP_HOMESTORGE_OVERLAY"
 
 ##############################################
 ## restore wine prefix, should only run this function after unionfs is mounted, because $WINEPREFIX path include the unionfs drive
-function restore_wine_prefix(){
+function wine_restore_prefix(){
 	[[ ! -d $WINEPREFIX ]] && wine cmd /C exit	# only setup wineprefix and do nothing
 	echo "disable" > "$WINEPREFIX/.update-timestamp"
 	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm "{}" \;
@@ -376,8 +376,12 @@ function restore_wine_prefix(){
 	if [[ ! -L "$WINEPREFIX/drive_c/windows/Fonts" ]];
 	then
 		rm -rf "$WINEPREFIX/drive_c/windows/Fonts"
-		ln -sfnv ../../../drive_d/fonts "$WINEPREFIX/drive_c/windows/Fonts"
+		ln -sfnv ../../../drive_d/myapp_fonts "$WINEPREFIX/drive_c/windows/Fonts"
 	fi
+}
+
+function wine_patch_reg(){
+	wine regedit "d:\\myapp_patch_reg\\$WINEARCH.patch.reg"
 }
 ##############################################
 
@@ -386,19 +390,26 @@ function restore_wine_prefix(){
 ## show the game walkthrough, you can see this info when using commandline to launch this app.
 function walkthrough_browser(){
 	cat << EOF
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @
 @
   you can also click below html file to show game walkthrough:
 @
-  file://$MNT_ALLWINESTORGE/drive_d/walkthrough.html"
+EOF
+	for i in $(ls "$MNT_ALLWINESTORGE/drive_d/myapp_walkthrough"/*.html);
+	do
+		#echo "  file://$MNT_ALLWINESTORGE/drive_d/myapp_walkthrough/$i"
+		# ls will output the full path if run -> ls /full/path/to/file/*.html
+		echo "  file://$i"
+	done
+	cat << EOF
 @
 @
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 EOF
 	#todo: failed to using xdg-open to open html file.
-	i3-sensible-browser "$MNT_ALLWINESTORGE/drive_d/walkthrough.html"
+	i3-sensible-browser "$MNT_ALLWINESTORGE/drive_d/myapp_walkthrough"/*.html
 }
 
 ##############################################
@@ -406,19 +417,19 @@ EOF
 
 ##############################################
 ## game savedata
-function copysavedata(){
+function savedata_replace(){
 	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
 	then
 		mkdir -p "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
-		cp -r --suffix=.myapp."$USER".backup "$MNT_ALLWINESTORGE/drive_d/savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+		cp -r --suffix=.myapp."$USER".backup "$MNT_ALLWINESTORGE/drive_d/myapp_savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
 	elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
 	then
 		mkdir -p "$MNT_HOMESTORGE/$SAVEDATA_DIR"
-		cp -r --suffix=.myapp."$USER".backup "$MNT_ALLWINESTORGE/drive_d/savedata"/* "$MNT_HOMESTORGE/$SAVEDATA_DIR"
+		cp -r --suffix=.myapp."$USER".backup "$MNT_ALLWINESTORGE/drive_d/myapp_savedata"/* "$MNT_HOMESTORGE/$SAVEDATA_DIR"
 	fi
 }
 
-function restoresavedata(){
+function savedata_restore(){
 	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
 	then
 		FIND_DIR="$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
@@ -426,7 +437,7 @@ function restoresavedata(){
 	then
 		FIND_DIR="$MNT_HOMESTORGE/$SAVEDATA_DIR"
 	else
-		echo "[AppRun:restoresavedata] error: invalid FIND_DIR, cannot recover user savedata"
+		echo "[AppRun:savedata_restore] error: invalid FIND_DIR, cannot recover user savedata"
 	fi
 
 	echo "restore user savedata..."
@@ -490,15 +501,18 @@ then
 	echo "*****using $WINEARCH"
 	if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
 	then
-		restore_wine_prefix
+		wine_restore_prefix
 		#"$APPDIR"/usr/bin/winetricks sandbox
+		wine_patch_reg
 		"$APPDIR"/usr/bin/winetricks "$@"
 	else
-		restore_wine_prefix
+		wine_restore_prefix
 		[[ $WALKTHROUGH_FLAG -eq 1 ]] && walkthrough_browser
-		[[ $SAVEDATA_FLAG -eq 1 ]] && copysavedata
+		[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_replace
 		cd "$MNT_ALLWINESTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
-		#winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path because winetricks sandbox was set.
+		#"$APPDIR"/usr/bin/winetricks sandbox
+		wine_patch_reg
+		#"$APPDIR"/usr/binwinetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path because winetricks sandbox was set.
 		wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@"
 	fi
 fi
@@ -540,8 +554,8 @@ if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
 then
 	cd "$APPDIR" || exit 2	#go back to $APPDIR, then remove temp file
 	echo "restore wine drive symlink entries"
-	restore_wine_prefix
-	[[ $SAVEDATA_FLAG -eq 1 ]] && restoresavedata
+	wine_restore_prefix
+	[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_restore
 fi
 savedata_show_location
 
