@@ -339,6 +339,7 @@ EOF
 		clear
 		return
 	fi
+	mkdir -p "$APPIMAGE_CACHE_DIR/usr/share"
 	cat << EOF > "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
 EXE_LDIR="$TEMP_EXE_LDIR"
 EXE_WROOT="$TEMP_EXE_WROOT"
