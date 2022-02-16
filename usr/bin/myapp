@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1644963163
+MYAPPRUN_VERSION=1645008762
 
 #############################################
 ## prevent running by root/sudo
@@ -399,12 +399,14 @@ function walkthrough_browser(){
   you can also click below html file to show game walkthrough:
 @
 EOF
+
 	for i in $(ls "$MNT_ALLWINESTORGE/drive_d/myapp_walkthrough"/*.html);
 	do
 		#echo "  file://$MNT_ALLWINESTORGE/drive_d/myapp_walkthrough/$i"
 		# ls will output the full path if run -> ls /full/path/to/file/*.html
 		echo "  file://$i"
 	done
+
 	cat << EOF
 @
 @
@@ -514,10 +516,10 @@ then
 		[[ $WALKTHROUGH_FLAG -eq 1 ]] && walkthrough_browser
 		[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_replace
 		cd "$MNT_ALLWINESTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
-		#"$APPDIR"/usr/bin/winetricks sandbox
+		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1
 		wine_patch_reg
 		wineboot -es
-		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path because winetricks sandbox was set.
+		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path if winetricks sandbox was set.
 		wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@"
 	fi
 fi
@@ -530,6 +532,9 @@ fi
 # monitor if the .exe is still running
 # however, if the .exe file is only a launcher to launch other .exe files. pls change below code to monitor other the correct *.exe files.
 function monitor_exe_running(){
+	# if you find the $EXENAME is only a launcher to launch other *.exe,
+	# you can uncomment below line to change the $EXENAME to another name.
+	#EXENAME="another name"		# uncomment this line if you need to monitor *.exe with another name.
 	[[ -z "$EXENAME" ]] && return
 
 	if [[ -n "$(pgrep -fi "$EXENAME")" ]];
@@ -546,6 +551,9 @@ function monitor_exe_running(){
 			break	# the $EXENAME exe is no longer running
 		fi
 	done
+	# some application will change the reg in wine, if return from this function directly,
+	# then unionfs drive will be unmount immediately.
+	# therefore we can add a "wineboot" command to wait for wine saving the registry.
 	wineboot -es
 }
 monitor_exe_running
@@ -559,10 +567,11 @@ monitor_exe_running
 if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
 then
 	cd "$APPDIR" || exit 2	#go back to $APPDIR, then remove temp file
-	echo "restore wine drive symlink entries"
+	echo "restore wine drive symlink entries..."
 	wine_restore_prefix
 	[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_restore
 fi
+
 savedata_show_location
 
 
@@ -570,10 +579,6 @@ function atexit() {
 	echo "killing $APPDIR/usr/bin/unionfs"
 	killall "$APPDIR/usr/bin/unionfs"
 	sleep 1
-	#echo "Removing $MNT_ALLWINESTORGE"
-	#rm -r "$MNT_ALLWINESTORGE"
-	#echo "Removing $MNT_HOMESTORGE"
-	#rm -r "$MNT_HOMESTORGE"
 	echo "Removing /tmp/$(basename "$APPDIR").unionfs"
 	rm -r "/tmp/$(basename "$APPDIR").unionfs"
 	rm -r "$APPIMAGE_CACHE_DIR/usr/share"/.unionfs* >/dev/null 2>&1
