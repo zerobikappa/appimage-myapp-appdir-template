@@ -381,7 +381,10 @@ function wine_restore_prefix(){
 }
 
 function wine_patch_reg(){
-	wine regedit "d:\\myapp_patch_reg\\$WINEARCH.patch.reg"
+	for i in $(ls "$MNT_ALLWINESTORGE"/drive_d/myapp_patch_reg/*.${WINEARCH}.reg); do
+		[[ -f $i ]] && i=$(basename "$i") || continue
+		wine regedit "d:\\myapp_patch_reg\\$i"
+	done
 }
 ##############################################
 
@@ -504,6 +507,7 @@ then
 		wine_restore_prefix
 		#"$APPDIR"/usr/bin/winetricks sandbox
 		wine_patch_reg
+		wineboot -es
 		"$APPDIR"/usr/bin/winetricks "$@"
 	else
 		wine_restore_prefix
@@ -512,7 +516,8 @@ then
 		cd "$MNT_ALLWINESTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
 		#"$APPDIR"/usr/bin/winetricks sandbox
 		wine_patch_reg
-		#"$APPDIR"/usr/binwinetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path because winetricks sandbox was set.
+		wineboot -es
+		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path because winetricks sandbox was set.
 		wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@"
 	fi
 fi
@@ -541,6 +546,7 @@ function monitor_exe_running(){
 			break	# the $EXENAME exe is no longer running
 		fi
 	done
+	wineboot -es
 }
 monitor_exe_running
 
