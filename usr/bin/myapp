@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1645020311
+MYAPPRUN_VERSION=1645051236
 
 #############################################
 ## prevent running by root/sudo
@@ -510,7 +510,7 @@ then
 		wine_restore_prefix
 		#"$APPDIR"/usr/bin/winetricks sandbox
 		wine_patch_reg
-		wineboot -es
+		wineboot -s
 		"$APPDIR"/usr/bin/winetricks "$@"
 	else
 		wine_restore_prefix
@@ -519,7 +519,7 @@ then
 		cd "$MNT_ALLWINESTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
 		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1
 		wine_patch_reg
-		wineboot -es
+		wineboot -s
 		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path if winetricks sandbox was set.
 		wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@"
 	fi
@@ -555,7 +555,7 @@ function monitor_exe_running(){
 	# some application will change the reg in wine, if return from this function directly,
 	# then unionfs drive will be unmount immediately.
 	# therefore we can add a "wineboot" command to wait for wine saving the registry.
-	wineboot -es
+	wineboot -s
 }
 monitor_exe_running
 
