@@ -23,7 +23,9 @@ SELF=$(readlink -f "$0")
 export PATH="${APPDIR}/usr/bin/:${APPDIR}/usr/sbin/:${APPDIR}/usr/games/:${APPDIR}/bin/:${APPDIR}/sbin/${PATH:+:$PATH}"
 export LD_LIBRARY_PATH="${APPDIR}/usr/lib/:${APPDIR}/usr/lib/i386-linux-gnu/:${APPDIR}/usr/lib/x86_64-linux-gnu/:${APPDIR}/usr/lib32/:${APPDIR}/usr/lib64/:${APPDIR}/lib/:${APPDIR}/lib/i386-linux-gnu/:${APPDIR}/lib/x86_64-linux-gnu/:${APPDIR}/lib32/:${APPDIR}/lib64/${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export PYTHONPATH="${APPDIR}/usr/share/pyshared/${PYTHONPATH:+:$PYTHONPATH}"
-export XDG_DATA_DIRS="${APPDIR}/usr/share/${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
+#export XDG_DATA_DIRS="${APPDIR}/usr/share/${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
+# if XDG_DATA_DIRS is empyt, after add ${APPDIR}/user/share/ into XDG_DATA_DIRS, also need to manual add default data path, otherwise local zenity could not load data files.
+export XDG_DATA_DIRS="${APPDIR}/usr/share/${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}:/usr/local/share/:/usr/share/"
 export PERLLIB="${APPDIR}/usr/share/perl5/:${APPDIR}/usr/lib/perl5/${PERLLIB:+:$PERLLIB}"
 export GSETTINGS_SCHEMA_DIR="${APPDIR}/usr/share/glib-2.0/schemas/${GSETTINGS_SCHEMA_DIR:+:$GSETTINGS_SCHEMA_DIR}"
 export QT_PLUGIN_PATH="${APPDIR}/usr/lib/qt4/plugins/:${APPDIR}/usr/lib/i386-linux-gnu/qt4/plugins/:${APPDIR}/usr/lib/x86_64-linux-gnu/qt4/plugins/:${APPDIR}/usr/lib32/qt4/plugins/:${APPDIR}/usr/lib64/qt4/plugins/:${APPDIR}/usr/lib/qt5/plugins/:${APPDIR}/usr/lib/i386-linux-gnu/qt5/plugins/:${APPDIR}/usr/lib/x86_64-linux-gnu/qt5/plugins/:${APPDIR}/usr/lib32/qt5/plugins/:${APPDIR}/usr/lib64/qt5/plugins/${QT_PLUGIN_PATH:+:$QT_PLUGIN_PATH}"
@@ -81,16 +83,12 @@ then
 	echo "${APPIMAGE}.home exists but is not necessary."
 	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/ to save related files."
 fi
-export HOME=$MNT_HOMESTORGE
-echo \$HOME=$HOME
 
 if [[ -d ${APPIMAGE}.config ]];
 then
 	echo "${APPIMAGE}.config exists but is not necessary."
 	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/.config to save related files."
 fi
-export XDG_CONFIG_HOME="$MNT_HOMESTORGE/.config"
-echo \$XDG_CONFIG_HOME=$XDG_CONFIG_HOME
 
 ##############################################
 
@@ -323,7 +321,7 @@ source "$APPDIR"/usr/bin/myapp-plugin-exeinfo-gen
 
 if [[ $EXEINFO_GEN_FLAG -eq 1 && $EXEINFO_GEN_METHOD == "cli" ]];
 then
-	exeinfo_gen
+	exeinfo_main
 	exit
 fi
 
@@ -381,10 +379,11 @@ function wine_restore_prefix(){
 }
 
 function wine_patch_reg(){
-	[[ -z "$(ls "$MNT_ALLWINESTORGE"/drive_d/myapp_patch_reg/*.${WINEARCH}.reg 2>/dev/null )" ]] && return
-	for i in $(ls "$MNT_ALLWINESTORGE"/drive_d/myapp_patch_reg/*.${WINEARCH}.reg); do
+	[[ -z "$(ls "$MNT_ALLWINESTORGE"/drive_d/myapp_patch_reg/$WINEARCH/*.reg 2>/dev/null )" ]] && return
+	for i in $(ls "$MNT_ALLWINESTORGE"/drive_d/myapp_patch_reg/$WINEARCH/*.reg); do
+		# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
 		[[ -f $i ]] && i=$(basename "$i") || continue
-		wine regedit "d:\\myapp_patch_reg\\$i"
+		wine regedit "d:\\myapp_patch_reg\\$WINEARCH\\$i"
 	done
 }
 ##############################################
@@ -499,17 +498,24 @@ EOF
 
 if [[ $EXEINFO_GEN_FLAG -eq 1 && $EXEINFO_GEN_METHOD == "gui" ]];
 then
-	exeinfo_gen
+	exeinfo_main
 fi
 
 if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
 then
+	# moved home and xdg_config_home env setting to here.
+	# if change $HOME and $XDG_CONFIG_HOME too early, the exeinfo plugin may encounter some path error.
+	export HOME=$MNT_HOMESTORGE
+	echo \$HOME=$HOME
+	export XDG_CONFIG_HOME="$MNT_HOMESTORGE/.config"
+	echo \$XDG_CONFIG_HOME=$XDG_CONFIG_HOME
 	echo "*****using $WINEARCH"
 	if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
 	then
 		wine_restore_prefix
 		#"$APPDIR"/usr/bin/winetricks sandbox
 		wine_patch_reg
+		#wineboot -es	# this command run too slow
 		wineboot -s
 		"$APPDIR"/usr/bin/winetricks "$@"
 	else
@@ -519,6 +525,7 @@ then
 		cd "$MNT_ALLWINESTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
 		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1
 		wine_patch_reg
+		#wineboot -es	# this command run too slow
 		wineboot -s
 		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path if winetricks sandbox was set.
 		wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@"
@@ -552,8 +559,9 @@ function monitor_exe_running(){
 			break	# the $EXENAME exe is no longer running
 		fi
 	done
-	# some application will change the reg in wine, if return from this function directly,
-	# then unionfs drive will be unmount immediately.
+	# some application will change the reg in wine.
+	# if return out of this function directly without waiting wine shutdown,
+	# unionfs drive will be unmount immediately.
 	# therefore we can add a "wineboot" command to wait for wine saving the registry.
 	wineboot -s
 }
@@ -582,6 +590,7 @@ function atexit() {
 	sleep 1
 	echo "Removing /tmp/$(basename "$APPDIR").unionfs"
 	rm -r "/tmp/$(basename "$APPDIR").unionfs"
+	# if not clean up unionfs hide files, may encounter some read file error next time.
 	rm -r "$APPIMAGE_CACHE_DIR/usr/share"/.unionfs* >/dev/null 2>&1
 	rm -r "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
 }
