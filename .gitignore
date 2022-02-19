@@ -1,5 +1,6 @@
 /.DirIcon
 /home
+/usr/share/drive_d/myapp_exeinfo/*
 /usr/share/drive_d/myapp_savedata/*
 /usr/share/drive_d/myapp_patch_reg/*
 !.gitkeep
