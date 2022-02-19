@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1645275770
+MYAPPRUN_VERSION=1645281548
 
 #############################################
 ## prevent running by root/sudo
@@ -390,9 +390,12 @@ mkdir -p "$MNT_HOMESTORGE" "$TMP_HOMESTORGE_OVERLAY"
 ##############################################
 ## restore wine prefix, should only run this function after unionfs is mounted, because $WINEPREFIX path include the unionfs drive
 function wine_restore_prefix(){
+	# "rm -rf" included, must check $WINEPREFIX first
+	[[ -z "$WINEPREFIX" ]] && echo "[myapp:wine_restore_prefix] ERROR:\$WINEPREFIX not set, could not restore wine prefix." >2 && return
+
 	[[ ! -d $WINEPREFIX ]] && wine cmd /C exit	# only setup wineprefix and do nothing
 	echo "disable" > "$WINEPREFIX/.update-timestamp"
-	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm "{}" \;
+	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
 	[[ ! -L "$WINEPREFIX/dosdevices/c:" ]] && ln -sfnv ../drive_c "$WINEPREFIX/dosdevices/c:"
 	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfnv ../../drive_d "$WINEPREFIX/dosdevices/d:"
 	if [[ ! -L "$WINEPREFIX/drive_c/windows/Fonts" ]];
@@ -608,14 +611,18 @@ savedata_show_location
 
 
 function atexit() {
+	# "rm -rf" included, must check env first.
+	[[ -z "$APPDIR" ]] && echo "[myapp:atexit] ERROR:\$APPDIR not set, could not clean temp files" >2 && return
+	[[ -z "$APPIMAGE_CACHE_DIR" ]] && echo "[myapp:atexit] ERROR:\$APPIMAGE_CACHE_DIR not set, could not clean temp files." >2 && return
+
 	echo "killing $APPDIR/usr/bin/unionfs"
 	killall "$APPDIR/usr/bin/unionfs"
 	sleep 1
 	echo "Removing /tmp/$(basename "$APPDIR").unionfs"
-	rm -r "/tmp/$(basename "$APPDIR").unionfs"
+	rm -rf "/tmp/$(basename "$APPDIR").unionfs"
 	# if not clean up unionfs hide files, may encounter some read file error next time.
-	rm -r "$APPIMAGE_CACHE_DIR/usr/share"/.unionfs* >/dev/null 2>&1
-	rm -r "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
+	rm -rf "$APPIMAGE_CACHE_DIR/usr/share"/.unionfs* >/dev/null 2>&1
+	rm -rf "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
 }
 #set -e
 #trap atexit EXIT	#NOT USED: due to some .exe(as game launcher) would pass EXIT signal after it completed to launch other .exe files. 
