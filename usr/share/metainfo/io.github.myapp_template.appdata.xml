@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>org.apphomepage.appimagename</id>
+  <id>io.github.myapp_template</id>
   
-  <name>AppimageName</name>
-  <summary>AppimageSummary</summary>
+  <name>myapp-template</name>
+  <summary>appimage appdir template</summary>
   
   <metadata_license>FSFAP</metadata_license>
   <project_license>WTFPL</project_license>
   
   <description>
     <p>
-      AppimageDescription
+      My bash script tool to install or test windows .exe before bundle it into .appimage package.
     </p>
   </description>
   
-  <launchable type="desktop-id">org.apphomepage.appimagename.desktop</launchable>
+  <launchable type="desktop-id">io.github.myapp_template.desktop</launchable>
   <screenshots>
     <screenshot type="default">
       <image>http://NoScreenShot.org/0.jpg</image>
@@ -27,5 +27,3 @@
     </screenshot>
   </screenshots>
 </component>
-
-<!-- https://www.freedesktop.org/software/appstream/metainfocreator/#/guiapp -->
