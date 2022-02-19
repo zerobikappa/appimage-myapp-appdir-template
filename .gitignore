@@ -4,4 +4,5 @@
 /usr/share/drive_d/myapp_savedata/*
 /usr/share/drive_d/myapp_patch_reg/win32/*
 /usr/share/drive_d/myapp_patch_reg/win64/*
+!winedbg.patch1.reg
 !.gitkeep
