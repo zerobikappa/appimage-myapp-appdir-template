@@ -6,14 +6,18 @@
 SELF=$(readlink -f "$0")
 HERE=${SELF%/*}
 
+#############################################
+## prevent running by root/sudo
+if [[ $(id -u) -eq 0 ]];
+then
+	echo "[AppRun]: prevent running by root/sudo"
+	echo "[AppRun]: you should not using root/sudo to run this application"
+	exit
+fi
+#############################################
+
 echo "remove git related files from AppDir"
-rm -rfv "$HERE"/.git*
+find "$HERE" -name ".git*" -exec rm -rfv "{}" \;
 rm -rfv "$HERE"/README.md
 rm -rfv "$HERE"/readme-todo
-rm -rfv "$HERE"/usr/share/drive_d/myapp_savedata/.git*
-rm -rfv "$HERE"/usr/share/drive_d/myapp_walkthrough/.git*
-rm -rfv "$HERE"/usr/share/drive_d/myapp_fonts/.git*
-rm -rfv "$HERE"/usr/share/drive_d/myapp_patch_reg/.git*
-rm -rfv "$HERE"/usr/share/drive_d/myapp_patch_reg/win32/.git*
-rm -rfv "$HERE"/usr/share/drive_d/myapp_patch_reg/win64/.git*
 rm -rfv "$HERE"/.remove-appdir-git.sh
