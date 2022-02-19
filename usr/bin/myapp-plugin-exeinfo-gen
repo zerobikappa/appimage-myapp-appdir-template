@@ -7,12 +7,12 @@ function exeinfo_test_env(){
 	cat << EOF
 [myapp-exeinfo-plugin-gen]: test env
 required:
-MYAPPDEBUG=$MYAPPDEBUG
 APPDIR=$APPDIR
 APPIMAGE_CACHE_DIR=$APPIMAGE_CACHE_DIR
 EXEINFO_GEN_METHOD=$EXEINFO_GEN_METHOD
 
 optional:
+MYAPPDEBUG=$MYAPPDEBUG
 EXE_LDIR=$EXE_LDIR
 EXE_WROOT=$EXE_WROOT
 EXE_WDIR=$EXE_WDIR
@@ -191,11 +191,11 @@ EOF
 function exeinfo_exe_location(){
 	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
 	then
-		TEMP_EXEPATH="$(kdialog --geometry 1000x600 --title "select the .exe file" --getopenfilename "$APPIMAGE_CACHE_DIR/usr/share"/* )"
+		TEMP_EXEPATH="$(kdialog --geometry 1000x600 --title "select the .exe file" --getopenfilename "$APPIMAGE_CACHE_DIR/usr/share" )"
 		RETURN_STATUS="$?"
 	elif [[ $EXEINFO_GEN_METHOD == "zenity" ]];
 	then
-		TEMP_EXEPATH="$(zenity --width=1000 --height=600 --file-selection --title="select the .exe file" --filename="$APPIMAGE_CACHE_DIR/usr/share"/* )"
+		TEMP_EXEPATH="$(zenity --width=1000 --height=600 --file-selection --title="select the .exe file" --filename="$APPIMAGE_CACHE_DIR/usr/share" )"
 		RETURN_STATUS="$?"
 	else
 		clear
@@ -289,11 +289,11 @@ function exeinfo_exe_location(){
 function exeinfo_savedata_location(){
 	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
 	then
-		TEMP_SAVEDATAPATH=$(kdialog --geometry 1000x600 --title "select the directory where to save the savedata files" --getexistingdirectory "$APPIMAGE_CACHE_DIR/usr/share"/* )
+		TEMP_SAVEDATAPATH=$(kdialog --geometry 1000x600 --title "select the directory where to save the savedata files" --getexistingdirectory "$APPIMAGE_CACHE_DIR/usr/share" )
 		RETURN_STATUS="$?"
 	elif [[ $EXEINFO_GEN_METHOD == "zenity" ]];
 	then
-		TEMP_SAVEDATAPATH="$(zenity --width=1000 --height=600 --file-selection --directory --title="select the directory where to save the savedata files" --filename="$APPIMAGE_CACHE_DIR/usr/share"/* )"
+		TEMP_SAVEDATAPATH="$(zenity --width=1000 --height=600 --file-selection --directory --title="select the directory where to save the savedata files" --filename="$APPIMAGE_CACHE_DIR/usr/share" )"
 		RETURN_STATUS="$?"
 	else
 		clear
@@ -361,7 +361,7 @@ function exeinfo_savedata_location(){
 function exeinfo_locale(){
 	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
 	then
-		TEMP_MYAPPLANG=$(kdialog --geometry 1000x600 --inputbox \
+		TEMP_LANG=$(kdialog --geometry 1000x600 --inputbox \
 "set \$LANG for this game:
 supported locale in current system:
 
@@ -376,7 +376,7 @@ please use locale-gen to generate locale setting first." "$LANG")
 	elif [[ $EXEINFO_GEN_METHOD == "zenity" ]];
 	then
 		# TODO: zenity --text option ignore underscore"_" output. I used whitespace" " to replace underscore"_" at this moment.
-		TEMP_MYAPPLANG=$(zenity --entry --text=\
+		TEMP_LANG=$(zenity --entry --text=\
 " \
 set \$LANG for this game:\n \
 supported locale in current system:\n \
@@ -407,22 +407,24 @@ please use locale-gen to generate locale setting first.\n" --entry-text="$LANG")
 		echo "  please use locale-gen to generate locale setting first."
 		echo "##################################################"
 		echo ""
-		read -p "set MYAPPLANG=: " -i "$LANG" TEMP_MYAPPLANG
+		read -p "set MYAPPLANG=: " -i "$LANG" TEMP_LANG
 		RETURN_STATUS="$?"
 	fi
 
 	clear
-	if [[ $RETURN_STATUS -eq 0 && -n $TEMP_MYAPPLANG ]];
+	if [[ $RETURN_STATUS -eq 0 && -n $TEMP_LANG ]];
 	then
-		if ! (localectl list-locales| grep "$TEMP_MYAPPLANG" -x --quiet 2>/dev/null );
+		if (localectl list-locales| grep "$TEMP_LANG" -x --quiet 2>/dev/null );
 		then
+			TEMP_MYAPPLANG=$TEMP_LANG
+		else	
 			echo "########################################"
-			echo "ERROR: unsupport MYAPPLANG: $TEMP_MYAPPLANG"
+			echo "ERROR: unsupport MYAPPLANG: $TEMP_LANG"
 			echo "########################################"
 			echo ""
-			unset TEMP_MYAPPLANG
 		fi
 	fi
+	unset TEMP_LANG
 	unset RETURN_STATUS
 }
 
@@ -521,8 +523,8 @@ EOF
 		clear
 		return
 	fi
-	mkdir -p "$APPIMAGE_CACHE_DIR/usr/share"
-	cat << EOF > "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
+	mkdir -p "$APPIMAGE_CACHE_DIR/usr/share/drive_d/myapp_exeinfo"
+	cat << EOF > "$APPIMAGE_CACHE_DIR/usr/share/drive_d/myapp_exeinfo/exeinfo_profile"
 EXE_LDIR="$TEMP_EXE_LDIR"
 EXE_WROOT="$TEMP_EXE_WROOT"
 EXE_WDIR="$TEMP_EXE_WDIR"
@@ -531,9 +533,9 @@ SAVEDATA_IN_HOME="$TEMP_SAVEDATA_IN_HOME"
 SAVEDATA_DIR="$TEMP_SAVEDATA_DIR"
 MYAPPLANG="$TEMP_MYAPPLANG"
 EOF
-	echo "saved into $APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile"
-	cat "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile" > "$APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile.$TEMP_MYAPPLANG"
-	echo "saved into $APPIMAGE_CACHE_DIR/usr/share/exeinfo_profile.$TEMP_MYAPPLANG"
+	echo "saved into $APPIMAGE_CACHE_DIR/usr/share/drive_d/myapp_exeinfo/exeinfo_profile"
+	cat "$APPIMAGE_CACHE_DIR/usr/share/drive_d/myapp_exeinfo/exeinfo_profile" > "$APPIMAGE_CACHE_DIR/usr/share/drive_d/myapp_exeinfo/exeinfo_profile.$TEMP_MYAPPLANG"
+	echo "saved into $APPIMAGE_CACHE_DIR/usr/share/drive_d/myapp_exeinfo/exeinfo_profile.$TEMP_MYAPPLANG"
 	EXIT_MAIN_MENU=1
 
 }
@@ -612,7 +614,14 @@ function exeinfo_main(){
 }
 
 [[ "$0" == "${BASH_SOURCE[0]}" && $MYAPPDEBUG -eq 1 ]] && exeinfo_test_env
-[[ "$0" == "${BASH_SOURCE[0]}" ]] && exeinfo_main
+if [[ "$0" == "${BASH_SOURCE[0]}" ]];
+then
+	[[ -n $APPDIR ]] || echo "[AppRun:plugin_exeinfo] required \$APPDIR but it was not set"
+	[[ -n $APPIMAGE_CACHE_DIR ]] || echo "[AppRun:plugin_exeinfo] required \$APPIMAGE_CACHE_DIR but it was not set"
+	[[ -n $EXEINFO_GEN_METHOD ]] || echo "[AppRun:plugin_exeinfo] required \$EXEINFO_GEN_METHOD but it was not set"
+	[[ -n $APPDIR || -n $APPIMAGE_CACHE_DIR || -n $EXEINFO_GEN_METHOD ]] || return
+	exeinfo_main
+fi
 
 ##############################################
 

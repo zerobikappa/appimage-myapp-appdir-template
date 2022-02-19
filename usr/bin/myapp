@@ -114,12 +114,21 @@ export WINEDLLOVERRIDES=winemenubuilder.exe=d	# prevent wine setup application m
 
 ##############################################
 ## load exeinfo_profile, may depends on $WINEARCH, (if savedata in c drive,) should set the $WINEARCH first
-if [[ -f "$APPIMAGE_CACHE_DIR"/usr/share/exeinfo_profile ]];
+if [[ -f "$APPIMAGE_CACHE_DIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile."$LANG" ]];
 then
-	source "$APPIMAGE_CACHE_DIR"/usr/share/exeinfo_profile
-elif [[ -f "$APPDIR"/usr/share/exeinfo_profile ]];
+	source "$APPIMAGE_CACHE_DIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile."$LANG"
+elif [[ -f "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile."$LANG" ]];
 then
-	source "$APPDIR"/usr/share/exeinfo_profile
+	source "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile."$LANG"
+elif [[ -f "$APPIMAGE_CACHE_DIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile ]];
+then
+	source "$APPIMAGE_CACHE_DIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile
+elif [[ -f "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile ]];
+then
+	source "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile
+else
+	echo "cannot find exeinfo_profile for your LANG:$LANG"
+	echo "also cannot find default exeinfo_profile"
 fi
 ##############################################
 
@@ -508,16 +517,15 @@ EOF
 ##############################################
 ## launch app
 
-#export LANG=ja_JP.UTF-8
-[[ -n $MYAPPLANG ]] && LANG=$MYAPPLANG || LANG="ja_JP.UTF-8"
-
 if [[ $EXEINFO_GEN_FLAG -eq 1 ]];
 then
 	[[ $EXEINFO_GEN_METHOD == "gui" || $EXEINFO_GEN_METHOD == "zenity" || $EXEINFO_GEN_METHOD == "kdialog" ]] && exeinfo_main
 fi
 
+
 if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
 then
+	[[ -n $MYAPPLANG ]] && LANG=$MYAPPLANG || echo "MYAPPLANG not set, using current LANG:$LANG"
 	# moved home and xdg_config_home env setting to here.
 	# if change $HOME and $XDG_CONFIG_HOME too early, the exeinfo plugin may encounter some path error.
 	export HOME=$MNT_HOMESTORGE
