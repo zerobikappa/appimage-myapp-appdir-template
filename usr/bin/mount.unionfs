@@ -1,9 +1,0 @@
-#!/bin/bash
-
-label=$1
-mpoint=$2
-shift 3
-dirs=${@##*,dirs=}
-dirs=${dirs/,/:}
-mount.fuse "unionfs#$dirs" "$mpoint" -o ${@%%,dirs=*} 
-
