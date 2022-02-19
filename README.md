@@ -220,6 +220,7 @@ for more information, please refer below project to learn about how to bundle yo
 
 [AppImageKit](https://github.com/AppImage/AppImageKit)  
 [Wine_Appimage](https://github.com/Hackerl/Wine_Appimage)
+[Create metadata](https://www.freedesktop.org/software/appstream/metainfocreator/#/guiapp)
 
 now you can run:
 
