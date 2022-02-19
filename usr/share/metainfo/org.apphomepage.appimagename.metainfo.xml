@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.apphomepage.appimagename</id>
+  
+  <name>AppimageName</name>
+  <summary>AppimageSummary</summary>
+  
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>WTFPL</project_license>
+  
+  <description>
+    <p>
+      AppimageDescription
+    </p>
+  </description>
+  
+  <launchable type="desktop-id">org.apphomepage.appimagename.desktop</launchable>
+  <screenshots>
+    <screenshot type="default">
+      <image>http://NoScreenShot.org/0.jpg</image>
+    </screenshot>
+    <screenshot>
+      <image>http://NoScreenShot.org/1.jpg</image>
+    </screenshot>
+    <screenshot>
+      <image>http://NoScreenShot.org/2.jpg</image>
+    </screenshot>
+  </screenshots>
+</component>
+
+<!-- https://www.freedesktop.org/software/appstream/metainfocreator/#/guiapp -->
