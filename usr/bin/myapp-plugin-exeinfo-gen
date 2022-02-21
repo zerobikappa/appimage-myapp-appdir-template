@@ -88,21 +88,22 @@ function exeinfo_load_env(){
 function exeinfo_test_gui(){
 	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
 	then
-		[[ $(command -v kdialog) ]] && return || EXIT_MAIN_MENU=1
+		[[ -x "$(command -v kdialog 2>/dev/null)" ]] && return || EXIT_MAIN_MENU=1
 	elif [[ $EXEINFO_GEN_METHOD == "zenity" ]];
 	then
-		[[ $(command -v zenity) ]] && return || EXIT_MAIN_MENU=1
+		[[ -x "$(command -v zenity 2>/dev/null)" ]] && return || EXIT_MAIN_MENU=1
 	elif [[ $EXEINFO_GEN_METHOD == "gui" ]];
 	then
-		if [[ $(command -v zenity) ]];
+		if [[ "${XDG_CURRENT_DESKTOP}" == "KDE" ]];
 		then
-			EXEINFO_GEN_METHOD="zenity"
-			return
-		elif [[ $(command -v kdialog) ]];
-		then
-			EXEINFO_GEN_METHOD="kdialog"
-			return
+			[[ -x "$(command -v kdialog 2>/dev/null)" ]] && EXEINFO_GEN_METHOD="kdialog" && return
+			[[ -x "$(command -v zenity 2>/dev/null)" ]] && EXEINFO_GEN_METHOD="zenity" && return
+			# if not returned, that means above command not found, then:
+			EXIT_MAIN_MENU=1
 		else
+			[[ -x "$(command -v zenity 2>/dev/null)" ]] && EXEINFO_GEN_METHOD="zenity" && return
+			[[ -x "$(command -v kdialog 2>/dev/null)" ]] && EXEINFO_GEN_METHOD="kdialog" && return
+			# if not returned, that means above command not found, then:
 			EXIT_MAIN_MENU=1
 		fi
 	elif [[ $EXEINFO_GEN_METHOD == "cli" ]];
@@ -131,7 +132,7 @@ function exeinfo_test_gui(){
 function exeinfo_main_menu(){
 	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
 	then
-		MENU_SELECT_ITEM=$(kdialog --geometry 1000x600 --title "exe info setting" --menu "select one of items to go" \
+		MENU_SELECT_ITEM=$(kdialog --geometry 800x600 --title "exe info setting" --menu "select one of items to go" \
 			1 "1. set exe file location($TEMP_EXENAME)" \
 			2 "2. set savedata directory location($TEMP_SAVEDATA_DIR)" \
 			3 "3. set \$LANG for this game($TEMP_MYAPPLANG)" \
@@ -144,7 +145,7 @@ function exeinfo_main_menu(){
 		[[ $? -eq 1 ]] && MENU_SELECT_ITEM=5
 	elif [[ $EXEINFO_GEN_METHOD == "zenity" ]];
 	then
-		MENU_SELECT_ITEM=$(zenity --width=1000 --height=600 --list --title="exe info setting" \
+		MENU_SELECT_ITEM=$(zenity --width=800 --height=600 --list --title="exe info setting" \
 			--ok-label="go" --cancel-label="close" \
 			--text="select one of items to go" \
 			--column="item" --column="action" \
@@ -191,11 +192,11 @@ EOF
 function exeinfo_exe_location(){
 	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
 	then
-		TEMP_EXEPATH="$(kdialog --geometry 1000x600 --title "select the .exe file" --getopenfilename "$APPIMAGE_CACHE_DIR/usr/share" )"
+		TEMP_EXEPATH="$(kdialog --geometry 800x600 --title "select the .exe file" --getopenfilename "$APPIMAGE_CACHE_DIR/usr/share" )"
 		RETURN_STATUS="$?"
 	elif [[ $EXEINFO_GEN_METHOD == "zenity" ]];
 	then
-		TEMP_EXEPATH="$(zenity --width=1000 --height=600 --file-selection --title="select the .exe file" --filename="$APPIMAGE_CACHE_DIR/usr/share" )"
+		TEMP_EXEPATH="$(zenity --width=800 --height=600 --file-selection --title="select the .exe file" --filename="$APPIMAGE_CACHE_DIR/usr/share" )"
 		RETURN_STATUS="$?"
 	else
 		clear
@@ -236,16 +237,19 @@ function exeinfo_exe_location(){
 		# check if .exe file in appdir or in appdir.cache
 		if [[ "${TEMP_EXEPATH#"$APPIMAGE_CACHE_DIR/usr/share"}" != "$TEMP_EXEPATH" ]];
 		then
-			TEMP_EXE_LROOT=${APPIMAGE_CACHE_DIR}/usr/share	# .exe file in AppDir.cache or in *.appimage.cache directory
+			# .exe file in AppDir.cache or in *.appimage.cache directory
+			TEMP_EXE_LROOT=${APPIMAGE_CACHE_DIR}/usr/share
 		elif [[ "${TEMP_EXEPATH#"$APPDIR/usr/share"}" != "$TEMP_EXEPATH" ]];
 		then
-			TEMP_EXE_LROOT=$APPDIR/usr/share	# .exe file in AppDir, running AppRun directly from AppDir at this moment.
+			# .exe file in AppDir, running AppRun directly from AppDir at this moment.
+			TEMP_EXE_LROOT=$APPDIR/usr/share
 		else
 			[[ $EXEINFO_GEN_METHOD == "kdialog" ]] && kdialog --error "you selected *.exe file outside of appimage dir."
-			[[ $EXEINFO_GEN_METHOD == "zenity" ]] && zenity --error --text="you selected *.exe file outside of appimage dir."
+			[[ $EXEINFO_GEN_METHOD == "zenity" ]] && zenity --width=300 --height=100 --error --text="you selected *.exe file outside of appimage dir."
 			clear
 			echo "########################################"
-			echo "ERROR: .exe file outside of appimage dir." >&2	# outside of AppDir and *.cache. Should not install .exe outside of AppDir or *.cache.
+			# outside of AppDir and *.cache. Should not install .exe outside of AppDir or *.cache.
+			echo "ERROR: .exe file outside of appimage dir." >&2
 			echo "########################################"
 			echo ""
 			TEMP_EXEPATH=""
@@ -289,11 +293,11 @@ function exeinfo_exe_location(){
 function exeinfo_savedata_location(){
 	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
 	then
-		TEMP_SAVEDATAPATH=$(kdialog --geometry 1000x600 --title "select the directory where to save the savedata files" --getexistingdirectory "$APPIMAGE_CACHE_DIR/usr/share" )
+		TEMP_SAVEDATAPATH=$(kdialog --geometry 800x600 --title "select the directory where to save the savedata files" --getexistingdirectory "$APPIMAGE_CACHE_DIR/usr/share" )
 		RETURN_STATUS="$?"
 	elif [[ $EXEINFO_GEN_METHOD == "zenity" ]];
 	then
-		TEMP_SAVEDATAPATH="$(zenity --width=1000 --height=600 --file-selection --directory --title="select the directory where to save the savedata files" --filename="$APPIMAGE_CACHE_DIR/usr/share" )"
+		TEMP_SAVEDATAPATH="$(zenity --width=800 --height=600 --file-selection --directory --title="select the directory where to save the savedata files" --filename="$APPIMAGE_CACHE_DIR/usr/share" )"
 		RETURN_STATUS="$?"
 	else
 		clear
@@ -346,9 +350,10 @@ function exeinfo_savedata_location(){
 			TEMP_SAVEDATA_DIR=$(apprun_realpath "${APPDIR}/home/public_user" "$TEMP_SAVEDATAPATH")
 		else
 			[[ $EXEINFO_GEN_METHOD == "kdialog" ]] && kdialog --error "you selected savedata directory outside of appimage dir."
-			[[ $EXEINFO_GEN_METHOD == "zenity" ]] && zenity --error --text="you selected savedata directory outside of appimage dir."
+			[[ $EXEINFO_GEN_METHOD == "zenity" ]] && zenity --width=300 --height=100 --error --text="you selected savedata directory outside of appimage dir."
 			echo "########################################"
-			echo "ERROR: savedata directory outside of appimage dir."	# outside of AppDir and *.appimage.
+			# outside of AppDir and *.appimage.
+			echo "ERROR: savedata directory outside of appimage dir."
 			echo "########################################"
 			echo ""
 			TEMP_SAVEDATAPATH=""
@@ -361,7 +366,8 @@ function exeinfo_savedata_location(){
 function exeinfo_locale(){
 	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
 	then
-		TEMP_LANG=$(kdialog --geometry 1000x600 --inputbox \
+		#NOTUSED: did not use kdialog --checklist because it only reply the tag number instead of the LANG itself
+		TEMP_LANG=$(kdialog --geometry 800x600 --inputbox \
 "set \$LANG for this game:
 supported locale in current system:
 
@@ -375,19 +381,15 @@ please use locale-gen to generate locale setting first." "$LANG")
 		RETURN_STATUS="$?"
 	elif [[ $EXEINFO_GEN_METHOD == "zenity" ]];
 	then
-		# TODO: zenity --text option ignore underscore"_" output. I used whitespace" " to replace underscore"_" at this moment.
-		TEMP_LANG=$(zenity --entry --text=\
+		TEMP_LANG=$(zenity --width=800 --height=600 --list --text=\
 " \
 set \$LANG for this game:\n \
-supported locale in current system:\n \
-\n\
-$(localectl list-locales| sed -e 's/_/ /')
-\n \
-you can only choose one of above items to setup.\n \
+you can only choose one of below items to setup.\n \
 because if you cannot find your language in this list,\n \
 that means you cannot use this language setting to run this game.\n \
 if you cannot find your language in this list,\n \
-please use locale-gen to generate locale setting first.\n" --entry-text="$LANG")
+please use locale-gen to generate locale setting first.\n" \
+--column="supported locale in current system:" $(localectl list-locales) )
 		RETURN_STATUS=$?
 	else
 		clear
@@ -431,7 +433,7 @@ please use locale-gen to generate locale setting first.\n" --entry-text="$LANG")
 function exeinfo_write_file(){
 	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
 	then
-		kdialog --geometry 1000x600 --warningcontinuecancel \
+		kdialog --geometry 800x600 --warningcontinuecancel \
 "old:
 EXE_LDIR=\"$EXE_LDIR\"
 EXE_WROOT=\"$EXE_WROOT\"
@@ -455,7 +457,7 @@ write into exeinfo_profile?
 		RETURN_NUMBER=$?
 	elif [[ $EXEINFO_GEN_METHOD == "zenity" ]];
 	then
-		zenity --question --ok-label="continue" --text=\
+		zenity --width=800 --height=600 --question --ok-label="continue" --text=\
 " \
 old:\n \
 EXE_LDIR=\"$EXE_LDIR\"\n \

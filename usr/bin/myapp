@@ -77,8 +77,9 @@ fi
 # 这个目录将用于存档win32和win64的$WINEPREFIX，如果你真的要把生成的 $WINEPREFIX 打包进appimage包里面的话
 RO_ALLWINESTORGE="$APPDIR/usr/share/" # Use the location where contain $WINEPREFIX, both win32 and win64 WINEPREFIX directory are here.
 
+# Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
 # wine 程序实际是从这个挂载点读写数据的，这里用了$APPDIR的名字，因为appimage文件的名字($APPIMAGE)如果太长而且包含unicode字符，会导致wine无法处理路径。appimage包释放时会自动生成一个不含unicode的短名字(也就是$APPDIR)，用这个作为挂载点的目录名。这个挂载点目录将会在游戏结束后被删除
-MNT_ALLWINESTORGE="/tmp/$(basename "$APPDIR").unionfs/usr/share" # Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
+MNT_ALLWINESTORGE="/tmp/$(basename "$APPDIR").unionfs/usr/share"
 
 # 对挂载点的写入更改会保存在 appimage包名字.cache 目录里，不会对本地目录造成任何更改
 TMP_ALLWINESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share"
@@ -88,8 +89,9 @@ TMP_ALLWINESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share"
 # 如果是用原本的经典配置(简单将 $XDG_CONFIG_HOME 变量重定向到 appimage包名字.config 目录)，会导致外部程序找不到配置文件
 RO_HOMESTORGE="/home/$USER/"
 
+# Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
 # $HOME将会重定向到这个挂载点。这个挂载点目录将会在游戏结束后被删除
-MNT_HOMESTORGE="/tmp/$(basename "$APPDIR").unionfs/home/public_user" # Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
+MNT_HOMESTORGE="/tmp/$(basename "$APPDIR").unionfs/home/public_user"
 
 # 对家目录$HOME的写入更改会保存在 appimage包名字.cache 目录里，不会对本地目录造成任何更改
 TMP_HOMESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/home/public_user"
@@ -127,23 +129,26 @@ fi
 ## setup WINE env
 ## 配置wine环境变量
 
+# default to run win64
 # 默认使用win64，但也保留可以在命令行里加 WINEARCH=win32 来运行appimage包
 if [[ "$WINEARCH" == "win32" ]];
 then
 	export WINEARCH=win32
 else
-	export WINEARCH=win64	# default to run win64
+	export WINEARCH=win64
 fi
 export WINEPREFIX="$MNT_ALLWINESTORGE/$WINEARCH"
 
+# default to prevent wine showing "fixeme" message.
 # 默认不显示任何debug信息，对于普通用户来说这些信息太烦人了
 if [[ -z $WINEDEBUG ]];
 then
-	export WINEDEBUG=-all	# default to prevent wine showing "fixeme" message.
+	export WINEDEBUG=-all
 fi
 
+# prevent wine setup application menu，no confirm if this setting was effected or not
 # 安装游戏时阻止在本地开始菜单建立项目，暂时不确定这项是不是真的生效了
-export WINEDLLOVERRIDES=winemenubuilder.exe=d	# prevent wine setup application menu，no confirm if this setting was effected or not
+export WINEDLLOVERRIDES=winemenubuilder.exe=d
 ##############################################
 
 
@@ -255,8 +260,8 @@ function print_version(){
 		echo "***AppImageKit Version***"
 		echo "(empty)(directly running from AppDir)"
 	else
-		#APPIMAGEKIT_VERSION="AppImageKit $($APPIMAGE --appimage-version)"
-		echo "***AppImageKit Version***"	# fix printout format error
+		#APPIMAGEKIT_VERSION="AppImageKit $($APPIMAGE --appimage-version)"	#NOTUSED: printed out wrong format
+		echo "***AppImageKit Version***"
 		$APPIMAGE --appimage-version
 	fi
 	if [[ -f "$APPDIR"/usr/share/exeinfo_profile ]];
@@ -364,7 +369,8 @@ while [[ -n "$1" ]] ; do
 				echo "[AppRun] error: unknown options: $next_parameters $*" >&2
 				exit
 			else
-				next_parameters="$next_parameters $*"	# then $next_parameters will be passed to wine
+				# then $next_parameters will be passed to wine
+				next_parameters="$next_parameters $*"
 				break
 			fi
 			;;
@@ -428,13 +434,15 @@ then
 	EXENAME="$APPDIR/usr/bin/winetricks"
 fi
 
-if [[ $TEST_WINETRICKS_FLAG -eq 1 || $EXEINFO_GEN_FLAG -eq 1 ]];	# if --exeinfo-gen or --test-winetricks is set, then -s and -w will be ignored.
+# if --exeinfo-gen or --test-winetricks is set, then -s and -w will be ignored.
+if [[ $TEST_WINETRICKS_FLAG -eq 1 || $EXEINFO_GEN_FLAG -eq 1 ]];
 then
 	[[ $SAVEDATA_FLAG -eq 1 ]] && SAVEDATA_FLAG=0 && echo "--savedata option ignored"
 	[[ $WALKTHROUGH_FLAG -eq 1 ]] && WALKTHROUGH_FLAG=0 && echo "--walkthrough option ignored"
 fi
 
-if [[ $EXEINFO_GEN_FLAG -eq 1 ]];	# if --exeinfo-gen is set, then -t will be ignored.
+# if --exeinfo-gen is set, then -t will be ignored.
+if [[ $EXEINFO_GEN_FLAG -eq 1 ]];
 then
 	[[ $TEST_WINETRICKS_FLAG -eq 1 ]] && TEST_WINETRICKS_FLAG=0 && echo "--test-winetricks option ignored"
 fi
@@ -473,7 +481,9 @@ function wine_restore_prefix(){
 	# (同时也已经在脚本最开头设置了禁止root/sudo运行的设定)
 	[[ -z "$WINEPREFIX" ]] && echo "[myapp:wine_restore_prefix] ERROR:\$WINEPREFIX not set, could not restore wine prefix." >2 && return
 
-	[[ ! -d $WINEPREFIX ]] && wine cmd /C exit	# only setup wineprefix and do nothing
+	# only setup wineprefix and do nothing
+	[[ ! -d $WINEPREFIX ]] && wine cmd /C exit
+
 	echo "disable" > "$WINEPREFIX/.update-timestamp"
 
 	# 在这里我仅保留C盘和D盘，其它盘的软链接全删除了，避免wine透过Z盘(linux系统的根目录)对本地系统进行写入
@@ -741,7 +751,9 @@ monitor_exe_running
 
 if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
 then
-	cd "$APPDIR" || exit 2	#go back to $APPDIR, then remove temp file
+	#go back to $APPDIR, then remove temp file
+	cd "$APPDIR" || exit 2
+
 	echo "restore wine drive symlink entries..."
 	wine_restore_prefix
 	[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_restore
