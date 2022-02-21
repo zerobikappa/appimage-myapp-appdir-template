@@ -75,14 +75,42 @@ function apprun_realpath(){
 
 }
 
-function exeinfo_load_env(){
+function exeinfo_load_file(){
+	if [[ -f "${APPIMAGE_CACHE_DIR}/usr/share/drive_d/myapp_exeinfo/exeinfo_profile.$LANG" ]];
+	then
+		PENDING_SOURCE_FILE="${APPIMAGE_CACHE_DIR}/usr/share/drive_d/myapp_exeinfo/exeinfo_profile.$LANG"
+	elif [[ -f "${APPDIR}/usr/share/drive_d/myapp_exeinfo/exeinfo_profile.$LANG" ]];
+	then
+		PENDING_SOURCE_FILE="${APPDIR}/usr/share/drive_d/myapp_exeinfo/exeinfo_profile.$LANG"
+	elif [[ -f "${APPIMAGE_CACHE_DIR}/usr/share/drive_d/myapp_exeinfo/exeinfo_profile" ]];
+	then
+		PENDING_SOURCE_FILE="${APPIMAGE_CACHE_DIR}/usr/share/drive_d/myapp_exeinfo/exeinfo_profile"
+	elif [[ -f "${APPDIR}/usr/share/drive_d/myapp_exeinfo/exeinfo_profile" ]];
+	then
+		PENDING_SOURCE_FILE="${APPDIR}/usr/share/drive_d/myapp_exeinfo/exeinfo_profile"
+	else
+		echo "cannot find exeinfo_profile for your LANG:$LANG"
+		echo "also cannot find default exeinfo_profile"
+		return
+	fi
+
+	if (cat "$PENDING_SOURCE_FILE" |grep '^[[:blank:]]*[^[:blank:]#]' |grep --quiet -e '$WINEARCH' -e '${WINEARCH}' -e '${WINEARCH:.*}' -e '${WINEARCH%.*}' -e '${WINEARCH#.*}');
+	then
+		[[ -z $WINEARCH ]] && echo "[exeinfo_load_file] ERROR: $PENDING_SOURCE_FILE includes \$USER but \$USER was not set. Failed to load exeinfo." >&2 && return
+	fi
+
+	source "$PENDING_SOURCE_FILE"
+	unset PENDING_SOURCE_FILE
+}
+
+function exeinfo_load_temp(){
 	TEMP_EXE_LDIR=$EXE_LDIR
 	TEMP_EXE_WROOT=$EXE_WROOT
 	TEMP_EXE_WDIR=$EXE_WDIR
 	TEMP_EXENAME=$EXENAME
 	TEMP_SAVEDATA_IN_HOME=$SAVEDATA_IN_HOME
 	TEMP_SAVEDATA_DIR=$SAVEDATA_DIR
-	TEMP_MYAPPLANG=$TEMP_MYAPPLANG
+	TEMP_MYAPPLANG=$MYAPPLANG
 }
 
 function exeinfo_test_gui(){
@@ -587,7 +615,7 @@ function exeinfo_confirm_exit(){
 
 function exeinfo_main(){
 	clear
-	exeinfo_load_env
+	exeinfo_load_temp
 	exeinfo_test_gui
 	EXIT_MAIN_MENU=0
 	while [[ $EXIT_MAIN_MENU -eq 0 ]];do

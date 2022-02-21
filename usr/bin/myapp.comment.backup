@@ -157,22 +157,8 @@ export WINEDLLOVERRIDES=winemenubuilder.exe=d
 #zh# exe程序的可执行文件名和路径、存档目录路径、游戏语言等信息保存在了一个叫 exeinfo_profile 的文件中。
 #zh# 有些软件会在C盘保存存档，这时存档文件的路径将会包含$WINEARCH变量，
 #zh# 所以把以下语句放在这里，确保已经设定好了$WINEARCH变量才执行以下语句
-if [[ -f "$APPIMAGE_CACHE_DIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile."$LANG" ]];
-then
-	source "$APPIMAGE_CACHE_DIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile."$LANG"
-elif [[ -f "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile."$LANG" ]];
-then
-	source "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile."$LANG"
-elif [[ -f "$APPIMAGE_CACHE_DIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile ]];
-then
-	source "$APPIMAGE_CACHE_DIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile
-elif [[ -f "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile ]];
-then
-	source "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile
-else
-	echo "cannot find exeinfo_profile for your LANG:$LANG"
-	echo "also cannot find default exeinfo_profile"
-fi
+source "$APPDIR"/usr/bin/myapp-plugin-exeinfo-gen
+exeinfo_load_file
 ##############################################
 
 
@@ -264,9 +250,9 @@ function print_version(){
 		echo "***AppImageKit Version***"
 		$APPIMAGE --appimage-version
 	fi
-	if [[ -f "$APPDIR"/usr/share/exeinfo_profile ]];
+	if [[ -f "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile ]];
 	then
-		source "$APPDIR"/usr/share/exeinfo_profile
+		source "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile
 	fi
 	[[ -z $EXENAME ]] && EXENAME="(empty)(not set in AppDir)"
 	APPLICATION_NAME=$(cat "$APPDIR"/*.desktop | grep -i "name=") && APPLICATION_NAME=${APPLICATION_NAME#*"="}
@@ -479,7 +465,7 @@ function wine_restore_prefix(){
 	# "rm -rf" included, must check $WINEPREFIX first
 	#zh# 有包含"rm -rf"语句，需要先检查好前面的$WINEPREFIX是否为空，避免删除了根目录的同名文件(如果恰好有的话)
 	#zh# (同时也已经在脚本最开头设置了禁止root/sudo运行的设定)
-	[[ -z "$WINEPREFIX" ]] && echo "[myapp:wine_restore_prefix] ERROR:\$WINEPREFIX not set, could not restore wine prefix." >2 && return
+	[[ -z "$WINEPREFIX" ]] && echo "[myapp:wine_restore_prefix] ERROR:\$WINEPREFIX not set, could not restore wine prefix." >&2 && return
 
 	# only setup wineprefix and do nothing
 	[[ ! -d $WINEPREFIX ]] && wine cmd /C exit
@@ -767,8 +753,8 @@ function atexit() {
 	#zh# 此处有包含"rm -rf"语句，需要先检查好前面的$APPDIR和$APPIMAGE_CACHE_DIR是否为空，避免删除了根目录的同名文件(如果恰好有的话)
 	#zh# (同时也已经在脚本最开头设置了禁止root/sudo运行的设定)
 	#zh# TODO: 考虑把 drive_d 目录从 usr/share/ 转移到 opt/ ，让不想用appimage包的用户可以直接将游戏安装在本地系统，安装后$APPDIR将变为空(因为APPDIR变成了根目录)，是否要兼容这种情况？
-	[[ -z "$APPDIR" ]] && echo "[myapp:atexit] ERROR:\$APPDIR not set, could not clean temp files" >2 && return
-	[[ -z "$APPIMAGE_CACHE_DIR" ]] && echo "[myapp:atexit] ERROR:\$APPIMAGE_CACHE_DIR not set, could not clean temp files." >2 && return
+	[[ -z "$APPDIR" ]] && echo "[myapp:atexit] ERROR:\$APPDIR not set, could not clean temp files" >&2 && return
+	[[ -z "$APPIMAGE_CACHE_DIR" ]] && echo "[myapp:atexit] ERROR:\$APPIMAGE_CACHE_DIR not set, could not clean temp files." >&2 && return
 
 	echo "killing $APPDIR/usr/bin/unionfs"
 	killall "$APPDIR/usr/bin/unionfs"

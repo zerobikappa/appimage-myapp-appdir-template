@@ -128,22 +128,8 @@ export WINEDLLOVERRIDES=winemenubuilder.exe=d
 
 ##############################################
 ## load exeinfo_profile, may depends on $WINEARCH, (if savedata in c drive,) should set the $WINEARCH first
-if [[ -f "$APPIMAGE_CACHE_DIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile."$LANG" ]];
-then
-	source "$APPIMAGE_CACHE_DIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile."$LANG"
-elif [[ -f "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile."$LANG" ]];
-then
-	source "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile."$LANG"
-elif [[ -f "$APPIMAGE_CACHE_DIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile ]];
-then
-	source "$APPIMAGE_CACHE_DIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile
-elif [[ -f "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile ]];
-then
-	source "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile
-else
-	echo "cannot find exeinfo_profile for your LANG:$LANG"
-	echo "also cannot find default exeinfo_profile"
-fi
+source "$APPDIR"/usr/bin/myapp-plugin-exeinfo-gen
+exeinfo_load_file
 ##############################################
 
 
@@ -232,9 +218,9 @@ function print_version(){
 		echo "***AppImageKit Version***"
 		$APPIMAGE --appimage-version
 	fi
-	if [[ -f "$APPDIR"/usr/share/exeinfo_profile ]];
+	if [[ -f "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile ]];
 	then
-		source "$APPDIR"/usr/share/exeinfo_profile
+		source "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile
 	fi
 	[[ -z $EXENAME ]] && EXENAME="(empty)(not set in AppDir)"
 	APPLICATION_NAME=$(cat "$APPDIR"/*.desktop | grep -i "name=") && APPLICATION_NAME=${APPLICATION_NAME#*"="}
@@ -423,7 +409,7 @@ mkdir -p "$MNT_HOMESTORGE" "$TMP_HOMESTORGE_OVERLAY"
 ## restore wine prefix, should only run this function after unionfs is mounted, because $WINEPREFIX path include the unionfs drive
 function wine_restore_prefix(){
 	# "rm -rf" included, must check $WINEPREFIX first
-	[[ -z "$WINEPREFIX" ]] && echo "[myapp:wine_restore_prefix] ERROR:\$WINEPREFIX not set, could not restore wine prefix." >2 && return
+	[[ -z "$WINEPREFIX" ]] && echo "[myapp:wine_restore_prefix] ERROR:\$WINEPREFIX not set, could not restore wine prefix." >&2 && return
 
 	# only setup wineprefix and do nothing
 	[[ ! -d $WINEPREFIX ]] && wine cmd /C exit
@@ -665,8 +651,8 @@ savedata_show_location
 
 function atexit() {
 	# "rm -rf" included, must check env first.
-	[[ -z "$APPDIR" ]] && echo "[myapp:atexit] ERROR:\$APPDIR not set, could not clean temp files" >2 && return
-	[[ -z "$APPIMAGE_CACHE_DIR" ]] && echo "[myapp:atexit] ERROR:\$APPIMAGE_CACHE_DIR not set, could not clean temp files." >2 && return
+	[[ -z "$APPDIR" ]] && echo "[myapp:atexit] ERROR:\$APPDIR not set, could not clean temp files" >&2 && return
+	[[ -z "$APPIMAGE_CACHE_DIR" ]] && echo "[myapp:atexit] ERROR:\$APPIMAGE_CACHE_DIR not set, could not clean temp files." >&2 && return
 
 	echo "killing $APPDIR/usr/bin/unionfs"
 	killall "$APPDIR/usr/bin/unionfs"
