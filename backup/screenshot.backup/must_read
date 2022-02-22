@@ -1,0 +1,23 @@
+If you go into this directory by chance, you may find some picture files in it.
+This directory is unnecessary for your project. you can delete it.
+I placed some pictures in this directory, after I push to my git repo, github will generate URL for these files.
+I can add these URL as <screenshots> in my usr/share/metainfo/io.github.myapp_template.appdata.xml , to pass meta data checking when building appimage package.
+If you do not want to include metadata in your appimage, you can just delete the .xml file to skip the metadata checking.
+If you want to include metadata in your appimage, you can create your .xml file and add your app screenshot in it.
+You can fast create you metadata file in below website:
+
+https://www.freedesktop.org/software/appstream/metainfocreator/#/guiapp
+
+Please do not place your any file in this directory. If you run the ".remove-appdir-git.sh"(the hidden file in my project directory to remove the git files, which are unnecessary to bundle in appimage), all unnecessary files will be deleted, including this directory.
+
+
+#zh# 如果你碰巧点进了这个目录，你会发现这个目录有些意义不明的黑屏图片。
+#zh# 你的appimage项目不会用到这个目录，你可以删掉这个目录。
+#zh# 我只是建了这个目录放了一些图片在里面，这样在我推送更新了我的git仓库之后，github会为这些图片生成文件url，我可以将这些url填入我的appimage对应的metadata信息文件(usr/share/metainfo/io.github.myapp_template.appdata.xml)中，以此避免在appimage构建过程中检查metadata报错。
+#zh# 如果你不想在你的appimage中加入metadata信息，那么你可以删除 usr/share/metainfo/ 里的 .xml 文件，这样在生成appimage包时会跳过metadata检查。
+#zh# 如果你想在你的appimage中加入metadata信息，那么你需要生成你自己的 .xml 文件，并把你的应用界面的截图的链接填进去。
+#zh# 想快速生成metadata文件，可以使用以下网站工具
+#zh# 
+#zh# https://www.freedesktop.org/software/appstream/metainfocreator/#/guiapp
+#zh# 
+#zh# 请不要把你自己的文件放入这个目录中，如果你运行了项目目录里的".remove-appdir-git.sh"脚本（是项目目录里的一个隐藏文件，可以快速清理掉git的相关文件，这些文件不需要打包进你的appimage包里），所有的无关文件将会被删除，包括这个目录。

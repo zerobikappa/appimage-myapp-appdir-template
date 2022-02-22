@@ -17,13 +17,13 @@
   <launchable type="desktop-id">io.github.myapp_template.desktop</launchable>
   <screenshots>
     <screenshot type="default">
-      <image>http://NoScreenShot.org/0.jpg</image>
+      <image>https://raw.githubusercontent.com/zerobikappa/appimage-myapp-appdir-template/main/backup/screenshot.backup/screenshot01.png</image>
     </screenshot>
     <screenshot>
-      <image>http://NoScreenShot.org/1.jpg</image>
+      <image>https://raw.githubusercontent.com/zerobikappa/appimage-myapp-appdir-template/main/backup/screenshot.backup/screenshot02.png</image>
     </screenshot>
     <screenshot>
-      <image>http://NoScreenShot.org/2.jpg</image>
+      <image>https://raw.githubusercontent.com/zerobikappa/appimage-myapp-appdir-template/main/backup/screenshot.backup/screenshot03.png</image>
     </screenshot>
   </screenshots>
 </component>
