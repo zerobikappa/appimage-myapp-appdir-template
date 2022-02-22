@@ -36,7 +36,7 @@ chmod u+x appimage-myapp-appdir-template/usr/bin/winetricks
 ```bash
 # for Ubuntu
 sudo apt-get install -y unionfs-fuse
-cp -fv /usr/bin/*unionfs* /usr/sbin/*unionfs* appimage-myapp-appdir-template/usr/bin
+cp -fv /usr/bin/unionfs appimage-myapp-appdir-template/usr/bin
 ```
 
 #### 5. get AppimageTool
