@@ -96,7 +96,7 @@ function exeinfo_load_file(){
 
 	if (cat "$PENDING_SOURCE_FILE" |grep '^[[:blank:]]*[^[:blank:]#]' |grep --quiet -e '$WINEARCH' -e '${WINEARCH}' -e '${WINEARCH:.*}' -e '${WINEARCH%.*}' -e '${WINEARCH#.*}');
 	then
-		[[ -z $WINEARCH ]] && echo "[exeinfo_load_file] ERROR: $PENDING_SOURCE_FILE includes \$USER but \$USER was not set. Failed to load exeinfo." >&2 && return
+		[[ -z $WINEARCH ]] && echo "[exeinfo_load_file] ERROR: $PENDING_SOURCE_FILE includes \$WINEARCH but \$WINEARCH was not set. Failed to load exeinfo." >&2 && return
 	fi
 
 	source "$PENDING_SOURCE_FILE"
