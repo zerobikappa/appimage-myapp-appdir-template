@@ -51,7 +51,7 @@ chmod u+x appimagetool.AppImage
 #### 6. build myapp-template.AppImage
 
 ```bash
-ARCH=x86_64 ./appimagetool.AppImage appimage-myapp-appdir-template
+ARCH=x86_64 ./appimagetool.AppImage -n appimage-myapp-appdir-template
 rm -rf appimage-myapp-appdir-template
 ```
 
