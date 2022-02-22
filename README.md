@@ -86,7 +86,7 @@ sudo apt-get wine
 then you can see `myapp-template-x86_64.AppImage.cache` directory was created.
 
 ```bash
-ls -d
+ls
 ###>>>
 myapp-template-x86_64.AppImage
 myapp-template-x86_64.AppImage.cache/
