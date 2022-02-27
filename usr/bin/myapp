@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1645540768
+MYAPPRUN_VERSION=1645992904
 
 #############################################
 ## prevent running by root/sudo for security concern
@@ -113,7 +113,6 @@ then
 else
 	export WINEARCH=win64
 fi
-# TODO: need to fix wineprefix path later
 export WINEPREFIX="$MNT_ALLWINESTORGE/myapp_prefix/wine.$WINEARCH/pfx"
 
 # default to prevent wine showing "fixeme" message.
