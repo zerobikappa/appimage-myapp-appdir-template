@@ -422,7 +422,7 @@ function wine_restore_prefix(){
 	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
 	[[ ! -L "$WINEPREFIX/dosdevices/c:" ]] && ln -sfnv ../drive_c "$WINEPREFIX/dosdevices/c:"
 	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfnv ../../../drive_d "$WINEPREFIX/dosdevices/d:"
-	[[ ! -L "$MNT_ALLWINESTORGE/drive_d/myapp_patch_reg" ]] && ln -sfnv ../myapp_patch_reg "$MNT_ALLWINESTORGE/drive_d/myapp_patch_reg"
+	[[ ! -L "$MNT_ALLWINESTORGE/drive_d/myapp_patch_reg" ]] && ln -sfnv ../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
 	if [[ ! -L "$WINEPREFIX/drive_c/windows/Fonts" ]];
 	then
 		rm -rf "$WINEPREFIX/drive_c/windows/Fonts"
