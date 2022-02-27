@@ -368,7 +368,7 @@ function exeinfo_savedata_location(){
 		then
 			TEMP_SAVEDATA_IN_HOME=0
 			TEMP_SAVEDATA_DIR=$(apprun_realpath "${APPDIR}/usr/share/myapp" "$TEMP_SAVEDATAPATH")
-		elif [[ "${TEMP_SAVEDATAPATH#"${APPIMAGE_CACHE_DIR}/home/public_user/myapp"}" != "$TEMP_SAVEDATAPATH" ]];
+		elif [[ "${TEMP_SAVEDATAPATH#"${APPIMAGE_CACHE_DIR}/home/public_user/"}" != "$TEMP_SAVEDATAPATH" ]];
 		then
 			TEMP_SAVEDATA_IN_HOME=1
 			TEMP_SAVEDATA_DIR=$(apprun_realpath "${APPIMAGE_CACHE_DIR}/home/public_user" "$TEMP_SAVEDATAPATH")
