@@ -64,11 +64,11 @@ fi
 ##############################################
 ## setup unionfs temp directory for this app
 
-RO_ALLWINESTORGE="$APPDIR/usr/share/" # Use the location where contain $WINEPREFIX, both win32 and win64 WINEPREFIX directory are here.
+RO_ALLWINESTORGE="$APPDIR/usr/share/myapp" # Use the location where contain $WINEPREFIX, both win32 and win64 WINEPREFIX directory are here.
 
-MNT_ALLWINESTORGE="/tmp/$(basename "$APPDIR").unionfs/usr/share"
+MNT_ALLWINESTORGE="/tmp/$(basename "$APPDIR").unionfs/usr/share/myapp"
 
-TMP_ALLWINESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share"
+TMP_ALLWINESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share/myapp"
 
 
 RO_HOMESTORGE="/home/$USER/"
@@ -113,7 +113,8 @@ then
 else
 	export WINEARCH=win64
 fi
-export WINEPREFIX="$MNT_ALLWINESTORGE/$WINEARCH"
+# TODO: need to fix wineprefix path later
+export WINEPREFIX="$MNT_ALLWINESTORGE/myapp_prefix/wine.$WINEARCH/pfx"
 
 # default to prevent wine showing "fixeme" message.
 if [[ -z $WINEDEBUG ]];
@@ -218,9 +219,9 @@ function print_version(){
 		echo "***AppImageKit Version***"
 		$APPIMAGE --appimage-version
 	fi
-	if [[ -f "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile ]];
+	if [[ -f "$APPDIR"/usr/share/myapp/myapp_exeinfo/exeinfo_profile ]];
 	then
-		source "$APPDIR"/usr/share/drive_d/myapp_exeinfo/exeinfo_profile
+		source "$APPDIR"/usr/share/myapp/myapp_exeinfo/exeinfo_profile
 	fi
 	[[ -z $EXENAME ]] && EXENAME="(empty)(not set in AppDir)"
 	APPLICATION_NAME=$(cat "$APPDIR"/*.desktop | grep -i "name=") && APPLICATION_NAME=${APPLICATION_NAME#*"="}
@@ -411,6 +412,8 @@ function wine_restore_prefix(){
 	# "rm -rf" included, must check $WINEPREFIX first
 	[[ -z "$WINEPREFIX" ]] && echo "[myapp:wine_restore_prefix] ERROR:\$WINEPREFIX not set, could not restore wine prefix." >&2 && return
 
+	mkdir -p "$MNT_ALLWINESTORGE/myapp_prefix/wine.$WINEARCH"
+
 	# only setup wineprefix and do nothing
 	[[ ! -d $WINEPREFIX ]] && wine cmd /C exit
 
@@ -418,11 +421,14 @@ function wine_restore_prefix(){
 
 	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
 	[[ ! -L "$WINEPREFIX/dosdevices/c:" ]] && ln -sfnv ../drive_c "$WINEPREFIX/dosdevices/c:"
-	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfnv ../../drive_d "$WINEPREFIX/dosdevices/d:"
+	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfnv ../../../drive_d "$WINEPREFIX/dosdevices/d:"
+	[[ ! -L "$MNT_ALLWINESTORGE/drive_d/myapp_patch_reg" ]] && ln -sfnv ../myapp_patch_reg "$MNT_ALLWINESTORGE/drive_d/myapp_patch_reg"
 	if [[ ! -L "$WINEPREFIX/drive_c/windows/Fonts" ]];
 	then
 		rm -rf "$WINEPREFIX/drive_c/windows/Fonts"
-		ln -sfnv ../../../drive_d/myapp_fonts "$WINEPREFIX/drive_c/windows/Fonts"
+		#refer path: .../myapp/myapp_fonts
+		#refer path: .../myapp/myapp_prefix/wine.wine64/pfx/drive_c/windows/Fonts
+		ln -sfnv ../../../../../myapp_fonts "$WINEPREFIX/drive_c/windows/Fonts"
 	fi
 }
 
@@ -430,15 +436,15 @@ function wine_patch_reg(){
 	# I tried to disable autostart winedbg via loading the .reg by regedit but failed. therefore I use winetricks to disable autostart debugger.
 	winetricks autostart_winedbg=disabled
 
-	[[ -z "$(ls "$MNT_ALLWINESTORGE"/drive_d/myapp_patch_reg/*.reg 2>/dev/null )" ]] && return
-	for i in $(ls "$MNT_ALLWINESTORGE"/drive_d/myapp_patch_reg/*.reg); do
+	[[ -z "$(ls "$MNT_ALLWINESTORGE"/myapp_patch_reg/*.reg 2>/dev/null )" ]] && return
+	for i in $(ls "$MNT_ALLWINESTORGE"/myapp_patch_reg/*.reg); do
 		# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
 		[[ -f $i ]] && i=$(basename "$i") || continue
 		wine regedit "d:\\myapp_patch_reg\\$i"
 	done
 
-	[[ -z "$(ls "$MNT_ALLWINESTORGE"/drive_d/myapp_patch_reg/$WINEARCH/*.reg 2>/dev/null )" ]] && return
-	for i in $(ls "$MNT_ALLWINESTORGE"/drive_d/myapp_patch_reg/$WINEARCH/*.reg); do
+	[[ -z "$(ls "$MNT_ALLWINESTORGE"/myapp_patch_reg/$WINEARCH/*.reg 2>/dev/null )" ]] && return
+	for i in $(ls "$MNT_ALLWINESTORGE"/myapp_patch_reg/$WINEARCH/*.reg); do
 		# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
 		[[ -f $i ]] && i=$(basename "$i") || continue
 		wine regedit "d:\\myapp_patch_reg\\$WINEARCH\\$i"
@@ -458,7 +464,7 @@ function walkthrough_browser(){
 @
 EOF
 
-	for i in $(ls "$MNT_ALLWINESTORGE/drive_d/myapp_walkthrough"/*.html);
+	for i in $(ls "$MNT_ALLWINESTORGE/myapp_walkthrough"/*.html);
 	do
 		#echo "  file://$MNT_ALLWINESTORGE/drive_d/myapp_walkthrough/$i"
 		# ls will output the full path if run -> ls /full/path/to/file/*.html
@@ -472,7 +478,7 @@ EOF
 
 EOF
 	#TODO: failed to using xdg-open to open html file.
-	i3-sensible-browser "$MNT_ALLWINESTORGE/drive_d/myapp_walkthrough"/*.html
+	i3-sensible-browser "$MNT_ALLWINESTORGE/myapp_walkthrough"/*.html
 }
 
 ##############################################
@@ -484,11 +490,11 @@ function savedata_replace(){
 	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
 	then
 		mkdir -p "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
-		cp -r --suffix=.myapp."$USER".backup "$MNT_ALLWINESTORGE/drive_d/myapp_savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+		cp -r --suffix=.myapp."$USER".backup "$MNT_ALLWINESTORGE/myapp_savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
 	elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
 	then
 		mkdir -p "$MNT_HOMESTORGE/$SAVEDATA_DIR"
-		cp -r --suffix=.myapp."$USER".backup "$MNT_ALLWINESTORGE/drive_d/myapp_savedata"/* "$MNT_HOMESTORGE/$SAVEDATA_DIR"
+		cp -r --suffix=.myapp."$USER".backup "$MNT_ALLWINESTORGE/myapp_savedata"/* "$MNT_HOMESTORGE/$SAVEDATA_DIR"
 	fi
 }
 
@@ -660,7 +666,7 @@ function atexit() {
 	echo "Removing /tmp/$(basename "$APPDIR").unionfs"
 	rm -rf "/tmp/$(basename "$APPDIR").unionfs"
 	# if not clean up unionfs hide files, may encounter some read file error next time.
-	rm -rf "$APPIMAGE_CACHE_DIR/usr/share"/.unionfs* >/dev/null 2>&1
+	rm -rf "$APPIMAGE_CACHE_DIR/usr/share/myapp"/.unionfs* >/dev/null 2>&1
 	rm -rf "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
 }
 #set -e
