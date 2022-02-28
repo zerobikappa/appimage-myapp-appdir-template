@@ -107,6 +107,7 @@ function wine_set_env(){
 ##############################################
 ## restore wine prefix, should only run this function after unionfs is mounted, because $WINEPREFIX path include the unionfs drive
 function wine_restore_prefix(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "run wine_restore_prefix"
 	[[ -z "$MNT_ALLWINESTORGE" ]] && echo "[wine_restore_prefix]:\$MNT_ALLWINESTORGE not set" >&2 && exit
 
 	export STEAM_COMPAT_CLIENT_INSTALL_PATH="$HOME/$SEARCH_COMPAT_CLIENT_PATH"
@@ -132,7 +133,8 @@ function wine_restore_prefix(){
 	# for test, not run this line in proton mode
 	#echo "disable" > "$WINEPREFIX/.update-timestamp"
 
-	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
+	# in proton, also keep y: drive, which is winetricks cache. otherwise it would keep asking you to install mono
+	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" ! -name "y:" -exec rm -rf "{}" \;
 	[[ ! -L "$WINEPREFIX/dosdevices/c:" ]] && ln -sfn ../drive_c "$WINEPREFIX/dosdevices/c:"
 	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfn ../../../drive_d "$WINEPREFIX/dosdevices/d:"
 	[[ ! -L "$MNT_ALLWINESTORGE/drive_d/myapp_patch_reg" ]] && ln -sfn ../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
@@ -146,6 +148,7 @@ function wine_restore_prefix(){
 }
 
 function wine_patch_reg(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "run wine_patch_reg"
 	[[ -z "$MNT_ALLWINESTORGE" ]] && echo "[wine_restore_prefix]:\$MNT_ALLWINESTORGE not set" >&2 && exit
 
 	# I tried to disable autostart winedbg via loading the .reg by regedit but failed. therefore I use winetricks to disable autostart debugger.

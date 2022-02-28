@@ -104,7 +104,8 @@ fi
 
 
 ##############################################
-source "$APPDIR"/usr/bin/myapp-plugin-proton
+source "$APPDIR"/usr/bin/myapp-plugin-wine
+#source "$APPDIR"/usr/bin/myapp-plugin-proton
 wine_set_env
 ##############################################
 
