@@ -29,7 +29,7 @@ EOF
 ## setup WINE env
 function wine_set_env(){
 	# default to run win64
-	if [[ "$WINEARCH" == "win32" ]];
+	if [[ "$WINEARCH" == "win32" || $(getconf LONG_BIT) -eq 32 ]];
 	then
 		export WINEARCH=win32
 	else

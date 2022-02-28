@@ -104,20 +104,6 @@ fi
 
 
 ##############################################
-source "$APPDIR"/usr/bin/myapp-plugin-wine
-#source "$APPDIR"/usr/bin/myapp-plugin-proton
-wine_set_env
-##############################################
-
-
-##############################################
-## load exeinfo_profile, may depends on $WINEARCH, (if savedata in c drive,) should set the $WINEARCH first
-source "$APPDIR"/usr/bin/myapp-plugin-exeinfo-gen
-exeinfo_load_file
-##############################################
-
-
-##############################################
 ## test runtime env
 function debug_show(){
 	cat << EOF
@@ -292,6 +278,9 @@ while [[ -n "$1" ]] ; do
 			echo ""
 			echo "created cache directory: $APPIMAGE.cache"
 			exit ;;
+		--proton)
+			LOAD_PROTON=1
+			shift ;;
 		--)
 			shift
 			if [[ -z "$*" && -z "$next_parameters" ]];
@@ -338,9 +327,25 @@ eval set -- "$next_parameters"
 
 
 ##############################################
-## extra filter for some option
+if [[ $LOAD_PROTON=1 ]];
+then
+	source "$APPDIR"/usr/bin/myapp-plugin-proton
+else
+	source "$APPDIR"/usr/bin/myapp-plugin-wine
+fi
+wine_set_env
+##############################################
 
+
+##############################################
+## load exeinfo_profile, may depends on $WINEARCH, (if savedata in c drive,) should set the $WINEARCH first
 source "$APPDIR"/usr/bin/myapp-plugin-exeinfo-gen
+exeinfo_load_file
+##############################################
+
+
+##############################################
+## extra filter for some option
 
 if [[ $EXEINFO_GEN_FLAG -eq 1 && $EXEINFO_GEN_METHOD == "cli" ]];
 then
@@ -504,7 +509,7 @@ then
 	[[ -n $MYAPPLANG ]] && LANG=$MYAPPLANG || echo "MYAPPLANG not set, using current LANG:$LANG"
 	# moved home and xdg_config_home env setting to here.
 	# if change $HOME and $XDG_CONFIG_HOME too early, the exeinfo plugin may encounter some error related to file path.
-	export HOME=$MNT_HOMESTORGE
+	export HOME="$MNT_HOMESTORGE"
 	echo \$HOME=$HOME
 	export XDG_CONFIG_HOME="$MNT_HOMESTORGE/.config"
 	echo \$XDG_CONFIG_HOME=$XDG_CONFIG_HOME
