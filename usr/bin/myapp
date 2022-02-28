@@ -516,9 +516,9 @@ then
 	echo "*****using $WINEARCH"
 	if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
 	then
-		wine_run_winetricks
+		wine_run_winetricks "$@"
 	else
-		wine_run_exe
+		wine_run_exe "$@"
 	fi
 fi
 
