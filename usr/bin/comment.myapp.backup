@@ -75,14 +75,14 @@ fi
 #zh# 设定unionfs的挂载点和参数
 
 #zh# 这个目录将用于存档win32和win64的$WINEPREFIX，如果你真的要把生成的 $WINEPREFIX 打包进appimage包里面的话
-RO_ALLWINESTORGE="$APPDIR/usr/share/myapp" # Use the location where contain $WINEPREFIX, both win32 and win64 WINEPREFIX directory are here.
+RO_MYAPPSTORGE="$APPDIR/usr/share/myapp" # Use the location where contain $WINEPREFIX, both win32 and win64 WINEPREFIX directory are here.
 
 #zh# Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
 #zh# wine 程序实际是从这个挂载点读写数据的，这里用了$APPDIR的名字，因为appimage文件的名字($APPIMAGE)如果太长而且包含unicode字符，会导致wine无法处理路径。appimage包释放时会自动生成一个不含unicode的短名字(也就是$APPDIR)，用这个作为挂载点的目录名。这个挂载点目录将会在游戏结束后被删除
-MNT_ALLWINESTORGE="/tmp/$(basename "$APPDIR").unionfs/usr/share/myapp"
+MNT_MYAPPSTORGE="/tmp/$(basename "$APPDIR").unionfs/usr/share/myapp"
 
 #zh# 对挂载点的写入更改会保存在 appimage包名字.cache 目录里，不会对本地目录造成任何更改
-TMP_ALLWINESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share/myapp"
+TMP_MYAPPSTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share/myapp"
 
 
 #zh# 读取数据从用户原本的家目录读取数据，这是有必要的。例如使用本地的图形界面kdialog时会需要从原本的$HOME目录里读取配置数据
@@ -137,7 +137,7 @@ then
 else
 	export WINEARCH=win64
 fi
-export WINEPREFIX="$MNT_ALLWINESTORGE/myapp_prefix/wine.$WINEARCH/pfx"
+export WINEPREFIX="$MNT_MYAPPSTORGE/myapp_prefix/wine.$WINEARCH/pfx"
 
 # default to prevent wine showing "fixeme" message.
 #zh# 默认不显示任何debug信息，对于普通用户来说这些信息太烦人了
@@ -450,9 +450,9 @@ fi
 #zh# 挂载不成功就退出，如果上一次不正常退出导致挂载点仍被占用就会出现这样的情况
 #zh# 这里也隐含着如果同一个游戏已经开了一个实例，那么第二次打开会由于挂载点被占用而无法打开的情况
 #zh# 加了上面的语句能让我分清楚错误退出的原因是哪一种情况
-mkdir -p "$MNT_ALLWINESTORGE" "$TMP_ALLWINESTORGE_OVERLAY"
-#$APPDIR/usr/bin/unionfs -o use_ino,nonempty,uid=$UID -ocow "$TMP_ALLWINESTORGE_OVERLAY"=RW:"$RO_ALLWINESTORGE"=RO "$MNT_ALLWINESTORGE" || exit 1
-"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_ALLWINESTORGE_OVERLAY"=RW:"$RO_ALLWINESTORGE"=RO "$MNT_ALLWINESTORGE" || exit 1
+mkdir -p "$MNT_MYAPPSTORGE" "$TMP_MYAPPSTORGE_OVERLAY"
+#$APPDIR/usr/bin/unionfs -o use_ino,nonempty,uid=$UID -ocow "$TMP_MYAPPSTORGE_OVERLAY"=RW:"$RO_MYAPPSTORGE"=RO "$MNT_MYAPPSTORGE" || exit 1
+"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_MYAPPSTORGE_OVERLAY"=RW:"$RO_MYAPPSTORGE"=RO "$MNT_MYAPPSTORGE" || exit 1
 
 mkdir -p "$MNT_HOMESTORGE" "$TMP_HOMESTORGE_OVERLAY"
 "$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_HOMESTORGE_OVERLAY"=RW:"$RO_HOMESTORGE"=RO "$MNT_HOMESTORGE" || exit 1
@@ -479,7 +479,7 @@ function wine_restore_prefix(){
 	[[ ! -L "$WINEPREFIX/dosdevices/c:" ]] && ln -sfnv ../drive_c "$WINEPREFIX/dosdevices/c:"
 	#zh# 把D盘放在了WINEPREFIX的外面，只要游戏安装在D盘里，就算删除了WINEPREFIX也不需要重新安装游戏
 	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfnv ../../../drive_d "$WINEPREFIX/dosdevices/d:"
-	[[ ! -L "$MNT_ALLWINESTORGE/drive_d/myapp_patch_reg" ]] && ln -sfnv ../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
+	[[ ! -L "$MNT_MYAPPSTORGE/drive_d/myapp_patch_reg" ]] && ln -sfnv ../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
 	#zh# 把字体目录放在了WINEPREFIX的外面，如果有需要的话可以自己放一些必要的字体进去，不必担心WINEPREFIX被删除
 	if [[ ! -L "$WINEPREFIX/drive_c/windows/Fonts" ]];
 	then
@@ -501,16 +501,16 @@ function wine_patch_reg(){
 	#zh# 有些安装版的游戏会写入信息在注册表里，如果删除了WINEPREFIX，就算游戏文件还在也无法运行游戏
 	#zh# 那么可以导出相关的注册表保存在 myapp_patch_reg 目录里，每次开启游戏时自动导入，这样就无需将WINEPREFIX也打包进appimage包里
 	#zh# 由于文件编码不同，如果是日文游戏的话必须在日文的环境变量下(LANG=ja_JP.UTF-8)开启winetricks导出注册表，否则导出的注册表将无法正常使用
-	[[ -z "$(ls "$MNT_ALLWINESTORGE"/myapp_patch_reg/*.reg 2>/dev/null )" ]] && return
-	for i in $(ls "$MNT_ALLWINESTORGE"/myapp_patch_reg/*.reg); do
+	[[ -z "$(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg 2>/dev/null )" ]] && return
+	for i in $(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg); do
 		# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
 		[[ -f $i ]] && i=$(basename "$i") || continue
 		wine regedit "d:\\myapp_patch_reg\\$i"
 	done
 
 	#zh# 如果32位和64位的注册表不一样，那么可以分开存放在 myapp_patch_reg/win32/ 和 myapp_patch/win64/ 里面
-	[[ -z "$(ls "$MNT_ALLWINESTORGE"/myapp_patch_reg/$WINEARCH/*.reg 2>/dev/null )" ]] && return
-	for i in $(ls "$MNT_ALLWINESTORGE"/myapp_patch_reg/$WINEARCH/*.reg); do
+	[[ -z "$(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/$WINEARCH/*.reg 2>/dev/null )" ]] && return
+	for i in $(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/$WINEARCH/*.reg); do
 		# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
 		[[ -f $i ]] && i=$(basename "$i") || continue
 		wine regedit "d:\\myapp_patch_reg\\$WINEARCH\\$i"
@@ -534,9 +534,9 @@ function walkthrough_browser(){
 @
 EOF
 
-	for i in $(ls "$MNT_ALLWINESTORGE/myapp_walkthrough"/*.html);
+	for i in $(ls "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.html);
 	do
-		#echo "  file://$MNT_ALLWINESTORGE/drive_d/myapp_walkthrough/$i"
+		#echo "  file://$MNT_MYAPPSTORGE/drive_d/myapp_walkthrough/$i"
 		# ls will output the full path if run -> ls /full/path/to/file/*.html
 		echo "  file://$i"
 	done
@@ -550,7 +550,7 @@ EOF
 	#TODO: failed to using xdg-open to open html file.
 	#zh#TODO: 改用了i3-sensible-browser脚本，因为使用xdg-open时系统不是用浏览器而是用文本编辑器打开.html文件
 	#zh#TODO: 另外也考虑要不要为这个语句单独配一个选项，让它变为可选的，因为如果用户在 myapp_walkthrough 目录里放了很多.html的话，一旦使用-w(--walkthrough)选项要求打开攻略，那么这里会一次过打开所有html文件。
-	i3-sensible-browser "$MNT_ALLWINESTORGE/myapp_walkthrough"/*.html
+	i3-sensible-browser "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.html
 }
 
 ##############################################
@@ -564,12 +564,12 @@ function savedata_replace(){
 	#zh# 如果游戏不正常退出了，你也可以到游戏存档目录找到你的存档。
 	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
 	then
-		mkdir -p "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
-		cp -r --suffix=.myapp."$USER".backup "$MNT_ALLWINESTORGE/myapp_savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+		mkdir -p "$MNT_MYAPPSTORGE/$SAVEDATA_DIR"
+		cp -r --suffix=.myapp."$USER".backup "$MNT_MYAPPSTORGE/myapp_savedata"/* "$MNT_MYAPPSTORGE/$SAVEDATA_DIR"
 	elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
 	then
 		mkdir -p "$MNT_HOMESTORGE/$SAVEDATA_DIR"
-		cp -r --suffix=.myapp."$USER".backup "$MNT_ALLWINESTORGE/myapp_savedata"/* "$MNT_HOMESTORGE/$SAVEDATA_DIR"
+		cp -r --suffix=.myapp."$USER".backup "$MNT_MYAPPSTORGE/myapp_savedata"/* "$MNT_HOMESTORGE/$SAVEDATA_DIR"
 	fi
 }
 
@@ -577,7 +577,7 @@ function savedata_restore(){
 	#zh# 这个函数用来还原用户存档。
 	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
 	then
-		FIND_DIR="$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+		FIND_DIR="$MNT_MYAPPSTORGE/$SAVEDATA_DIR"
 	elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
 	then
 		FIND_DIR="$MNT_HOMESTORGE/$SAVEDATA_DIR"
@@ -601,7 +601,7 @@ cat << EOF
 @
 @
 @
-  your savedata will be saved at file://$TMP_ALLWINESTORGE_OVERLAY/
+  your savedata will be saved at file://$TMP_MYAPPSTORGE_OVERLAY/
 @
 @
 @
@@ -674,7 +674,7 @@ then
 		[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_replace
 
 		#zh# 启动游戏前先cd到可执行文件的所在目录，否则有些.exe文件无法正常运行
-		cd "$MNT_ALLWINESTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
+		cd "$MNT_MYAPPSTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
 
 		#zh# 如果有注册表补丁就导入
 		wine_patch_reg

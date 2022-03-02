@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1645999388
+MYAPPRUN_VERSION=1646251850
 
 #############################################
 ## prevent running by root/sudo for security concern
@@ -64,11 +64,11 @@ fi
 ##############################################
 ## setup unionfs temp directory for this app
 
-RO_ALLWINESTORGE="$APPDIR/usr/share/myapp" # Use the location where contain $WINEPREFIX, both win32 and win64 WINEPREFIX directory are here.
+RO_MYAPPSTORGE="$APPDIR/usr/share/myapp" # Use the location where contain $WINEPREFIX, both win32 and win64 WINEPREFIX directory are here.
 
-MNT_ALLWINESTORGE="/tmp/$(basename "$APPDIR").unionfs/usr/share/myapp"
+MNT_MYAPPSTORGE="/tmp/$(basename "$APPDIR").unionfs/usr/share/myapp"
 
-TMP_ALLWINESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share/myapp"
+TMP_MYAPPSTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share/myapp"
 
 
 RO_HOMESTORGE="/home/$USER/"
@@ -76,6 +76,11 @@ RO_HOMESTORGE="/home/$USER/"
 MNT_HOMESTORGE="/tmp/$(basename "$APPDIR").unionfs/home/public_user"
 
 TMP_HOMESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/home/public_user"
+
+
+HOME_REAL="$HOME"
+HOME_FAKE="$MNT_HOMESTORGE"
+
 ##############################################
 
 
@@ -214,6 +219,7 @@ EOF
 #parameters=$(getopt -o swth --long save-data,walkthrough,browser:,test-winetricks,help -n "$0" -- "$@")	# NOTUSED: because $(getopt) cannot ignore unknown options
 
 parameters=$(echo "$@"|tr "=" " ")
+next_parameters=""
 eval set -- "$parameters"
 
 function option_check(){
@@ -283,24 +289,31 @@ while [[ -n "$1" ]] ; do
 			shift ;;
 		--)
 			shift
-			if [[ -z "$*" && -z "$next_parameters" ]];
+			if [[ -z "$@" && -z "$next_parameters" ]];
 			then
 				break
 			elif [[ ! $MYAPPDEBUG -eq 1 ]];
 			then
 				echo "[AppRun] error: not MYAPPDEBUG mode now. prevent to pass any unknown option." >&2
-				echo "[AppRun] error: unknown options: $next_parameters $*" >&2
+				echo "[AppRun] error: unknown options: $next_parameters $@" >&2
 				exit
 			else
 				# then $next_parameters will be passed to wine
-				next_parameters="$next_parameters $*"
+				[[ -z $next_parameters ]] && next_parameters="$@" || next_parameters="$next_parameters $@"
+				shift $#
 				break
 			fi
 			;;
-		*) 
-			if [[ $MYAPPDEBUG -eq 1 ]];
+		*)
+			if [[ "$(option_check $1)" == "short" && ${#1} -gt 2 ]];
 			then
-				next_parameters="$next_parameters $1"
+				parameters="$(getopt -o 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -n "$0" -- "$1")"
+				shift
+				parameters="$parameters $@"
+				eval set -- "$parameters"
+			elif [[ $MYAPPDEBUG -eq 1 ]];
+			then
+				[[ -z $next_parameters ]] && next_parameters="$1" || next_parameters="$next_parameters $1"
 				shift
 			else
 				echo "[AppRun] error: not MYAPPDEBUG mode now. prevent to pass any unknow option." >&2
@@ -320,14 +333,14 @@ done
 
 # TODO: cannot handle grouped short option, such as "-sw" will be recognized as unknown option instead of "-s -w"
 
-# the rest of option/argument will be passed to wine
+# unused option/argument will be passed to wine
 eval set -- "$next_parameters"
 
 ##############################################
 
 
 ##############################################
-if [[ $LOAD_PROTON=1 ]];
+if [[ $LOAD_PROTON -eq 1 ]];
 then
 	source "$APPDIR"/usr/bin/myapp-plugin-proton
 else
@@ -349,7 +362,7 @@ exeinfo_load_file
 
 if [[ $EXEINFO_GEN_FLAG -eq 1 && $EXEINFO_GEN_METHOD == "cli" ]];
 then
-	exeinfo_main
+	HOME="$HOME_REAL" exeinfo_main
 	exit
 fi
 
@@ -385,9 +398,9 @@ then
 	exit 1
 fi
 
-mkdir -p "$MNT_ALLWINESTORGE" "$TMP_ALLWINESTORGE_OVERLAY"
-#$APPDIR/usr/bin/unionfs -o use_ino,nonempty,uid=$UID -ocow "$TMP_ALLWINESTORGE_OVERLAY"=RW:"$RO_ALLWINESTORGE"=RO "$MNT_ALLWINESTORGE" || exit 1
-"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_ALLWINESTORGE_OVERLAY"=RW:"$RO_ALLWINESTORGE"=RO "$MNT_ALLWINESTORGE" || exit 1
+mkdir -p "$MNT_MYAPPSTORGE" "$TMP_MYAPPSTORGE_OVERLAY"
+#$APPDIR/usr/bin/unionfs -o use_ino,nonempty,uid=$UID -ocow "$TMP_MYAPPSTORGE_OVERLAY"=RW:"$RO_MYAPPSTORGE"=RO "$MNT_MYAPPSTORGE" || exit 1
+"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_MYAPPSTORGE_OVERLAY"=RW:"$RO_MYAPPSTORGE"=RO "$MNT_MYAPPSTORGE" || exit 1
 
 mkdir -p "$MNT_HOMESTORGE" "$TMP_HOMESTORGE_OVERLAY"
 "$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_HOMESTORGE_OVERLAY"=RW:"$RO_HOMESTORGE"=RO "$MNT_HOMESTORGE" || exit 1
@@ -405,9 +418,9 @@ function walkthrough_browser(){
 @
 EOF
 
-	for i in $(ls "$MNT_ALLWINESTORGE/myapp_walkthrough"/*.html);
+	for i in $(ls "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.html);
 	do
-		#echo "  file://$MNT_ALLWINESTORGE/drive_d/myapp_walkthrough/$i"
+		#echo "  file://$MNT_MYAPPSTORGE/drive_d/myapp_walkthrough/$i"
 		# ls will output the full path if run -> ls /full/path/to/file/*.html
 		echo "  file://$i"
 	done
@@ -419,7 +432,7 @@ EOF
 
 EOF
 	#TODO: failed to using xdg-open to open html file.
-	i3-sensible-browser "$MNT_ALLWINESTORGE/myapp_walkthrough"/*.html
+	i3-sensible-browser "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.html
 }
 
 ##############################################
@@ -428,24 +441,28 @@ EOF
 ##############################################
 ## game savedata
 function savedata_replace(){
+	HOME="$HOME_FAKE"
+	exeinfo_user_dirs
+	exeinfo_load_file
 	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
 	then
-		mkdir -p "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
-		cp -r --suffix=.myapp."$USER".backup "$MNT_ALLWINESTORGE/myapp_savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+		mkdir -p "$SAVEDATA_DIR"
+		cp -r --suffix=.myapp."$USER".backup "$MNT_MYAPPSTORGE/myapp_savedata"/* "$SAVEDATA_DIR"
 	elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
 	then
-		mkdir -p "$MNT_HOMESTORGE/$SAVEDATA_DIR"
-		cp -r --suffix=.myapp."$USER".backup "$MNT_ALLWINESTORGE/myapp_savedata"/* "$MNT_HOMESTORGE/$SAVEDATA_DIR"
+		mkdir -p "$SAVEDATA_DIR"
+		cp -r --suffix=.myapp."$USER".backup "$MNT_MYAPPSTORGE/myapp_savedata"/* "$SAVEDATA_DIR"
 	fi
 }
 
 function savedata_restore(){
+	HOME="$HOME_FAKE"
 	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
 	then
-		FIND_DIR="$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+		FIND_DIR="$SAVEDATA_DIR"
 	elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
 	then
-		FIND_DIR="$MNT_HOMESTORGE/$SAVEDATA_DIR"
+		FIND_DIR="$SAVEDATA_DIR"
 	else
 		echo "[AppRun:savedata_restore] error: invalid FIND_DIR, cannot recover user savedata"
 	fi
@@ -466,7 +483,7 @@ cat << EOF
 @
 @
 @
-  your savedata will be saved at file://$TMP_ALLWINESTORGE_OVERLAY/
+  your savedata will be saved at file://$TMP_MYAPPSTORGE_OVERLAY/
 @
 @
 @
@@ -500,7 +517,7 @@ EOF
 
 if [[ $EXEINFO_GEN_FLAG -eq 1 ]];
 then
-	[[ $EXEINFO_GEN_METHOD == "gui" || $EXEINFO_GEN_METHOD == "zenity" || $EXEINFO_GEN_METHOD == "kdialog" ]] && exeinfo_main
+	[[ $EXEINFO_GEN_METHOD == "gui" || $EXEINFO_GEN_METHOD == "zenity" || $EXEINFO_GEN_METHOD == "kdialog" ]] && HOME="$HOME_REAL" exeinfo_main
 fi
 
 
@@ -509,9 +526,9 @@ then
 	[[ -n $MYAPPLANG ]] && LANG=$MYAPPLANG || echo "MYAPPLANG not set, using current LANG:$LANG"
 	# moved home and xdg_config_home env setting to here.
 	# if change $HOME and $XDG_CONFIG_HOME too early, the exeinfo plugin may encounter some error related to file path.
-	export HOME="$MNT_HOMESTORGE"
+	export HOME="$HOME_FAKE"
 	echo \$HOME=$HOME
-	export XDG_CONFIG_HOME="$MNT_HOMESTORGE/.config"
+	export XDG_CONFIG_HOME="$HOME_FAKE/.config"
 	echo \$XDG_CONFIG_HOME=$XDG_CONFIG_HOME
 	echo "*****using $WINEARCH"
 	if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
@@ -554,7 +571,7 @@ function monitor_exe_running(){
 	# if return out of this function directly without waiting wine shutdown,
 	# unionfs drive will be unmount immediately.
 	# therefore we can add a "wineboot" command to wait for wine saving the registry.
-	[[ ! $EXEINFO_GEN_FLAG -eq 1 ]] && wineboot -s
+	[[ ! $EXEINFO_GEN_FLAG -eq 1 && ! $LOAD_PROTON -eq 1 ]] && wineboot -s
 }
 monitor_exe_running
 

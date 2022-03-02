@@ -53,7 +53,7 @@ function wine_search_proton(){
 	do
 		if [[ -x "$PROTON_DIR"/proton ]];
 		then
-			# must use readlink to convert the path, otherwise if directly pass the path including symlink, some local files(such as default_pfx) maybe delete at below function.
+			# must use readlink to convert to absolute path, otherwise if directly pass the path including symlink, some local files(such as default_pfx) maybe delete at below function. because if the symlink is absolute path instead of relative path, it will still show the original path in unionfs.
 			SEARCH_COMPAT_CLIENT_PATH="$(readlink -f "$HOME/$SEARCH_COMPAT_CLIENT_PATH")"
 			SEARCH_COMPAT_CLIENT_PATH="${SEARCH_COMPAT_CLIENT_PATH#"$HOME/"}"
 
@@ -68,7 +68,7 @@ function wine_search_proton(){
 		return
 	elif [[ -x "$HOME/.steam/steam/steamapps/common/Proton - Experimental/proton" ]];
 	then
-		# must use readlink to convert the path, otherwise if directly pass the path including symlink, some local files(such as default_pfx) maybe delete at below function.
+		# must use readlink to convert to absolute path, otherwise if directly pass the path including symlink, some local files(such as default_pfx) maybe delete at below function. because if the symlink is absolute path instead of relative path, it will still show the original path in unionfs.
 		SEARCH_COMPAT_CLIENT_PATH="$(readlink -f "$HOME/.steam/steam")"
 		SEARCH_COMPAT_CLIENT_PATH="${SEARCH_COMPAT_CLIENT_PATH#"$HOME/"}"
 
@@ -77,7 +77,7 @@ function wine_search_proton(){
 		return
 	elif [[ -x "$HOME/.local/share/Steam/steamapps/common/Proton - Experimental/proton" ]];
 	then
-		# must use readlink to convert the path, otherwise if directly pass the path including symlink, some local files(such as default_pfx) maybe delete at below function.
+		# must use readlink to convert to absolute path, otherwise if directly pass the path including symlink, some local files(such as default_pfx) maybe delete at below function. because if the symlink is absolute path instead of relative path, it will still show the original path in unionfs.
 		SEARCH_COMPAT_CLIENT_PATH="$(readlink -f "$HOME/.local/share/Steam")"
 		SEARCH_COMPAT_CLIENT_PATH="${SEARCH_COMPAT_CLIENT_PATH#"$HOME/"}"
 
@@ -126,7 +126,7 @@ function wine_set_env(){
 ## restore wine prefix, should only run this function after unionfs is mounted, because $WINEPREFIX path include the unionfs drive
 function wine_restore_prefix(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "run wine_restore_prefix"
-	[[ -z "$MNT_ALLWINESTORGE" ]] && echo "[wine_restore_prefix]:\$MNT_ALLWINESTORGE not set" >&2 && exit
+	[[ -z "$MNT_MYAPPSTORGE" ]] && echo "[wine_restore_prefix]:\$MNT_MYAPPSTORGE not set" >&2 && exit
 	#if [[ "$WINEARCH" == "win32" ]];
 	#then
 	#	[[ ! -x "$HOME/$PROTON_DIR_FROM_HOME/temprun.win32.proton" ]] && cat "$HOME/$PROTON_DIR_FROM_HOME/proton" | sed 's/wine64/wine/g' > "$HOME/$PROTON_DIR_FROM_HOME/temprun.win32.proton"
@@ -143,15 +143,15 @@ function wine_restore_prefix(){
 
 	export STEAM_COMPAT_CLIENT_INSTALL_PATH="$HOME/$SEARCH_COMPAT_CLIENT_PATH"
 	export PATH="$HOME/$PROTON_DIR_FROM_HOME/dist/bin/:$PATH"
-	export STEAM_COMPAT_DATA_PATH="$MNT_ALLWINESTORGE/myapp_prefix/proton.$WINEARCH"
+	export STEAM_COMPAT_DATA_PATH="$MNT_MYAPPSTORGE/myapp_prefix/proton.$WINEARCH"
 	# not necessary to set WINEPREFIX because proton uses $STEAM_COMPAT_DATA_PATH/pfx to decide the WINEPREFIX directory
 	# however, we still set the WINEPREFIX because below lines need $WINEPREFIX
-	export WINEPREFIX="$MNT_ALLWINESTORGE/myapp_prefix/proton.$WINEARCH/pfx"
+	export WINEPREFIX="$MNT_MYAPPSTORGE/myapp_prefix/proton.$WINEARCH/pfx"
 
 	# "rm -rf" included, must check $WINEPREFIX first
 	#[[ -z "$WINEPREFIX" ]] && echo "[myapp:wine_restore_prefix] ERROR:\$WINEPREFIX not set, could not restore wine prefix." >&2 && return
 
-	mkdir -p "$MNT_ALLWINESTORGE/myapp_prefix/proton.$WINEARCH"
+	mkdir -p "$MNT_MYAPPSTORGE/myapp_prefix/proton.$WINEARCH"
 
 	# only setup wineprefix and do nothing
 	if [[ $MYAPPDEBUG -eq 1 ]];
@@ -167,23 +167,64 @@ function wine_restore_prefix(){
 	#echo "disable" > "$WINEPREFIX/.update-timestamp"
 
 	# in proton, also keep y: drive, which is winetricks cache. otherwise it would keep asking you to install mono
-	# TODO: seems not the problem of y: drive. but why wine keep asking to install mono?
+	# TODO: ok...seems not the problem of y: drive. but why wine keep asking to install mono?
 	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" ! -name "y:" -exec rm -rf "{}" \;
 	[[ ! -L "$WINEPREFIX/dosdevices/c:" ]] && ln -sfn ../drive_c "$WINEPREFIX/dosdevices/c:"
-	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfn ../../../drive_d "$WINEPREFIX/dosdevices/d:"
-	[[ ! -L "$MNT_ALLWINESTORGE/drive_d/myapp_patch_reg" ]] && ln -sfn ../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
-	if [[ ! -L "$WINEPREFIX/drive_c/windows/Fonts" ]];
+	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfn ../../../../drive_d "$WINEPREFIX/dosdevices/d:"
+	#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/myapp_patch_reg
+	[[ ! -L "$MNT_MYAPPSTORGE/myapp_patch_reg" ]] && ln -sfn ../../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
+	#if [[ ! -L "$WINEPREFIX/drive_c/windows/Fonts" ]];
+	#then
+	#	rm -rf "$WINEPREFIX/drive_c/windows/Fonts"
+	#	#refer path: .../myapp/myapp_fonts
+	#	#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/windows/Fonts
+	#	ln -sfnv ../../../../../../myapp_fonts "$WINEPREFIX/drive_c/windows/Fonts"
+	#fi
+
+	# should already load plugin-exeinfo at this moment
+	# should already mount fake home unionfs at this moment
+	exeinfo_user_dirs
+	[[ -z "$MNT_HOMESTORGE" ]] && echo "[wine_restore_prefix]:\$MNT_HOMESTORGE not set" >&2 && return
+	if [[ ! -L "$WINEPREFIX/drive_c/users/steamuser/Documents" ]];
 	then
-		rm -rf "$WINEPREFIX/drive_c/windows/Fonts"
-		#refer path: .../myapp/myapp_fonts
-		#refer path: .../myapp/myapp_prefix/wine.wine64/pfx/drive_c/windows/Fonts
-		ln -sfnv ../../../../../myapp_fonts "$WINEPREFIX/drive_c/windows/Fonts"
+		rm -rf "$WINEPREFIX/drive_c/users/steamuser/Documents"
+		ln -sfn "$MNT_HOMESTORGE/$FAKE_DOCUMENTS_DIR_NAME" "$WINEPREFIX/drive_c/users/steamuser/Documents"
 	fi
+	if [[ ! -L "$WINEPREFIX/drive_c/users/steamuser/Desktop" ]];
+	then
+		rm -rf "$WINEPREFIX/drive_c/users/steamuser/Desktop"
+		ln -sfn "$MNT_HOMESTORGE/$FAKE_DESKTOP_DIR_NAME" "$WINEPREFIX/drive_c/users/steamuser/Desktop"
+	fi
+	if [[ ! -L "$WINEPREFIX/drive_c/users/steamuser/Downloads" ]];
+	then
+		rm -rf "$WINEPREFIX/drive_c/users/steamuser/Downloads"
+		ln -sfn "$MNT_HOMESTORGE/$FAKE_DOWNLOAD_DIR_NAME" "$WINEPREFIX/drive_c/users/steamuser/Downloads"
+	fi
+	if [[ ! -L "$WINEPREFIX/drive_c/users/steamuser/Music" ]];
+	then
+		rm -rf "$WINEPREFIX/drive_c/users/steamuser/Music"
+		ln -sfn "$MNT_HOMESTORGE/$FAKE_MUSIC_DIR_NAME" "$WINEPREFIX/drive_c/users/steamuser/Music"
+	fi
+	if [[ ! -L "$WINEPREFIX/drive_c/users/steamuser/Pictures" ]];
+	then
+		rm -rf "$WINEPREFIX/drive_c/users/steamuser/Pictures"
+		ln -sfn "$MNT_HOMESTORGE/$FAKE_PICTURES_DIR_NAME" "$WINEPREFIX/drive_c/users/steamuser/Pictures"
+	fi
+	if [[ ! -L "$WINEPREFIX/drive_c/users/steamuser/Videos" ]];
+	then
+		rm -rf "$WINEPREFIX/drive_c/users/steamuser/Videos"
+		ln -sfn "$MNT_HOMESTORGE/$FAKE_VIDEOS_DIR_NAME" "$WINEPREFIX/drive_c/users/steamuser/Videos"
+	fi
+}
+
+function wine_shutdown_prefix(){
+	echo wine_shutdown_prefix
+	"$HOME/$PROTON_DIR_FROM_HOME/proton" run wineboot -s
 }
 
 function wine_patch_reg(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "run wine_patch_reg"
-	[[ -z "$MNT_ALLWINESTORGE" ]] && echo "[wine_restore_prefix] ERROR:\$MNT_ALLWINESTORGE not set" >&2 && exit
+	[[ -z "$MNT_MYAPPSTORGE" ]] && echo "[wine_restore_prefix] ERROR:\$MNT_MYAPPSTORGE not set" >&2 && exit
 
 	# I tried to disable autostart winedbg via loading the .reg by regedit but failed. therefore I use winetricks to disable autostart debugger.
 	if [[ $MYAPPDEBUG -eq 1 ]];
@@ -194,16 +235,16 @@ function wine_patch_reg(){
 		winetricks autostart_winedbg=disabled >/dev/null 2>&1
 	fi
 
-	[[ -z "$(ls "$MNT_ALLWINESTORGE"/myapp_patch_reg/*.reg 2>/dev/null )" ]] && return
-	for i in $(ls "$MNT_ALLWINESTORGE"/myapp_patch_reg/*.reg); do
+	[[ -z "$(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg 2>/dev/null )" ]] && return
+	for i in $(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg); do
 		# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
 		[[ -f $i ]] && i=$(basename "$i") || continue
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" regedit "d:\\myapp_patch_reg\\$i"
 		"$HOME/$PROTON_DIR_FROM_HOME/proton" regedit "d:\\myapp_patch_reg\\$i"
 	done
 
-	[[ -z "$(ls "$MNT_ALLWINESTORGE"/myapp_patch_reg/$WINEARCH/*.reg 2>/dev/null )" ]] && return
-	for i in $(ls "$MNT_ALLWINESTORGE"/myapp_patch_reg/$WINEARCH/*.reg); do
+	[[ -z "$(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/$WINEARCH/*.reg 2>/dev/null )" ]] && return
+	for i in $(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/$WINEARCH/*.reg); do
 		# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
 		[[ -f $i ]] && i=$(basename "$i") || continue
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" regedit "d:\\myapp_patch_reg\\$WINEARCH\\$i"
@@ -218,9 +259,9 @@ function wine_run_winetricks(){
 	wine_restore_prefix
 	#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
 	wine_patch_reg
-	#wineboot -es	# this command run too slow
 	#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
-	"$HOME/$PROTON_DIR_FROM_HOME/proton" run wineboot -s
+	wine_shutdown_prefix
+
 	if [[ $MYAPPDEBUG -eq 1 ]];
 	then
 		"$APPDIR"/usr/bin/winetricks "$@"
@@ -237,13 +278,11 @@ function wine_run_exe(){
 	[[ $WALKTHROUGH_FLAG -eq 1 ]] && walkthrough_browser
 	[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_replace
 
-	cd "$MNT_ALLWINESTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
+	cd "$MNT_MYAPPSTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
 
 	wine_patch_reg
-
-	#wineboot -es	# this command run too slow
 	#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
-	"$HOME/$PROTON_DIR_FROM_HOME/proton" run wineboot -s
+	wine_shutdown_prefix
 
 	#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path if winetricks sandbox was set.
 	if [[ $MYAPPDEBUG -eq 1 ]];
