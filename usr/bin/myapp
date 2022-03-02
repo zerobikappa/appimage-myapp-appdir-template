@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1646251850
+MYAPPRUN_VERSION=1646256197
 
 #############################################
 ## prevent running by root/sudo for security concern
@@ -146,11 +146,19 @@ run option:
 	will be redirect to this directory to prevent
 	changing files in local \$HOME.
 
+  --proton
+	default use local wine to run, but you can add
+	this option to use local Steam Proton instead.
+	if you install different version of Steam Proton,
+	it will choose the latest stable version.
+	if no stable version was found,
+	it will try to use the experimental version.
+
   -h, --help
-	show this help then exit
+	show this help, then exit
 
   --version
-	show application information and version
+	show application information and version, then exit
 
 
 test option:
@@ -200,6 +208,7 @@ function print_version(){
 	[[ -z $EXENAME ]] && EXENAME="(empty)(not set in AppDir)"
 	APPLICATION_NAME=$(cat "$APPDIR"/*.desktop | grep -i "name=") && APPLICATION_NAME=${APPLICATION_NAME#*"="}
 	APPLICATION_DESCRIPTION=$(cat "$APPDIR"/*.desktop | grep -i "comment=") && APPLICATION_DESCRIPTION=${APPLICATION_DESCRIPTION#*"="}
+	[[ -z $MYAPPLANG ]] && MYAPPLANG="(not set default language)"
 	cat << EOF
 
   ***Application Info***
@@ -207,8 +216,20 @@ function print_version(){
   .exe name: $EXENAME
   application name: $APPLICATION_NAME
   application description: $APPLICATION_DESCRIPTION
-
+  optional language:
+      LANG=$MYAPPLANG(default)
 EOF
+	find "$APPDIR/usr/share/myapp/myapp_exeinfo" -mindepth 1 -maxdepth 1 -name "exeinfo_profile.*" -print0 | sort -z | while read -d $'\0' OPTIONAL_EXEINFO_PROFILE;
+	do
+		TEMP_KEY_WORD="$(cat $OPTIONAL_EXEINFO_PROFILE | grep '^[[:blank:]]*[^[:blank:]#]' | grep "MYAPPLANG=")"
+		TEMP_KEY_WORD="${TEMP_KEY_WORD#*'MYAPPLANG='}"
+		TEMP_KEY_WORD="${TEMP_KEY_WORD##\"}"
+		TEMP_KEY_WORD="${TEMP_KEY_WORD%%\"}"
+		[[ -z "$TEMP_KEY_WORD" ]] && continue
+		echo '      LANG='"$TEMP_KEY_WORD"
+	done
+	unset TEMP_KEY_WORD
+	echo ""
 }
 ##############################################
 
