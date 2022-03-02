@@ -157,7 +157,7 @@ export WINEDLLOVERRIDES=winemenubuilder.exe=d
 #zh# exe程序的可执行文件名和路径、存档目录路径、游戏语言等信息保存在了一个叫 exeinfo_profile 的文件中。
 #zh# 有些软件会在C盘保存存档，这时存档文件的路径将会包含$WINEARCH变量，
 #zh# 所以把以下语句放在这里，确保已经设定好了$WINEARCH变量才执行以下语句
-source "$APPDIR"/usr/bin/myapp-plugin-exeinfo-gen
+source "$APPDIR"/usr/bin/myapp-plugin-exeinfo
 exeinfo_load_file
 ##############################################
 
@@ -403,7 +403,7 @@ eval set -- "$next_parameters"
 #zh# 给一些参数的额外过滤
 
 #zh# 另外编写了一些用于生成exe程序配置信息的脚本，太长了所以放在另一个脚本里，以插件的形式导入
-source "$APPDIR"/usr/bin/myapp-plugin-exeinfo-gen
+source "$APPDIR"/usr/bin/myapp-plugin-exeinfo
 
 #zh# 如果用命令行模式运行exeinfo生成器，那么不需要挂载unionfs，直接在这里运行然后退出就可以了。
 #zh# 如果用图形界面模式运行exeinfo生成器，那么zenity(gnome用户)或kdialog(kde用户)需要读取本地目录的一些配置文件，我没有把两者打包进appimage的打算，所以放在更下面的地方等挂载了unionfs再运行。

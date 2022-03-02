@@ -352,7 +352,7 @@ wine_set_env
 
 ##############################################
 ## load exeinfo_profile, may depends on $WINEARCH, (if savedata in c drive,) should set the $WINEARCH first
-source "$APPDIR"/usr/bin/myapp-plugin-exeinfo-gen
+source "$APPDIR"/usr/bin/myapp-plugin-exeinfo
 exeinfo_load_file
 ##############################################
 
