@@ -526,7 +526,7 @@ function exeinfo_savedata_location(){
 }
 
 function exeinfo_locale(){
-	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
+	if [[ "$EXEINFO_GEN_METHOD" == "kdialog" ]];
 	then
 		#NOTUSED: did not use kdialog --checklist because it only reply the tag number instead of the LANG itself
 		TEMP_LANG=$(kdialog --geometry 800x600 --inputbox \
@@ -541,7 +541,7 @@ that means you cannot use this language setting to run this game.
 if you cannot find your language in this list,
 please use locale-gen to generate locale setting first." "$LANG")
 		RETURN_STATUS="$?"
-	elif [[ $EXEINFO_GEN_METHOD == "zenity" ]];
+	elif [[ "$EXEINFO_GEN_METHOD" == "zenity" ]];
 	then
 		TEMP_LANG=$(zenity --width=800 --height=600 --list --text=\
 " \

@@ -102,14 +102,14 @@ function wine_patch_reg(){
 	[[ -z "$(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg 2>/dev/null )" ]] && return
 	for i in $(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg); do
 		# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
-		[[ -f $i ]] && i=$(basename "$i") || continue
+		[[ -f "$i" ]] && i=$(basename "$i") || continue
 		wine regedit "d:\\myapp_patch_reg\\$i"
 	done
 
 	[[ -z "$(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/$WINEARCH/*.reg 2>/dev/null )" ]] && return
 	for i in $(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/$WINEARCH/*.reg); do
 		# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
-		[[ -f $i ]] && i=$(basename "$i") || continue
+		[[ -f "$i" ]] && i=$(basename "$i") || continue
 		wine regedit "d:\\myapp_patch_reg\\$WINEARCH\\$i"
 	done
 }

@@ -244,6 +244,8 @@ next_parameters=""
 eval set -- "$parameters"
 
 function option_check(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
 	if [[ ${1::2} == "--" ]];
 	then
 		echo "long"
@@ -253,6 +255,8 @@ function option_check(){
 	else
 		echo "none"
 	fi
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
 while [[ -n "$1" ]] ; do
@@ -310,7 +314,7 @@ while [[ -n "$1" ]] ; do
 			shift ;;
 		--)
 			shift
-			if [[ -z "$@" && -z "$next_parameters" ]];
+			if [[ -z "$*" && -z "$next_parameters" ]];
 			then
 				break
 			elif [[ ! $MYAPPDEBUG -eq 1 ]];
@@ -326,9 +330,10 @@ while [[ -n "$1" ]] ; do
 			fi
 			;;
 		*)
-			if [[ "$(option_check $1)" == "short" && ${#1} -gt 2 ]];
+			if [[ "$(option_check "$1")" == "short" && ${#1} -gt 2 ]];
 			then
 				parameters="$(getopt -o 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -n "$0" -- "$1")"
+				parameters="${parameters%%' --'*}"
 				shift
 				parameters="$parameters $@"
 				eval set -- "$parameters"
@@ -431,6 +436,8 @@ mkdir -p "$MNT_HOMESTORGE" "$TMP_HOMESTORGE_OVERLAY"
 ##############################################
 ## show the game walkthrough, you can see this info when using commandline to launch this app.
 function walkthrough_browser(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
 	cat << EOF
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @
@@ -454,6 +461,8 @@ EOF
 EOF
 	#TODO: failed to using xdg-open to open html file.
 	i3-sensible-browser "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.html
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
 ##############################################
@@ -462,6 +471,8 @@ EOF
 ##############################################
 ## game savedata
 function savedata_replace(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
 	HOME="$HOME_FAKE"
 	exeinfo_user_dirs
 	exeinfo_load_file
@@ -474,9 +485,13 @@ function savedata_replace(){
 		mkdir -p "$SAVEDATA_DIR"
 		cp -r --suffix=.myapp."$USER".backup "$MNT_MYAPPSTORGE/myapp_savedata"/* "$SAVEDATA_DIR"
 	fi
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
 function savedata_restore(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
 	HOME="$HOME_FAKE"
 	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
 	then
@@ -496,9 +511,13 @@ function savedata_restore(){
 		echo  "$SAVEDATA_BACKUP" ' >>to>> ' "${SAVEDATA_BACKUP%".myapp.$USER.backup"}"
 		mv -f "$SAVEDATA_BACKUP" "${SAVEDATA_BACKUP%".myapp.$USER.backup"}"
 	done
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
 function savedata_show_location(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
 cat << EOF
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @
@@ -510,6 +529,8 @@ cat << EOF
 @
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 EOF
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
 ##############################################
@@ -548,9 +569,9 @@ then
 	# moved home and xdg_config_home env setting to here.
 	# if change $HOME and $XDG_CONFIG_HOME too early, the exeinfo plugin may encounter some error related to file path.
 	export HOME="$HOME_FAKE"
-	echo \$HOME=$HOME
+	echo \$HOME="$HOME"
 	export XDG_CONFIG_HOME="$HOME_FAKE/.config"
-	echo \$XDG_CONFIG_HOME=$XDG_CONFIG_HOME
+	echo \$XDG_CONFIG_HOME="$XDG_CONFIG_HOME"
 	echo "*****using $WINEARCH"
 	if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
 	then
@@ -568,6 +589,8 @@ fi
 # monitor if the .exe is still running
 # however, if the .exe file is only a launcher to launch other .exe files. pls change below code to monitor other the correct *.exe files.
 function monitor_exe_running(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
 	# if you find the $EXENAME is only a launcher to launch other *.exe,
 	# you can uncomment below line to change the $EXENAME to another name.
 
@@ -593,6 +616,8 @@ function monitor_exe_running(){
 	# unionfs drive will be unmount immediately.
 	# therefore we can add a "wineboot" command to wait for wine saving the registry.
 	[[ ! $EXEINFO_GEN_FLAG -eq 1 && ! $LOAD_PROTON -eq 1 ]] && wineboot -s
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 monitor_exe_running
 
@@ -616,6 +641,8 @@ savedata_show_location
 
 
 function atexit() {
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
 	# "rm -rf" included, must check env first.
 	[[ -z "$APPDIR" ]] && echo "[myapp:atexit] ERROR:\$APPDIR not set, could not clean temp files" >&2 && return
 	[[ -z "$APPIMAGE_CACHE_DIR" ]] && echo "[myapp:atexit] ERROR:\$APPIMAGE_CACHE_DIR not set, could not clean temp files." >&2 && return
@@ -628,6 +655,8 @@ function atexit() {
 	# if not clean up unionfs hide files, may encounter some read file error next time.
 	rm -rf "$APPIMAGE_CACHE_DIR/usr/share/myapp"/.unionfs* >/dev/null 2>&1
 	rm -rf "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 #set -e
 #trap atexit EXIT	#NOT USED: due to some .exe(as game launcher) would pass EXIT signal after it completed to launch other .exe files. 
