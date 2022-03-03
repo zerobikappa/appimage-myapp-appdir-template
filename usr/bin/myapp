@@ -221,7 +221,7 @@ function print_version(){
 EOF
 	find "$APPDIR/usr/share/myapp/myapp_exeinfo" -mindepth 1 -maxdepth 1 -name "exeinfo_profile.*" -print0 | sort -z | while read -d $'\0' OPTIONAL_EXEINFO_PROFILE;
 	do
-		TEMP_KEY_WORD="$(cat $OPTIONAL_EXEINFO_PROFILE | grep '^[[:blank:]]*[^[:blank:]#]' | grep "MYAPPLANG=")"
+		TEMP_KEY_WORD="$(cat "$OPTIONAL_EXEINFO_PROFILE" | grep '^[[:blank:]]*[^[:blank:]#]' | grep "MYAPPLANG=")"
 		TEMP_KEY_WORD="${TEMP_KEY_WORD#*'MYAPPLANG='}"
 		TEMP_KEY_WORD="${TEMP_KEY_WORD##\"}"
 		TEMP_KEY_WORD="${TEMP_KEY_WORD%%\"}"
