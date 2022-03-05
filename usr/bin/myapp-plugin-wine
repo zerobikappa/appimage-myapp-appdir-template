@@ -1,0 +1,198 @@
+#!/bin/bash
+
+##############################################
+## test env
+function wine_test_env(){
+	# these env should be passed to this script
+	echo "[myapp-exeinfo-plugin-gen]: test env"
+	echo "required:"
+	debug_print_env APPDIR APPIMAGE_CACHE_DIR EXEINFO_GEN_METHOD
+	echo "optional:"
+	debug_print_env MYAPPDEBUG EXE_LDIR EXE_WROOT EXE_WDIR EXENAME SAVEDATA_IN_HOME SAVEDATA_DIR MYAPPLANG
+}
+##############################################
+
+
+##############################################
+## setup WINE env
+function wine_set_env(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
+	# default to run win64
+	if [[ "$WINEARCH" == "win32" || $(getconf LONG_BIT) -eq 32 ]];
+	then
+		export WINEARCH=win32
+	else
+		export WINEARCH=win64
+	fi
+
+	# default to prevent wine showing "fixeme" message.
+	if [[ -z $WINEDEBUG ]];
+	then
+		export WINEDEBUG=-all
+	fi
+
+	# prevent wine setup application menu，no confirm if this setting was effected or not
+	export WINEDLLOVERRIDES=winemenubuilder.exe=d
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+}
+##############################################
+
+
+##############################################
+## restore wine prefix, should ensure unionfs is mounted before run this function, because $WINEPREFIX path include the unionfs drive
+function wine_restore_prefix(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
+	[[ -z "$MNT_MYAPPSTORGE" ]] && echo "[wine_restore_prefix] ERROR:\$MNT_MYAPPSTORGE not set" >&2 && exit
+
+	export WINEPREFIX="$MNT_MYAPPSTORGE/myapp_prefix/wine.$WINEARCH/pfx"
+	# "rm -rf" included, must check $WINEPREFIX first
+	#[[ -z "$WINEPREFIX" ]] && echo "[myapp:wine_restore_prefix] ERROR:\$WINEPREFIX not set, could not restore wine prefix." >&2 && return
+
+	mkdir -p "$MNT_MYAPPSTORGE/myapp_prefix/wine.$WINEARCH"
+
+	# only setup wineprefix and do nothing
+	if [[ $MYAPPDEBUG -eq 1 ]];
+	then
+		[[ ! -d $WINEPREFIX ]] && wine cmd /C exit
+	else
+		[[ ! -d $WINEPREFIX ]] && wine cmd /C exit >/dev/null 2>&1
+	fi
+
+	# not necessary to update WINEPREFIX automatically every time
+	echo "disable" > "$WINEPREFIX/.update-timestamp"
+
+	# only keep C: and D: drive and remove other drive symlink, to prevent wine motifing local files through Z: drive
+	# it is not necessary to package other drive symlink into appimage
+	# however, wine will recreate other drive symlink every time when you open explorer in wine/winetricks, we should delete them again after game is ended
+	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
+	[[ ! -L "$WINEPREFIX/dosdevices/c:" ]] && ln -sfn ../drive_c "$WINEPREFIX/dosdevices/c:"
+	# D: drive is moved outside of $WINEPREFIX
+	# you can feel free to delete your WINEPREFIX and just package D: drive into appimage
+	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfn ../../../../drive_d "$WINEPREFIX/dosdevices/d:"
+	#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/myapp_patch_reg
+	[[ ! -L "$MNT_MYAPPSTORGE/myapp_patch_reg" ]] && ln -sfn ../../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
+
+	# Font directory is moved outside of $WINEPREFIX
+	# this is a simple solution for font issue in japanese games
+	# just place some CJK font in myapp_fonts directory and package it in appimage
+	if [[ ! -L "$WINEPREFIX/drive_c/windows/Fonts" ]];
+	then
+		rm -rf "$WINEPREFIX/drive_c/windows/Fonts"
+		#refer path: .../myapp/myapp_fonts
+		#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/windows/Fonts
+		ln -sfnv ../../../../../../myapp_fonts "$WINEPREFIX/drive_c/windows/Fonts"
+	fi
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+}
+
+function wine_shutdown_prefix(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
+	#wineboot -es	# this command run too slow
+	wineboot -s
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+}
+
+function wine_patch_reg(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
+	[[ -z "$MNT_MYAPPSTORGE" ]] && echo "[wine_restore_prefix] ERROR:\$MNT_MYAPPSTORGE not set" >&2 && exit
+
+	# I tried to disable autostart winedbg via loading the .reg by regedit but failed.
+	# as a workaround I use winetricks to disable autostart debugger.
+	if [[ $MYAPPDEBUG -eq 1 ]];
+	then
+		winetricks autostart_winedbg=disabled
+	else
+		winetricks autostart_winedbg=disabled >/dev/null 2>&1
+	fi
+
+	if [[ -n "$(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg 2>/dev/null )" ]];
+	then
+		for i in $(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg); do
+			# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
+			[[ -f "$i" ]] && i=$(basename "$i") || continue
+			wine regedit "d:\\myapp_patch_reg\\$i"
+		done
+	fi
+
+	if [[ -n "$(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/$WINEARCH/*.reg 2>/dev/null )" ]];
+	then
+		for i in $(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/$WINEARCH/*.reg); do
+			# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
+			[[ -f "$i" ]] && i=$(basename "$i") || continue
+			wine regedit "d:\\myapp_patch_reg\\$WINEARCH\\$i"
+		done
+	fi
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+}
+##############################################
+
+
+##############################################
+function wine_run_winetricks(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
+	wine_restore_prefix
+	#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
+	wine_patch_reg
+	wine_shutdown_prefix
+
+	if [[ $MYAPPDEBUG -eq 1 ]];
+	then
+		"$APPDIR"/usr/bin/winetricks "$@"
+	else
+		"$APPDIR"/usr/bin/winetricks "$@" >/dev/null 2>&1
+	fi
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+}
+
+function wine_run_exe(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
+	wine_restore_prefix
+	#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
+
+	[[ $WALKTHROUGH_FLAG -eq 1 ]] && walkthrough_browser
+	[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_replace
+
+	cd "$MNT_MYAPPSTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
+
+	wine_patch_reg
+
+	wine_shutdown_prefix
+
+	#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path if winetricks sandbox was set.
+	if [[ $MYAPPDEBUG -eq 1 ]];
+	then
+		wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@"
+	else
+		wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" >/dev/null 2>&1
+	fi
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+}
+##############################################
+
+
+##############################################
+[[ "$0" == "${BASH_SOURCE[0]}" && $MYAPPDEBUG -eq 1 ]] && wine_test_env
+if [[ "$0" == "${BASH_SOURCE[0]}" ]];
+then
+	[[ -n $APPDIR ]] || echo "[AppRun:plugin_exeinfo] required \$APPDIR but it was not set"
+	[[ -n $APPIMAGE_CACHE_DIR ]] || echo "[AppRun:plugin_exeinfo] required \$APPIMAGE_CACHE_DIR but it was not set"
+	[[ -n $EXEINFO_GEN_METHOD ]] || echo "[AppRun:plugin_exeinfo] required \$EXEINFO_GEN_METHOD but it was not set"
+	[[ -n $APPDIR || -n $APPIMAGE_CACHE_DIR || -n $EXEINFO_GEN_METHOD ]] || exit
+fi
+
+##############################################
+
+
+

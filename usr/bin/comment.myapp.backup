@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1645992904
+MYAPPRUN_VERSION=1646515505
 
 #############################################
 ## prevent running by root/sudo for security concern
@@ -12,6 +12,31 @@ then
 	echo "[AppRun]: prevent running by root/sudo"
 	echo "[AppRun]: you should not using root/sudo to run this application"
 	exit
+fi
+#############################################
+
+
+#############################################
+function debug_print_env(){
+	for i in "$@";
+	do
+		eval echo "\ \ \ \ $i=\$$i"
+	done
+}
+
+if [[ "$MYAPPDEBUG" -eq 2 ]];
+then
+	# use bash debug + buildin debug info
+	set -x
+	MYAPPDEBUG=1
+elif [[ "$MYAPPDEBUG" -eq 1 ]];
+then
+	# only use buildin debug info
+	set +x
+else
+	# invalid value, reset to empty
+	set +x
+	unset MYAPPDEBUG
 fi
 #############################################
 
@@ -74,15 +99,15 @@ fi
 ## setup unionfs temp directory for this app
 #zh# 设定unionfs的挂载点和参数
 
-#zh# 这个目录将用于存档win32和win64的$WINEPREFIX，如果你真的要把生成的 $WINEPREFIX 打包进appimage包里面的话
-RO_ALLWINESTORGE="$APPDIR/usr/share/myapp" # Use the location where contain $WINEPREFIX, both win32 and win64 WINEPREFIX directory are here.
+#zh# 工程目录，用来放置所有与打包的这个游戏相关的所有文件。包括：游戏exe文件，全通关存档，攻略离线网页文件，exeinfo文件，注册表补丁，字体文件，wine和proton的prefix（如果你真的要连这个也打包进来的话）……
+RO_MYAPPSTORGE="$APPDIR/usr/share/myapp"
 
 #zh# Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
 #zh# wine 程序实际是从这个挂载点读写数据的，这里用了$APPDIR的名字，因为appimage文件的名字($APPIMAGE)如果太长而且包含unicode字符，会导致wine无法处理路径。appimage包释放时会自动生成一个不含unicode的短名字(也就是$APPDIR)，用这个作为挂载点的目录名。这个挂载点目录将会在游戏结束后被删除
-MNT_ALLWINESTORGE="/tmp/$(basename "$APPDIR").unionfs/usr/share/myapp"
+MNT_MYAPPSTORGE="/tmp/$(basename "$APPDIR").unionfs/usr/share/myapp"
 
 #zh# 对挂载点的写入更改会保存在 appimage包名字.cache 目录里，不会对本地目录造成任何更改
-TMP_ALLWINESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share/myapp"
+TMP_MYAPPSTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share/myapp"
 
 
 #zh# 读取数据从用户原本的家目录读取数据，这是有必要的。例如使用本地的图形界面kdialog时会需要从原本的$HOME目录里读取配置数据
@@ -95,6 +120,12 @@ MNT_HOMESTORGE="/tmp/$(basename "$APPDIR").unionfs/home/public_user"
 
 #zh# 对家目录$HOME的写入更改会保存在 appimage包名字.cache 目录里，不会对本地目录造成任何更改
 TMP_HOMESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/home/public_user"
+
+# backup the path of $HOME because exeinfo-gen need to read the real $HOME instead of the fake one
+#zh# 把原本的家目录的路径备份下来，因为exeinfo-gen功能需要用来原本的路径
+HOME_REAL="$HOME"
+HOME_FAKE="$MNT_HOMESTORGE"
+
 ##############################################
 
 
@@ -126,60 +157,23 @@ fi
 
 
 ##############################################
-## setup WINE env
-#zh# 配置wine环境变量
-
-# default to run win64
-#zh# 默认使用win64，但也保留可以在命令行里加 WINEARCH=win32 来运行appimage包
-if [[ "$WINEARCH" == "win32" ]];
-then
-	export WINEARCH=win32
-else
-	export WINEARCH=win64
-fi
-export WINEPREFIX="$MNT_ALLWINESTORGE/myapp_prefix/wine.$WINEARCH/pfx"
-
-# default to prevent wine showing "fixeme" message.
-#zh# 默认不显示任何debug信息，对于普通用户来说这些信息太烦人了
-if [[ -z $WINEDEBUG ]];
-then
-	export WINEDEBUG=-all
-fi
-
-# prevent wine setup application menu，no confirm if this setting was effected or not
-#zh# 安装游戏时阻止在本地开始菜单建立项目，暂时不确定这项是不是真的生效了
-export WINEDLLOVERRIDES=winemenubuilder.exe=d
-##############################################
-
-
-##############################################
-## load exeinfo_profile, may depends on $WINEARCH, (if savedata in c drive,) should set the $WINEARCH first
-#zh# exe程序的可执行文件名和路径、存档目录路径、游戏语言等信息保存在了一个叫 exeinfo_profile 的文件中。
-#zh# 有些软件会在C盘保存存档，这时存档文件的路径将会包含$WINEARCH变量，
-#zh# 所以把以下语句放在这里，确保已经设定好了$WINEARCH变量才执行以下语句
-source "$APPDIR"/usr/bin/myapp-plugin-exeinfo-gen
-exeinfo_load_file
-##############################################
-
-
-##############################################
 ## test runtime env
-function debug_show(){
-	cat << EOF
-APPIMAGE=$APPIMAGE
-APPDIR=$APPDIR
-OWD=$OWD
-ARGV0=$ARGV0
-\$0=$0
-EOF
-}
-[[ $MYAPPDEBUG -eq 1 ]] && debug_show
+#function debug_show(){
+#	cat << EOF
+#APPIMAGE=$APPIMAGE
+#APPDIR=$APPDIR
+#OWD=$OWD
+#ARGV0=$ARGV0
+#\$0=$0
+#EOF
+#}
+[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env APPIMAGE APPDIR OWD ARGV0 0
 ##############################################
 
 
 ##############################################
 function print_help(){
-	cat << EOF
+	cat << \EOF
 run option:
 
   -s, --savedata
@@ -195,16 +189,24 @@ run option:
 	means using firefox to open walkthrough.html
 
   -p, --portable-cache
-	create \${APPIMAGE}.cache directory then exit.
-	when running appimage, \$HOME and \$XDG_CONFIG_HOME
+	create ${APPIMAGE}.cache directory then exit.
+	when running appimage, $HOME and $XDG_CONFIG_HOME
 	will be redirect to this directory to prevent
-	changing files in local \$HOME.
+	changing files in local $HOME.
+
+  --proton
+	default use local wine to run, but you can add
+	this option to use local Steam Proton instead.
+	if you install different version of Steam Proton,
+	it will choose the latest stable version.
+	if no stable version was found,
+	it will try to use the experimental version.
 
   -h, --help
-	show this help then exit
+	show this help, then exit
 
   --version
-	show application information and version
+	show application information and version, then exit
 
 
 test option:
@@ -257,6 +259,7 @@ function print_version(){
 	[[ -z $EXENAME ]] && EXENAME="(empty)(not set in AppDir)"
 	APPLICATION_NAME=$(cat "$APPDIR"/*.desktop | grep -i "name=") && APPLICATION_NAME=${APPLICATION_NAME#*"="}
 	APPLICATION_DESCRIPTION=$(cat "$APPDIR"/*.desktop | grep -i "comment=") && APPLICATION_DESCRIPTION=${APPLICATION_DESCRIPTION#*"="}
+	[[ -z $MYAPPLANG ]] && MYAPPLANG="(not set default language)"
 	cat << EOF
 
   ***Application Info***
@@ -264,8 +267,20 @@ function print_version(){
   .exe name: $EXENAME
   application name: $APPLICATION_NAME
   application description: $APPLICATION_DESCRIPTION
-
+  optional language:
+      LANG=$MYAPPLANG(default)
 EOF
+	find "$APPDIR/usr/share/myapp/myapp_exeinfo" -mindepth 1 -maxdepth 1 -name "exeinfo_profile.*" -print0 | sort -z | while read -d $'\0' OPTIONAL_EXEINFO_PROFILE;
+	do
+		TEMP_KEY_WORD="$(cat "$OPTIONAL_EXEINFO_PROFILE" | grep '^[[:blank:]]*[^[:blank:]#]' | grep "MYAPPLANG=")"
+		TEMP_KEY_WORD="${TEMP_KEY_WORD#*'MYAPPLANG='}"
+		TEMP_KEY_WORD="${TEMP_KEY_WORD##\"}"
+		TEMP_KEY_WORD="${TEMP_KEY_WORD%%\"}"
+		[[ -z "$TEMP_KEY_WORD" ]] && continue
+		echo '      LANG='"$TEMP_KEY_WORD"
+	done
+	unset TEMP_KEY_WORD
+	echo ""
 }
 ##############################################
 
@@ -280,9 +295,19 @@ EOF
 #parameters=$(getopt -o swth --long save-data,walkthrough,browser:,test-winetricks,help -n "$0" -- "$@")	# NOTUSED: because $(getopt) cannot ignore unknown options
 
 parameters=$(echo "$@"|tr "=" " ")
+# in this script, if I initialize a variable to empty,
+# that means I want to avoid some unexpected error,
+# in case user pass an initial value in command line
+#zh# 在这个脚本里，如果我特意为某个变量初始化为空值
+#zh# 那就要留意这可能是有必要的
+#zh# 以防用户在命令行里给这个变量赋值
+#zh# 而带来一些不可预料的错误
+next_parameters=""
 eval set -- "$parameters"
 
 function option_check(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
 	if [[ ${1::2} == "--" ]];
 	then
 		echo "long"
@@ -292,6 +317,8 @@ function option_check(){
 	else
 		echo "none"
 	fi
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
 while [[ -n "$1" ]] ; do
@@ -344,6 +371,9 @@ while [[ -n "$1" ]] ; do
 			echo ""
 			echo "created cache directory: $APPIMAGE.cache"
 			exit ;;
+		--proton)
+			LOAD_PROTON=1
+			shift ;;
 		--)
 			shift
 			if [[ -z "$*" && -z "$next_parameters" ]];
@@ -352,18 +382,30 @@ while [[ -n "$1" ]] ; do
 			elif [[ ! $MYAPPDEBUG -eq 1 ]];
 			then
 				echo "[AppRun] error: not MYAPPDEBUG mode now. prevent to pass any unknown option." >&2
-				echo "[AppRun] error: unknown options: $next_parameters $*" >&2
+				echo "[AppRun] error: unknown options: $next_parameters $@" >&2
 				exit
 			else
 				# then $next_parameters will be passed to wine
-				next_parameters="$next_parameters $*"
+				[[ -z $next_parameters ]] && next_parameters="$@" || next_parameters="$next_parameters $@"
+				shift $#
 				break
 			fi
 			;;
-		*) 
-			if [[ $MYAPPDEBUG -eq 1 ]];
+		*)
+			if [[ "$(option_check "$1")" == "short" && ${#1} -gt 2 ]];
 			then
-				next_parameters="$next_parameters $1"
+				#zh# 遇到连在一起的短选项，例如「-abc」，那就先暂定一下
+				#zh# 用getopt语句分割成「-a -b -c」，替换回原来参数里，然后才继续处理选项
+				#zh# 由于getopt不能处理未知选项，索性就不让它做检查选项有效性的工作
+				#zh# 检查选项是否有效由我这段case语句来做，getopt只做分割参数的工作
+				parameters="$(getopt -o 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -n "$0" -- "$1")"
+				parameters="${parameters%%' --'*}"
+				shift
+				parameters="$parameters $@"
+				eval set -- "$parameters"
+			elif [[ $MYAPPDEBUG -eq 1 ]];
+			then
+				[[ -z $next_parameters ]] && next_parameters="$1" || next_parameters="$next_parameters $1"
 				shift
 			else
 				echo "[AppRun] error: not MYAPPDEBUG mode now. prevent to pass any unknow option." >&2
@@ -387,11 +429,7 @@ done
 #zh# ./yourappimagename -s    这个-s选项会被我的脚本抓取，用来执行加载全通关存档的语句
 #zh# ./yourappimagename -- -s    这个-s选项不会被我的脚本抓取，而是会继续传到下面的 wine 里。
 
-# TODO: cannot handle grouped short option, such as "-sw" will be recognized as unknown option instead of "-s -w"
-#zh# TODO: 无法处理连在一起的短选项，"-sw" 会被认为是未知选项，而不是"-s -w"两个短选项。
-#zh# 初步思路是先过滤一遍长选项，把长选项执行了，然后把剩余选项开头是"-"的选项抽出来，交给getopt分割成一个个短选项，然后再进行二次过滤。
-
-# the rest of option/argument will be passed to wine
+# unused option/argument will be passed to wine
 #zh# 过滤后的剩余选项/参数会继续传递到下面的wine里
 eval set -- "$next_parameters"
 
@@ -399,19 +437,36 @@ eval set -- "$next_parameters"
 
 
 ##############################################
+if [[ $LOAD_PROTON -eq 1 ]];
+then
+	source "$APPDIR"/usr/bin/myapp-plugin-proton
+else
+	source "$APPDIR"/usr/bin/myapp-plugin-wine
+fi
+wine_set_env
+##############################################
+
+
+##############################################
+# I defined some function to generate .exe file name, path, and other information.
+# I saved these function in below script file and load it as plugin
+#zh# 另外编写了一些用于生成exe程序配置信息的脚本
+#zh# 太长了所以放在另一个脚本里，以插件的形式导入
+source "$APPDIR"/usr/bin/myapp-plugin-exeinfo
+
+# load exeinfo_profile, may depends on $WINEARCH, (if savedata in c drive,) should set the $WINEARCH first
+# it may also depends on $XDG_DOCUMENTS_DIR, if you add this env verb in exeinfo_profile
+# should ensure the relevant variables were set
+#zh# 这里加载游戏文件的相关路径，如果游戏可执行文件、游戏存档位置位于C盘或家目录，
+#zh# 那么exeinfo_profile就可能包含$WINEARCH、$XDG_DOCUMENTS_DIR等变量
+#zh# 需要确保相关的变量已经设定好了才加载exeinfo_profile
+exeinfo_load_file
+##############################################
+
+
+##############################################
 ## extra filter for some option
 #zh# 给一些参数的额外过滤
-
-#zh# 另外编写了一些用于生成exe程序配置信息的脚本，太长了所以放在另一个脚本里，以插件的形式导入
-source "$APPDIR"/usr/bin/myapp-plugin-exeinfo-gen
-
-#zh# 如果用命令行模式运行exeinfo生成器，那么不需要挂载unionfs，直接在这里运行然后退出就可以了。
-#zh# 如果用图形界面模式运行exeinfo生成器，那么zenity(gnome用户)或kdialog(kde用户)需要读取本地目录的一些配置文件，我没有把两者打包进appimage的打算，所以放在更下面的地方等挂载了unionfs再运行。
-if [[ $EXEINFO_GEN_FLAG -eq 1 && $EXEINFO_GEN_METHOD == "cli" ]];
-then
-	exeinfo_main
-	exit
-fi
 
 if [[ -z $EXENAME ]];
 then
@@ -450,9 +505,9 @@ fi
 #zh# 挂载不成功就退出，如果上一次不正常退出导致挂载点仍被占用就会出现这样的情况
 #zh# 这里也隐含着如果同一个游戏已经开了一个实例，那么第二次打开会由于挂载点被占用而无法打开的情况
 #zh# 加了上面的语句能让我分清楚错误退出的原因是哪一种情况
-mkdir -p "$MNT_ALLWINESTORGE" "$TMP_ALLWINESTORGE_OVERLAY"
-#$APPDIR/usr/bin/unionfs -o use_ino,nonempty,uid=$UID -ocow "$TMP_ALLWINESTORGE_OVERLAY"=RW:"$RO_ALLWINESTORGE"=RO "$MNT_ALLWINESTORGE" || exit 1
-"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_ALLWINESTORGE_OVERLAY"=RW:"$RO_ALLWINESTORGE"=RO "$MNT_ALLWINESTORGE" || exit 1
+mkdir -p "$MNT_MYAPPSTORGE" "$TMP_MYAPPSTORGE_OVERLAY"
+#$APPDIR/usr/bin/unionfs -o use_ino,nonempty,uid=$UID -ocow "$TMP_MYAPPSTORGE_OVERLAY"=RW:"$RO_MYAPPSTORGE"=RO "$MNT_MYAPPSTORGE" || exit 1
+"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_MYAPPSTORGE_OVERLAY"=RW:"$RO_MYAPPSTORGE"=RO "$MNT_MYAPPSTORGE" || exit 1
 
 mkdir -p "$MNT_HOMESTORGE" "$TMP_HOMESTORGE_OVERLAY"
 "$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_HOMESTORGE_OVERLAY"=RW:"$RO_HOMESTORGE"=RO "$MNT_HOMESTORGE" || exit 1
@@ -460,68 +515,10 @@ mkdir -p "$MNT_HOMESTORGE" "$TMP_HOMESTORGE_OVERLAY"
 
 
 ##############################################
-## restore wine prefix, should only run this function after unionfs is mounted, because $WINEPREFIX path include the unionfs drive
-function wine_restore_prefix(){
-	# "rm -rf" included, must check $WINEPREFIX first
-	#zh# 有包含"rm -rf"语句，需要先检查好前面的$WINEPREFIX是否为空，避免删除了根目录的同名文件(如果恰好有的话)
-	#zh# (同时也已经在脚本最开头设置了禁止root/sudo运行的设定)
-	[[ -z "$WINEPREFIX" ]] && echo "[myapp:wine_restore_prefix] ERROR:\$WINEPREFIX not set, could not restore wine prefix." >&2 && return
-
-	# only setup wineprefix and do nothing
-	[[ ! -d $WINEPREFIX ]] && wine cmd /C exit
-
-	echo "disable" > "$WINEPREFIX/.update-timestamp"
-
-	#zh# 在这里我仅保留C盘和D盘，其它盘的软链接全删除了，避免wine透过Z盘(linux系统的根目录)对本地系统进行写入
-	#zh# 是否真的有用还有待考察，就算删除了，只要在wine/winetricks里打开内置的文件管理窗，还是会重新生成，游戏结束后还要再删一次
-	#zh# 不过删除多余盘符链接至少能避免打包一些不必要的东西进去appimage包里
-	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
-	[[ ! -L "$WINEPREFIX/dosdevices/c:" ]] && ln -sfnv ../drive_c "$WINEPREFIX/dosdevices/c:"
-	#zh# 把D盘放在了WINEPREFIX的外面，只要游戏安装在D盘里，就算删除了WINEPREFIX也不需要重新安装游戏
-	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfnv ../../../drive_d "$WINEPREFIX/dosdevices/d:"
-	[[ ! -L "$MNT_ALLWINESTORGE/drive_d/myapp_patch_reg" ]] && ln -sfnv ../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
-	#zh# 把字体目录放在了WINEPREFIX的外面，如果有需要的话可以自己放一些必要的字体进去，不必担心WINEPREFIX被删除
-	if [[ ! -L "$WINEPREFIX/drive_c/windows/Fonts" ]];
-	then
-		rm -rf "$WINEPREFIX/drive_c/windows/Fonts"
-		#refer path: .../myapp/myapp_fonts
-		#refer path: .../myapp/myapp_prefix/wine.wine64/pfx/drive_c/windows/Fonts
-		ln -sfnv ../../../../../myapp_fonts "$WINEPREFIX/drive_c/windows/Fonts"
-	fi
-}
-
-function wine_patch_reg(){
-	# I tried to disable autostart winedbg via loading the .reg by regedit but failed. therefore I use winetricks to disable autostart debugger.
-	#zh# 程序遇到崩溃时winedbg默认自动开启，但开启winedbg的时候大部分情况下它就一直挂在那里既无法打开winedbg也无法按ctrl+c退出进程
-	#zh# 禁用自动开启后，程序崩溃时它会先弹窗问你要不要开启winedbg窗口，选择不开启的话它就会跳过然后正常结束进程
-	#zh# 我仍保留着导入注册表来更改这个设定，但好像不太行，"Auto"一栏一直都是"1"(崩溃时自动开启调试)，原因不明
-	#zh# 所以这里暂时也通过winetricks来关闭自动调试
-	winetricks autostart_winedbg=disabled
-
-	#zh# 有些安装版的游戏会写入信息在注册表里，如果删除了WINEPREFIX，就算游戏文件还在也无法运行游戏
-	#zh# 那么可以导出相关的注册表保存在 myapp_patch_reg 目录里，每次开启游戏时自动导入，这样就无需将WINEPREFIX也打包进appimage包里
-	#zh# 由于文件编码不同，如果是日文游戏的话必须在日文的环境变量下(LANG=ja_JP.UTF-8)开启winetricks导出注册表，否则导出的注册表将无法正常使用
-	[[ -z "$(ls "$MNT_ALLWINESTORGE"/myapp_patch_reg/*.reg 2>/dev/null )" ]] && return
-	for i in $(ls "$MNT_ALLWINESTORGE"/myapp_patch_reg/*.reg); do
-		# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
-		[[ -f $i ]] && i=$(basename "$i") || continue
-		wine regedit "d:\\myapp_patch_reg\\$i"
-	done
-
-	#zh# 如果32位和64位的注册表不一样，那么可以分开存放在 myapp_patch_reg/win32/ 和 myapp_patch/win64/ 里面
-	[[ -z "$(ls "$MNT_ALLWINESTORGE"/myapp_patch_reg/$WINEARCH/*.reg 2>/dev/null )" ]] && return
-	for i in $(ls "$MNT_ALLWINESTORGE"/myapp_patch_reg/$WINEARCH/*.reg); do
-		# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
-		[[ -f $i ]] && i=$(basename "$i") || continue
-		wine regedit "d:\\myapp_patch_reg\\$WINEARCH\\$i"
-	done
-}
-##############################################
-
-
-##############################################
 ## show the game walkthrough, you can see this info when using commandline to launch this app.
 function walkthrough_browser(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
 	#zh# 这个函数用来打开攻略网页
 	#zh# 可以浏览攻略网站然后「将网页另存为」保存成一个.html文件，然后将.html文件放在 myapp_walkthrough 目录里，这样就可以一同打包到appimage包里
 	#zh# 当然，出于安全考虑，建议将.html里的所有跳转链接删除
@@ -534,9 +531,9 @@ function walkthrough_browser(){
 @
 EOF
 
-	for i in $(ls "$MNT_ALLWINESTORGE/myapp_walkthrough"/*.html);
+	for i in $(ls "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.html);
 	do
-		#echo "  file://$MNT_ALLWINESTORGE/drive_d/myapp_walkthrough/$i"
+		#echo "  file://$MNT_MYAPPSTORGE/drive_d/myapp_walkthrough/$i"
 		# ls will output the full path if run -> ls /full/path/to/file/*.html
 		echo "  file://$i"
 	done
@@ -550,7 +547,9 @@ EOF
 	#TODO: failed to using xdg-open to open html file.
 	#zh#TODO: 改用了i3-sensible-browser脚本，因为使用xdg-open时系统不是用浏览器而是用文本编辑器打开.html文件
 	#zh#TODO: 另外也考虑要不要为这个语句单独配一个选项，让它变为可选的，因为如果用户在 myapp_walkthrough 目录里放了很多.html的话，一旦使用-w(--walkthrough)选项要求打开攻略，那么这里会一次过打开所有html文件。
-	i3-sensible-browser "$MNT_ALLWINESTORGE/myapp_walkthrough"/*.html
+	i3-sensible-browser "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.html
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
 ##############################################
@@ -562,25 +561,35 @@ function savedata_replace(){
 	#zh# 这个函数用来加载全通关存档，例如如果你打包的是爱情文字小说游戏，嗯，懂的都懂，那么你可以将全CG收集完成的存档放在 myapp_savedata 目录，当加了-s(--savedata)选项要求加载全通关存档时，会从这里提取存档覆盖当前存档。
 	#zh# 原本的用户存档不会消失，而是加了后缀 .myapp.你的用户名.backup 在原目录里存放着，游戏结束后会还原回你的存档。
 	#zh# 如果游戏不正常退出了，你也可以到游戏存档目录找到你的存档。
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
+	HOME="$HOME_FAKE"
+	exeinfo_user_dirs
+	exeinfo_load_file
 	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
 	then
-		mkdir -p "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
-		cp -r --suffix=.myapp."$USER".backup "$MNT_ALLWINESTORGE/myapp_savedata"/* "$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+		mkdir -p "$SAVEDATA_DIR"
+		cp -r --suffix=.myapp."$USER".backup "$MNT_MYAPPSTORGE/myapp_savedata"/* "$SAVEDATA_DIR"
 	elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
 	then
-		mkdir -p "$MNT_HOMESTORGE/$SAVEDATA_DIR"
-		cp -r --suffix=.myapp."$USER".backup "$MNT_ALLWINESTORGE/myapp_savedata"/* "$MNT_HOMESTORGE/$SAVEDATA_DIR"
+		mkdir -p "$SAVEDATA_DIR"
+		cp -r --suffix=.myapp."$USER".backup "$MNT_MYAPPSTORGE/myapp_savedata"/* "$SAVEDATA_DIR"
 	fi
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
 function savedata_restore(){
 	#zh# 这个函数用来还原用户存档。
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
+	HOME="$HOME_FAKE"
 	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
 	then
-		FIND_DIR="$MNT_ALLWINESTORGE/$SAVEDATA_DIR"
+		FIND_DIR="$SAVEDATA_DIR"
 	elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
 	then
-		FIND_DIR="$MNT_HOMESTORGE/$SAVEDATA_DIR"
+		FIND_DIR="$SAVEDATA_DIR"
 	else
 		echo "[AppRun:savedata_restore] error: invalid FIND_DIR, cannot recover user savedata"
 	fi
@@ -593,20 +602,26 @@ function savedata_restore(){
 		echo  "$SAVEDATA_BACKUP" ' >>to>> ' "${SAVEDATA_BACKUP%".myapp.$USER.backup"}"
 		mv -f "$SAVEDATA_BACKUP" "${SAVEDATA_BACKUP%".myapp.$USER.backup"}"
 	done
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
 function savedata_show_location(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
 cat << EOF
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @
 @
 @
-  your savedata will be saved at file://$TMP_ALLWINESTORGE_OVERLAY/
+  your savedata will be saved at file://$TMP_MYAPPSTORGE_OVERLAY/
 @
 @
 @
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 EOF
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
 ##############################################
@@ -633,60 +648,46 @@ EOF
 ##############################################
 ## launch app
 
-#zh# 如果是使用图形界面模式运行exeinfo生成器，那么就是放在这里运行。因为此时unionfs已经加载了。
+# should mount unionfs before run exeinfo generator
+# because zenity and kdialog may read the config files in $HOME
+# what is more, it may need to use $XDG_{DOCUMENTS,DOWNLOAD,...}_DIR to 
+# calculate the relative path.
+#zh# 确保已经挂载了unionfs才运行exeinfo生成器
+#zh# 因为zenity和kdialog可能需要读取一些配置文件，而这些文件在家目录里
+#zh# 还有一个理由，就是它有可能需要通过$XDG_DOCUMENTS_DIR、$XDG_DOWNLOAD_DIR
+#zh# 等等的一些变量，来计算出某些游戏文件的相对路径
 if [[ $EXEINFO_GEN_FLAG -eq 1 ]];
 then
-	[[ $EXEINFO_GEN_METHOD == "gui" || $EXEINFO_GEN_METHOD == "zenity" || $EXEINFO_GEN_METHOD == "kdialog" ]] && exeinfo_main
+	# should use real $HOME to run
+	# otherwise zenity/kdialog may output wrong path in file selection dialog
+	#zh# 不可以使用假的家目录路径，否则的exeinfo生成器会有些小问题
+	#zh# 具体来说就是zenity和kdialog的文件选择窗左边有些快捷入口，包含了HOME，如果按下得出的路径不是用户真正的家目录，而是重定向后的假HOME
+	#zh# 并且这个路径无法被readlink还原回真正的路径
+	HOME="$HOME_REAL" exeinfo_main
+
+	# if I need to remove some file before end the program
+	# I may forgot to change $HOME to fake home
+	# it is better to switch to fake home immediately
+	# 如果接下来的步骤有需要删除一些文件
+	# 为了防止自己忘记把家目录切换成$HOME_FAKE
+	# 最好在这里就立刻切换了
+	HOME="$HOME_FAKE"
 fi
 
 
 if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
 then
 	[[ -n $MYAPPLANG ]] && LANG=$MYAPPLANG || echo "MYAPPLANG not set, using current LANG:$LANG"
-	# moved home and xdg_config_home env setting to here.
-	# if change $HOME and $XDG_CONFIG_HOME too early, the exeinfo plugin may encounter some error related to file path.
-	#zh# 在真正要启动wine之前才重定向 $HOME 和 $XDG_CONFIG_HOME 变量
-	#zh# 如果太早重定向家目录和配置目录，上方的exeinfo生成器会有些小问题
-	#zh# 具体来说就是zenity和kdialog的文件选择窗左边有些快捷入口，包含了HOME，如果按下得出的路径不是用户真正的家目录，而是重定向后的假HOME
-	#zh# 并且这个路径无法被readlink还原回真正的路径
-	export HOME=$MNT_HOMESTORGE
-	echo \$HOME=$HOME
-	export XDG_CONFIG_HOME="$MNT_HOMESTORGE/.config"
-	echo \$XDG_CONFIG_HOME=$XDG_CONFIG_HOME
+	export HOME="$HOME_FAKE"
+	echo \$HOME="$HOME"
+	export XDG_CONFIG_HOME="$HOME_FAKE/.config"
+	echo \$XDG_CONFIG_HOME="$XDG_CONFIG_HOME"
 	echo "*****using $WINEARCH"
 	if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
 	then
-		wine_restore_prefix
-		#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
-		wine_patch_reg
-		#wineboot -es	# this command run too slow
-		wineboot -s
-		"$APPDIR"/usr/bin/winetricks "$@"
+		wine_run_winetricks "$@"
 	else
-		#zh# 除了因为有可能第一次运行游戏要生成WINEPREFIX之外，
-		#zh# 还因为我重定向了D盘，所以无论如何都先重设一下WINEPREFIX，
-		#zh# 确保一个正确的WINEPREFIX已经存在了
-		wine_restore_prefix
-		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
-
-		#zh# 如果指定了加载存档或显示攻略
-		[[ $WALKTHROUGH_FLAG -eq 1 ]] && walkthrough_browser
-		[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_replace
-
-		#zh# 启动游戏前先cd到可执行文件的所在目录，否则有些.exe文件无法正常运行
-		cd "$MNT_ALLWINESTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
-
-		#zh# 如果有注册表补丁就导入
-		wine_patch_reg
-
-		#zh# 导入后进行一次wine关机的操作，这会等待上一步的注册表导入完成(效果有待考察)，
-		#zh# 以防注册表还未写入就突然启动可执行文件，导致启动失败
-		#wineboot -es	# this command run too slow
-		wineboot -s
-
-		#zh# 由于删除了C盘和D盘之外的所有链接，所以用DOS格式的路径传给wine
-		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path if winetricks sandbox was set.
-		wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@"
+		wine_run_exe "$@"
 	fi
 fi
 
@@ -698,6 +699,8 @@ fi
 # monitor if the .exe is still running
 # however, if the .exe file is only a launcher to launch other .exe files. pls change below code to monitor other the correct *.exe files.
 function monitor_exe_running(){
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
 	# if you find the $EXENAME is only a launcher to launch other *.exe,
 	# you can uncomment below line to change the $EXENAME to another name.
 	#zh# 这个函数用来持续监测游戏的可执行文件是不是还在运行，如果游戏退出了的话，这里就会结束循环，转去卸载unionfs的挂载点
@@ -728,9 +731,11 @@ function monitor_exe_running(){
 	# unionfs drive will be unmount immediately.
 	# therefore we can add a "wineboot" command to wait for wine saving the registry.
 	#zh# 有些游戏结束时会写入信息到注册表，在这里加入wine关机的语句，以防程序还没保存好资料就断开挂载点
-	[[ ! $EXEINFO_GEN_FLAG -eq 1 ]] && wineboot -s
+	[[ ! $EXEINFO_GEN_FLAG -eq 1 && ! $LOAD_PROTON -eq 1 ]] && wineboot -s
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
-monitor_exe_running
+[[ ! $EXEINFO_GEN_FLAG -eq 1 ]] && monitor_exe_running
 
 ##############################################
 
@@ -748,10 +753,12 @@ then
 	[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_restore
 fi
 
-savedata_show_location
+[[ ! $EXEINFO_GEN_FLAG -eq 1 ]] && savedata_show_location
 
 
 function atexit() {
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
 	# "rm -rf" included, must check env first.
 	#zh# 此处有包含"rm -rf"语句，需要先检查好前面的$APPDIR和$APPIMAGE_CACHE_DIR是否为空，避免删除了根目录的同名文件(如果恰好有的话)
 	#zh# (同时也已经在脚本最开头设置了禁止root/sudo运行的设定)
@@ -768,6 +775,8 @@ function atexit() {
 	#zh# 把残留的unionfs隐藏文件清理掉，否则下次启动游戏时可能会有读写错误导致无法进入游戏
 	rm -rf "$APPIMAGE_CACHE_DIR/usr/share/myapp"/.unionfs* >/dev/null 2>&1
 	rm -rf "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 #set -e
 #trap atexit EXIT	#NOT USED: due to some .exe(as game launcher) would pass EXIT signal after it completed to launch other .exe files. 
