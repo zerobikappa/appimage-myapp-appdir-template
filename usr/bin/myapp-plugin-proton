@@ -285,7 +285,7 @@ function wine_patch_reg(){
 			# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
 			[[ -f "$i" ]] && i=$(basename "$i") || continue
 			#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" regedit "d:\\myapp_patch_reg\\$i"
-			"$HOME/$PROTON_DIR_FROM_HOME/proton" run regedit "d:\\myapp_patch_reg\\$i"
+			"$HOME/$PROTON_DIR_FROM_HOME/proton" run regedit "c:\\myapp_patch_reg\\$i"
 		done
 	fi
 
@@ -295,7 +295,7 @@ function wine_patch_reg(){
 			# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
 			[[ -f "$i" ]] && i=$(basename "$i") || continue
 			#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" regedit "d:\\myapp_patch_reg\\$WINEARCH\\$i"
-			"$HOME/$PROTON_DIR_FROM_HOME/proton" run regedit "d:\\myapp_patch_reg\\$WINEARCH\\$i"
+			"$HOME/$PROTON_DIR_FROM_HOME/proton" run regedit "c:\\myapp_patch_reg\\$WINEARCH\\$i"
 		done
 	fi
 
