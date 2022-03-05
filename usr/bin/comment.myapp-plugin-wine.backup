@@ -19,6 +19,7 @@ function wine_set_env(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
 	# default to run win64
+	#zh# 默认用64位的wine
 	if [[ "$WINEARCH" == "win32" || $(getconf LONG_BIT) -eq 32 ]];
 	then
 		export WINEARCH=win32
@@ -27,12 +28,14 @@ function wine_set_env(){
 	fi
 
 	# default to prevent wine showing "fixeme" message.
+	#zh# 默认不显示任何debug信息，对于普通用户来说这些信息太烦人了
 	if [[ -z $WINEDEBUG ]];
 	then
 		export WINEDEBUG=-all
 	fi
 
 	# prevent wine setup application menu，no confirm if this setting was effected or not
+	#zh# 安装软件进prefix时阻止程序建立开始菜单选项，不确定是否生效了，有待观察
 	export WINEDLLOVERRIDES=winemenubuilder.exe=d
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
@@ -45,6 +48,8 @@ function wine_set_env(){
 function wine_restore_prefix(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
+	#zh# 这个函数用来还原wineprefix
+	#zh# 因为$WINEPREFIX路径包含挂载点，要先确保unionfs已经挂载了
 	[[ -z "$MNT_MYAPPSTORGE" ]] && echo "[wine_restore_prefix] ERROR:\$MNT_MYAPPSTORGE not set" >&2 && exit
 
 	export WINEPREFIX="$MNT_MYAPPSTORGE/myapp_prefix/wine.$WINEARCH/pfx"
@@ -54,6 +59,7 @@ function wine_restore_prefix(){
 	mkdir -p "$MNT_MYAPPSTORGE/myapp_prefix/wine.$WINEARCH"
 
 	# only setup wineprefix and do nothing
+	#zh# 只建立prefix，不做其他任何操作
 	if [[ $MYAPPDEBUG -eq 1 ]];
 	then
 		[[ ! -d $WINEPREFIX ]] && wine cmd /C exit
@@ -67,10 +73,15 @@ function wine_restore_prefix(){
 	# only keep C: and D: drive and remove other drive symlink, to prevent wine motifing local files through Z: drive
 	# it is not necessary to package other drive symlink into appimage
 	# however, wine will recreate other drive symlink every time when you open explorer in wine/winetricks, we should delete them again after game is ended
+	#zh# 在这里我仅保留C盘和D盘，其它盘的软链接全删除了，避免wine透过Z盘(linux系统的根目录)对本地系统进行写入
+	#zh# 是否真的有用还有待考察，就算删除了，只要在wine/winetricks里打开内置的文件管理窗，还是会重新生成，游戏结束后还要再删一次
+	#zh# 不过删除多余盘符链接至少能避免打包一些不必要的东西进去appimage包里
 	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
 	[[ ! -L "$WINEPREFIX/dosdevices/c:" ]] && ln -sfn ../drive_c "$WINEPREFIX/dosdevices/c:"
 	# D: drive is moved outside of $WINEPREFIX
 	# you can feel free to delete your WINEPREFIX and just package D: drive into appimage
+	#zh# 把D盘放在了WINEPREFIX的外面，只要游戏安装在D盘里，就算删除了WINEPREFIX也不需要重新安装游戏
+	#zh# WINEPREFIX 应当根据不同电脑的wine版本当场生成，而不应打包进appimage包里
 	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfn ../../../../drive_d "$WINEPREFIX/dosdevices/d:"
 	#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/myapp_patch_reg
 	[[ ! -L "$MNT_MYAPPSTORGE/myapp_patch_reg" ]] && ln -sfn ../../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
@@ -78,6 +89,7 @@ function wine_restore_prefix(){
 	# Font directory is moved outside of $WINEPREFIX
 	# this is a simple solution for font issue in japanese games
 	# just place some CJK font in myapp_fonts directory and package it in appimage
+	#zh# 把字体目录放在了WINEPREFIX的外面，如果有需要的话可以自己放一些必要的字体进去，不必担心WINEPREFIX被删除
 	if [[ ! -L "$WINEPREFIX/drive_c/windows/Fonts" ]];
 	then
 		rm -rf "$WINEPREFIX/drive_c/windows/Fonts"
@@ -105,6 +117,10 @@ function wine_patch_reg(){
 
 	# I tried to disable autostart winedbg via loading the .reg by regedit but failed.
 	# as a workaround I use winetricks to disable autostart debugger.
+	#zh# 程序遇到崩溃时winedbg默认自动开启，但开启winedbg的时候大部分情况下它就一直挂在那里既无法打开winedbg也无法按ctrl+c退出进程
+	#zh# 禁用自动开启后，程序崩溃时它会先弹窗问你要不要开启winedbg窗口，选择不开启的话它就会跳过然后正常结束进程
+	#zh# 我仍保留着导入注册表来更改这个设定，但好像不太行，"Auto"一栏一直都是"1"(崩溃时自动开启调试)，原因不明
+	#zh# 所以这里暂时也通过winetricks来关闭自动调试
 	if [[ $MYAPPDEBUG -eq 1 ]];
 	then
 		winetricks autostart_winedbg=disabled
@@ -112,6 +128,9 @@ function wine_patch_reg(){
 		winetricks autostart_winedbg=disabled >/dev/null 2>&1
 	fi
 
+	#zh# 有些安装版的游戏会写入信息在注册表里，如果删除了WINEPREFIX，就算游戏文件还在也无法运行游戏
+	#zh# 那么可以导出相关的注册表保存在 myapp_patch_reg 目录里，每次开启游戏时自动导入，这样就无需将WINEPREFIX也打包进appimage包里
+	#zh# 由于文件编码不同，如果是日文游戏的话必须在日文的环境变量下(LANG=ja_JP.UTF-8)开启winetricks导出注册表，否则导出的注册表将无法正常使用
 	if [[ -n "$(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg 2>/dev/null )" ]];
 	then
 		for i in $(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg); do
@@ -121,6 +140,7 @@ function wine_patch_reg(){
 		done
 	fi
 
+	#zh# 如果32位和64位的注册表不一样，那么可以分开存放在 myapp_patch_reg/win32/ 和 myapp_patch/win64/ 里面
 	if [[ -n "$(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/$WINEARCH/*.reg 2>/dev/null )" ]];
 	then
 		for i in $(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/$WINEARCH/*.reg); do
@@ -157,21 +177,30 @@ function wine_run_winetricks(){
 function wine_run_exe(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
+	#zh# 除了因为有可能第一次运行游戏要生成WINEPREFIX之外，
+	#zh# 还因为我重定向了D盘，所以无论如何都先重设一下WINEPREFIX，
+	#zh# 确保一个正确的WINEPREFIX已经存在了
 	wine_restore_prefix
 	#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
 
+	#zh# 如果指定了加载存档或显示攻略
 	[[ $WALKTHROUGH_FLAG -eq 1 ]] && walkthrough_browser
 	[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_replace
 
+	#zh# 启动游戏前先cd到可执行文件的所在目录，否则有些.exe文件无法正常运行
 	cd "$MNT_MYAPPSTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
 
+	#zh# 如果有注册表补丁就导入
 	wine_patch_reg
 
+	#zh# 导入后进行一次wine关机的操作，这会等待上一步的注册表导入完成(效果有待考察)，
+	#zh# 以防注册表还未写入就突然启动可执行文件，导致启动失败
 	wine_shutdown_prefix
 
 	#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path if winetricks sandbox was set.
 	if [[ $MYAPPDEBUG -eq 1 ]];
 	then
+		#zh# 由于删除了C盘和D盘之外的所有链接，所以用DOS格式的路径传给wine
 		wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@"
 	else
 		wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" >/dev/null 2>&1
