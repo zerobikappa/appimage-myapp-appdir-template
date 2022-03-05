@@ -206,7 +206,7 @@ function wine_restore_prefix(){
 	#zh# WINEPREFIX 应当根据不同电脑的wine版本当场生成，而不应打包进appimage包里
 	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfn ../../../../drive_d "$WINEPREFIX/dosdevices/d:"
 	#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/myapp_patch_reg
-	[[ ! -L "$MNT_MYAPPSTORGE/myapp_patch_reg" ]] && ln -sfn ../../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
+	[[ ! -L "$MNT_MYAPPSTORGE/myapp_patch_reg" ]] && ln -sfn ../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
 
 	# proton already package some CJK fonts
 	#zh# proton已经包含了一些cjk字体，就用它自己的好了
@@ -215,7 +215,7 @@ function wine_restore_prefix(){
 	#	rm -rf "$WINEPREFIX/drive_c/windows/Fonts"
 	#	#refer path: .../myapp/myapp_fonts
 	#	#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/windows/Fonts
-	#	ln -sfnv ../../../../../../myapp_fonts "$WINEPREFIX/drive_c/windows/Fonts"
+	#	ln -sfnv ../../../../../myapp_fonts "$WINEPREFIX/drive_c/windows/Fonts"
 	#fi
 
 	# should already load plugin-exeinfo at this moment

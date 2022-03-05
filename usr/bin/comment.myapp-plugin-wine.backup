@@ -84,7 +84,7 @@ function wine_restore_prefix(){
 	#zh# WINEPREFIX 应当根据不同电脑的wine版本当场生成，而不应打包进appimage包里
 	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfn ../../../../drive_d "$WINEPREFIX/dosdevices/d:"
 	#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/myapp_patch_reg
-	[[ ! -L "$MNT_MYAPPSTORGE/myapp_patch_reg" ]] && ln -sfn ../../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
+	[[ ! -L "$MNT_MYAPPSTORGE/myapp_patch_reg" ]] && ln -sfn ../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
 
 	# Font directory is moved outside of $WINEPREFIX
 	# this is a simple solution for font issue in japanese games
@@ -95,7 +95,7 @@ function wine_restore_prefix(){
 		rm -rf "$WINEPREFIX/drive_c/windows/Fonts"
 		#refer path: .../myapp/myapp_fonts
 		#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/windows/Fonts
-		ln -sfnv ../../../../../../myapp_fonts "$WINEPREFIX/drive_c/windows/Fonts"
+		ln -sfnv ../../../../../myapp_fonts "$WINEPREFIX/drive_c/windows/Fonts"
 	fi
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"

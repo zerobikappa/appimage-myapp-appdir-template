@@ -181,7 +181,7 @@ function wine_restore_prefix(){
 	# you can feel free to delete your WINEPREFIX and just package D: drive into appimage
 	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfn ../../../../drive_d "$WINEPREFIX/dosdevices/d:"
 	#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/myapp_patch_reg
-	[[ ! -L "$MNT_MYAPPSTORGE/myapp_patch_reg" ]] && ln -sfn ../../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
+	[[ ! -L "$MNT_MYAPPSTORGE/myapp_patch_reg" ]] && ln -sfn ../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
 
 	# proton already package some CJK fonts
 	#if [[ ! -L "$WINEPREFIX/drive_c/windows/Fonts" ]];
@@ -189,7 +189,7 @@ function wine_restore_prefix(){
 	#	rm -rf "$WINEPREFIX/drive_c/windows/Fonts"
 	#	#refer path: .../myapp/myapp_fonts
 	#	#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/windows/Fonts
-	#	ln -sfnv ../../../../../../myapp_fonts "$WINEPREFIX/drive_c/windows/Fonts"
+	#	ln -sfnv ../../../../../myapp_fonts "$WINEPREFIX/drive_c/windows/Fonts"
 	#fi
 
 	# should already load plugin-exeinfo at this moment
