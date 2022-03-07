@@ -489,11 +489,11 @@ function exeinfo_savedata_location(){
 		if [[ "${TEMP_SAVEDATAPATH#"${APPIMAGE_CACHE_DIR}/usr/share/myapp"}" != "$TEMP_SAVEDATAPATH" ]];
 		then
 			TEMP_SAVEDATA_IN_HOME=0
-			TEMP_SAVEDATA_DIR='MNT_MYAPPSTORGE/'"$(apprun_realpath "${APPIMAGE_CACHE_DIR}/usr/share/myapp" "$TEMP_SAVEDATAPATH")"
+			TEMP_SAVEDATA_DIR='$MNT_MYAPPSTORGE/'"$(apprun_realpath "${APPIMAGE_CACHE_DIR}/usr/share/myapp" "$TEMP_SAVEDATAPATH")"
 		elif [[ "${TEMP_SAVEDATAPATH#"${APPDIR}/usr/share/myapp"}" != "$TEMP_SAVEDATAPATH" ]];
 		then
 			TEMP_SAVEDATA_IN_HOME=0
-			TEMP_SAVEDATA_DIR='MNT_MYAPPSTORGE/'"$(apprun_realpath "${APPDIR}/usr/share/myapp" "$TEMP_SAVEDATAPATH")"
+			TEMP_SAVEDATA_DIR='$MNT_MYAPPSTORGE/'"$(apprun_realpath "${APPDIR}/usr/share/myapp" "$TEMP_SAVEDATAPATH")"
 		elif [[ "${TEMP_SAVEDATAPATH#"${APPIMAGE_CACHE_DIR}/home/public_user/"}" != "$TEMP_SAVEDATAPATH" ]];
 		then
 			TEMP_SAVEDATA_IN_HOME=1
