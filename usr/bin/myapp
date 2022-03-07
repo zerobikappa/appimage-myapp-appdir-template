@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1646519294
+MYAPPRUN_VERSION=1646653293
 
 #############################################
 ## prevent running by root/sudo for security concern
@@ -46,6 +46,17 @@ SELF=$(readlink -f "$0")
 # moved script from HERE(AppDir) to HERE/usr/bin, therefore use $APPDIR to replace $HERE
 #HERE=${SELF%/*}
 [[ -z $APPDIR ]] && APPDIR=${SELF%/usr/bin/*}
+
+# if you already install unionfs in your system, it should be newer version than that I bundled in appimage, prefer to use system unionfs
+if [[ -n "$(command -v unionfs)" ]];
+then
+	UNIONFS_BIN="$(command -v unionfs)"
+	[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env UNIONFS_BIN
+else
+	UNIONFS_BIN="$APPDIR/usr/bin/unionfs"
+	[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env UNIONFS_BIN
+fi
+
 export PATH="${APPDIR}/usr/bin/:${APPDIR}/usr/sbin/:${APPDIR}/usr/games/:${APPDIR}/bin/:${APPDIR}/sbin/${PATH:+:$PATH}"
 export LD_LIBRARY_PATH="${APPDIR}/usr/lib/:${APPDIR}/usr/lib/i386-linux-gnu/:${APPDIR}/usr/lib/x86_64-linux-gnu/:${APPDIR}/usr/lib32/:${APPDIR}/usr/lib64/:${APPDIR}/lib/:${APPDIR}/lib/i386-linux-gnu/:${APPDIR}/lib/x86_64-linux-gnu/:${APPDIR}/lib32/:${APPDIR}/lib64/${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export PYTHONPATH="${APPDIR}/usr/share/pyshared/${PYTHONPATH:+:$PYTHONPATH}"
@@ -269,7 +280,7 @@ next_parameters=""
 eval set -- "$parameters"
 
 function option_check(){
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+	# do not place any debug output here, because this function use "echo" command to return result.
 
 	if [[ ${1::2} == "--" ]];
 	then
@@ -280,8 +291,6 @@ function option_check(){
 	else
 		echo "none"
 	fi
-
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
 while [[ -n "$1" ]] ; do
@@ -382,6 +391,7 @@ done
 # ./yourappimagename -s    the "-s" option will be catched by my script to run "load savedata"
 # ./yourappimagename -- -s    the "-s" option will pass to wine
 
+[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env next_parameters
 # unused option/argument will be passed to wine
 eval set -- "$next_parameters"
 
@@ -438,6 +448,7 @@ fi
 
 ##############################################
 ## mount unionfs
+echo "[10%] mount unionfs"
 
 # before setup unionfs temp directory, check if exe is already running
 if [[ -n "$EXENAME" && -n "$(pgrep -fi "$EXENAME")" ]];
@@ -448,10 +459,16 @@ fi
 
 mkdir -p "$MNT_MYAPPSTORGE" "$TMP_MYAPPSTORGE_OVERLAY"
 #$APPDIR/usr/bin/unionfs -o use_ino,nonempty,uid=$UID -ocow "$TMP_MYAPPSTORGE_OVERLAY"=RW:"$RO_MYAPPSTORGE"=RO "$MNT_MYAPPSTORGE" || exit 1
-"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_MYAPPSTORGE_OVERLAY"=RW:"$RO_MYAPPSTORGE"=RO "$MNT_MYAPPSTORGE" || exit 1
+#"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_MYAPPSTORGE_OVERLAY"=RW:"$RO_MYAPPSTORGE"=RO "$MNT_MYAPPSTORGE" || exit 1
+"$UNIONFS_BIN" -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_MYAPPSTORGE_OVERLAY"=RW:"$RO_MYAPPSTORGE"=RO "$MNT_MYAPPSTORGE" || exit 1
 
 mkdir -p "$MNT_HOMESTORGE" "$TMP_HOMESTORGE_OVERLAY"
-"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_HOMESTORGE_OVERLAY"=RW:"$RO_HOMESTORGE"=RO "$MNT_HOMESTORGE" || exit 1
+#"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_HOMESTORGE_OVERLAY"=RW:"$RO_HOMESTORGE"=RO "$MNT_HOMESTORGE" || exit 1
+"$UNIONFS_BIN" -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_HOMESTORGE_OVERLAY"=RW:"$RO_HOMESTORGE"=RO "$MNT_HOMESTORGE" || exit 1
+
+PID_MYAPPSTORGE="$(pgrep -a unionfs | grep "$MNT_MYAPPSTORGE" | awk '{print $1}')"
+PID_HOMESTORGE="$(pgrep -a unionfs | grep "$MNT_HOMESTORGE" | awk '{print $1}')"
+[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env PID_MYAPPSTORGE PID_HOMESTORGE
 ##############################################
 
 
@@ -642,7 +659,25 @@ function monitor_exe_running(){
 	# if return out of this function directly without waiting wine shutdown,
 	# unionfs drive will be unmount immediately.
 	# therefore we can add a "wineboot" command to wait for wine saving the registry.
-	[[ ! $EXEINFO_GEN_FLAG -eq 1 && ! $LOAD_PROTON -eq 1 ]] && wineboot -s
+	if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
+	then
+		#go back to $APPDIR, then remove temp file
+		cd "$APPDIR" || exit 2
+	
+		if [[ $MYAPPDEBUG -eq 1 ]];
+		then
+			echo "[10%] restore wine drive symlink entries..."
+			wine_restore_prefix
+			echo "[30%] shutdown prefix..."
+			wine_shutdown_prefix
+		else
+			echo "[10%] restore wine drive symlink entries..."
+			wine_restore_prefix >/dev/null 2>&1
+			echo "[30%] shutdown prefix..."
+			wine_shutdown_prefix >/dev/null 2>&1
+		fi
+		[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_restore
+	fi
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
@@ -654,16 +689,6 @@ function monitor_exe_running(){
 ##############################################
 ## cleanup temp file
 
-if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
-then
-	#go back to $APPDIR, then remove temp file
-	cd "$APPDIR" || exit 2
-
-	echo "restore wine drive symlink entries..."
-	wine_restore_prefix
-	[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_restore
-fi
-
 [[ ! $EXEINFO_GEN_FLAG -eq 1 ]] && savedata_show_location
 
 
@@ -674,14 +699,18 @@ function atexit() {
 	[[ -z "$APPDIR" ]] && echo "[myapp:atexit] ERROR:\$APPDIR not set, could not clean temp files" >&2 && return
 	[[ -z "$APPIMAGE_CACHE_DIR" ]] && echo "[myapp:atexit] ERROR:\$APPIMAGE_CACHE_DIR not set, could not clean temp files." >&2 && return
 
-	echo "killing $APPDIR/usr/bin/unionfs"
-	killall "$APPDIR/usr/bin/unionfs"
+	echo "[40%] killing $APPDIR/usr/bin/unionfs"
+	#killall "$APPDIR/usr/bin/unionfs"
+	kill -9 $PID_MYAPPSTORGE
+	kill -9 $PID_HOMESTORGE
 	sleep 1
-	echo "Removing /tmp/$(basename "$APPDIR").unionfs"
+	echo "[70%] removing /tmp/$(basename "$APPDIR").unionfs"
 	rm -rf "/tmp/$(basename "$APPDIR").unionfs"
 	# if not clean up unionfs hide files, may encounter some read file error next time.
+	echo "[90%] removing unionfs hidden files"
 	rm -rf "$APPIMAGE_CACHE_DIR/usr/share/myapp"/.unionfs* >/dev/null 2>&1
 	rm -rf "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
+	echo "[100%] ended"
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }

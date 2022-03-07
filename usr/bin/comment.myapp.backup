@@ -306,7 +306,7 @@ next_parameters=""
 eval set -- "$parameters"
 
 function option_check(){
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+	# do not place any debug output here, because this function use "echo" command to return result.
 
 	if [[ ${1::2} == "--" ]];
 	then
@@ -317,8 +317,6 @@ function option_check(){
 	else
 		echo "none"
 	fi
-
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
 while [[ -n "$1" ]] ; do
@@ -429,6 +427,7 @@ done
 #zh# ./yourappimagename -s    这个-s选项会被我的脚本抓取，用来执行加载全通关存档的语句
 #zh# ./yourappimagename -- -s    这个-s选项不会被我的脚本抓取，而是会继续传到下面的 wine 里。
 
+[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env next_parameters
 # unused option/argument will be passed to wine
 #zh# 过滤后的剩余选项/参数会继续传递到下面的wine里
 eval set -- "$next_parameters"
@@ -731,7 +730,16 @@ function monitor_exe_running(){
 	# unionfs drive will be unmount immediately.
 	# therefore we can add a "wineboot" command to wait for wine saving the registry.
 	#zh# 有些游戏结束时会写入信息到注册表，在这里加入wine关机的语句，以防程序还没保存好资料就断开挂载点
-	[[ ! $EXEINFO_GEN_FLAG -eq 1 && ! $LOAD_PROTON -eq 1 ]] && wineboot -s
+	if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
+	then
+		#go back to $APPDIR, then remove temp file
+		cd "$APPDIR" || exit 2
+	
+		echo "restore wine drive symlink entries..."
+		wine_restore_prefix
+		wine_shutdown_prefix
+		[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_restore
+	fi
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
@@ -742,16 +750,6 @@ function monitor_exe_running(){
 
 ##############################################
 ## cleanup temp file
-
-if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
-then
-	#go back to $APPDIR, then remove temp file
-	cd "$APPDIR" || exit 2
-
-	echo "restore wine drive symlink entries..."
-	wine_restore_prefix
-	[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_restore
-fi
 
 [[ ! $EXEINFO_GEN_FLAG -eq 1 ]] && savedata_show_location
 

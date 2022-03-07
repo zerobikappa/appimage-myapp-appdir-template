@@ -261,6 +261,12 @@ function wine_shutdown_prefix(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
 	"$HOME/$PROTON_DIR_FROM_HOME/proton" run wineboot -s
+	# to prevent launch the game too early(before complete reg patch)
+	# or
+	# to prevent unmount unionfs too early(before wine save changes)
+	# wait until winserver terminate
+	#"$HOME/$PROTON_DIR_FROM_HOME/proton" run wineserver -w
+	wineserver -w
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
@@ -308,16 +314,28 @@ function wine_patch_reg(){
 function wine_run_winetricks(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
-	wine_restore_prefix
-	#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
-	wine_patch_reg
-	#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
-	wine_shutdown_prefix
-
 	if [[ $MYAPPDEBUG -eq 1 ]];
 	then
+		echo "[20%] prepare prefix"
+		wine_restore_prefix
+		#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
+		echo "[60%] patch wine registry"
+		wine_patch_reg
+		echo "[70%] restore completed, shutdown prefix"
+		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
+		wine_shutdown_prefix
+		echo "[100%] launch"
 		"$APPDIR"/usr/bin/winetricks "$@"
 	else
+		echo "[20%] prepare prefix"
+		wine_restore_prefix >/dev/null 2>&1
+		#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
+		echo "[60%] patch wine registry"
+		wine_patch_reg >/dev/null 2>&1
+		echo "[70%] restore completed, shutdown prefix"
+		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
+		wine_shutdown_prefix >/dev/null 2>&1
+		echo "[100%] launch"
 		"$APPDIR"/usr/bin/winetricks "$@" >/dev/null 2>&1
 	fi
 
@@ -327,19 +345,43 @@ function wine_run_winetricks(){
 function wine_run_exe(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
-	wine_restore_prefix
-	#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
+	if [[ $MYAPPDEBUG -eq 1 ]];
+	then
+		echo "[20%] prepare prefix"
+		wine_restore_prefix
+		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
+		echo "[60%] patch wine registry"
+		wine_patch_reg
+		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
+		echo "[70%] restore completed, shutdown prefix"
+		wine_shutdown_prefix
+	else
+		echo "[20%] prepare prefix"
+		wine_restore_prefix >/dev/null 2>&1
+		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
+		echo "[60%] patch wine registry"
+		wine_patch_reg >/dev/null 2>&1
+		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
+		echo "[70%] restore completed, shutdown prefix"
+		wine_shutdown_prefix >/dev/null 2>&1
+	fi
 
-	[[ $WALKTHROUGH_FLAG -eq 1 ]] && walkthrough_browser
-	[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_replace
+	if [[ $WALKTHROUGH_FLAG -eq 1 ]];
+	then
+		echo "[80%] open walkthrough"
+		walkthrough_browser
+	fi
+
+	if [[ $SAVEDATA_FLAG -eq 1 ]];
+	then
+		echo "[90%] load full achieved savedata"
+		savedata_replace
+	fi
 
 	cd "$MNT_MYAPPSTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
 
-	wine_patch_reg
-	#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
-	wine_shutdown_prefix
-
 	#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path if winetricks sandbox was set.
+	echo "[100%] launch"
 	if [[ $MYAPPDEBUG -eq 1 ]];
 	then
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@"
