@@ -698,9 +698,8 @@ if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
 then
 	[[ -n $MYAPPLANG ]] && LANG=$MYAPPLANG || echo "MYAPPLANG not set, using current LANG:$LANG"
 	export HOME="$HOME_FAKE"
-	echo \$HOME="$HOME"
 	export XDG_CONFIG_HOME="$HOME_FAKE/.config"
-	echo \$XDG_CONFIG_HOME="$XDG_CONFIG_HOME"
+	debug_print_env "APPDIR" "HOME" "XDG_CONFIG_HOME"
 	echo "*****using $WINEARCH"
 	if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
 	then
