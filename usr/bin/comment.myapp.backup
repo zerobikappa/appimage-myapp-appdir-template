@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1646519294
+MYAPPRUN_VERSION=1646653293
 
 #############################################
 ## prevent running by root/sudo for security concern
@@ -49,6 +49,18 @@ SELF=$(readlink -f "$0")
 #zh# 把启动脚本的位置从原本的$APPDIR目录里移动到了APPDIR/usr/bin里了，所以去除$HERE并用$APPDIR代替
 #HERE=${SELF%/*}
 [[ -z $APPDIR ]] && APPDIR=${SELF%/usr/bin/*}
+
+# if you already install unionfs in your system, it should be newer version than that I bundled in appimage, prefer to use system unionfs
+#zh# 我打包的unionfs是兼容较旧系统的老版本可执行文件，如果本机已经安装了unionfs，很大机会是比我这个新的，优先用本机安装的unionfs
+if [[ -x "$(command -v unionfs)" ]];
+then
+	UNIONFS_BIN="$(command -v unionfs)"
+	[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env UNIONFS_BIN
+else
+	UNIONFS_BIN="$APPDIR/usr/bin/unionfs"
+	[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env UNIONFS_BIN
+fi
+
 export PATH="${APPDIR}/usr/bin/:${APPDIR}/usr/sbin/:${APPDIR}/usr/games/:${APPDIR}/bin/:${APPDIR}/sbin/${PATH:+:$PATH}"
 export LD_LIBRARY_PATH="${APPDIR}/usr/lib/:${APPDIR}/usr/lib/i386-linux-gnu/:${APPDIR}/usr/lib/x86_64-linux-gnu/:${APPDIR}/usr/lib32/:${APPDIR}/usr/lib64/:${APPDIR}/lib/:${APPDIR}/lib/i386-linux-gnu/:${APPDIR}/lib/x86_64-linux-gnu/:${APPDIR}/lib32/:${APPDIR}/lib64/${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export PYTHONPATH="${APPDIR}/usr/share/pyshared/${PYTHONPATH:+:$PYTHONPATH}"
@@ -492,6 +504,7 @@ fi
 ##############################################
 ## mount unionfs
 #zh# 挂载unionfs
+echo "[10%] mount unionfs"
 
 # before setup unionfs temp directory, check if exe is already running
 #zh# 查看游戏是不是已经正在运行，这里我设置了禁止同一个游戏开启多个实例。玩单机游戏应该不需要多开吧。
@@ -506,10 +519,17 @@ fi
 #zh# 加了上面的语句能让我分清楚错误退出的原因是哪一种情况
 mkdir -p "$MNT_MYAPPSTORGE" "$TMP_MYAPPSTORGE_OVERLAY"
 #$APPDIR/usr/bin/unionfs -o use_ino,nonempty,uid=$UID -ocow "$TMP_MYAPPSTORGE_OVERLAY"=RW:"$RO_MYAPPSTORGE"=RO "$MNT_MYAPPSTORGE" || exit 1
-"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_MYAPPSTORGE_OVERLAY"=RW:"$RO_MYAPPSTORGE"=RO "$MNT_MYAPPSTORGE" || exit 1
+#"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_MYAPPSTORGE_OVERLAY"=RW:"$RO_MYAPPSTORGE"=RO "$MNT_MYAPPSTORGE" || exit 1
+"$UNIONFS_BIN" -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_MYAPPSTORGE_OVERLAY"=RW:"$RO_MYAPPSTORGE"=RO "$MNT_MYAPPSTORGE" || exit 1
 
 mkdir -p "$MNT_HOMESTORGE" "$TMP_HOMESTORGE_OVERLAY"
-"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_HOMESTORGE_OVERLAY"=RW:"$RO_HOMESTORGE"=RO "$MNT_HOMESTORGE" || exit 1
+#"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_HOMESTORGE_OVERLAY"=RW:"$RO_HOMESTORGE"=RO "$MNT_HOMESTORGE" || exit 1
+"$UNIONFS_BIN" -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_HOMESTORGE_OVERLAY"=RW:"$RO_HOMESTORGE"=RO "$MNT_HOMESTORGE" || exit 1
+
+#zh# 提取unionfs挂载点的进程号，之后关闭进程时会用到，避免用killall unionfs乱杀
+PID_MYAPPSTORGE="$(pgrep -a unionfs | grep "$MNT_MYAPPSTORGE" | awk '{print $1}')"
+PID_HOMESTORGE="$(pgrep -a unionfs | grep "$MNT_HOMESTORGE" | awk '{print $1}')"
+[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env PID_MYAPPSTORGE PID_HOMESTORGE
 ##############################################
 
 
@@ -735,9 +755,18 @@ function monitor_exe_running(){
 		#go back to $APPDIR, then remove temp file
 		cd "$APPDIR" || exit 2
 	
-		echo "restore wine drive symlink entries..."
-		wine_restore_prefix
-		wine_shutdown_prefix
+		if [[ $MYAPPDEBUG -eq 1 ]];
+		then
+			echo "[10%] restore wine drive symlink entries..."
+			wine_restore_prefix
+			echo "[30%] shutdown prefix..."
+			wine_shutdown_prefix
+		else
+			echo "[10%] restore wine drive symlink entries..."
+			wine_restore_prefix >/dev/null 2>&1
+			echo "[30%] shutdown prefix..."
+			wine_shutdown_prefix >/dev/null 2>&1
+		fi
 		[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_restore
 	fi
 
@@ -764,15 +793,19 @@ function atexit() {
 	[[ -z "$APPDIR" ]] && echo "[myapp:atexit] ERROR:\$APPDIR not set, could not clean temp files" >&2 && return
 	[[ -z "$APPIMAGE_CACHE_DIR" ]] && echo "[myapp:atexit] ERROR:\$APPIMAGE_CACHE_DIR not set, could not clean temp files." >&2 && return
 
-	echo "killing $APPDIR/usr/bin/unionfs"
-	killall "$APPDIR/usr/bin/unionfs"
+	echo "[40%] killing $APPDIR/usr/bin/unionfs"
+	#killall "$APPDIR/usr/bin/unionfs"
+	kill -9 $PID_MYAPPSTORGE
+	kill -9 $PID_HOMESTORGE
 	sleep 1
-	echo "Removing /tmp/$(basename "$APPDIR").unionfs"
+	echo "[70%] removing /tmp/$(basename "$APPDIR").unionfs"
 	rm -rf "/tmp/$(basename "$APPDIR").unionfs"
 	# if not clean up unionfs hide files, may encounter some read file error next time.
 	#zh# 把残留的unionfs隐藏文件清理掉，否则下次启动游戏时可能会有读写错误导致无法进入游戏
+	echo "[90%] removing unionfs hidden files"
 	rm -rf "$APPIMAGE_CACHE_DIR/usr/share/myapp"/.unionfs* >/dev/null 2>&1
 	rm -rf "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
+	echo "[100%] ended"
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }

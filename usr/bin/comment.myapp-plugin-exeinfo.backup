@@ -76,15 +76,6 @@ function apprun_realpath(){
 }
 
 function exeinfo_user_dirs(){
-#refer env
-#XDG_DESKTOP_DIR
-#XDG_DOWNLOAD_DIR
-#XDG_TEMPLATES_DIR
-#XDG_PUBLICSHARE_DIR
-#XDG_DOCUMENTS_DIR
-#XDG_MUSIC_DIR
-#XDG_PICTURES_DIR
-#XDG_VIDEOS_DIR
 	XDG_DESKTOP_DIR="$HOME/Desktop"
 	XDG_DOWNLOAD_DIR="$HOME/Downloads"
 	XDG_TEMPLATES_DIR="$HOME/Templates"
@@ -94,6 +85,7 @@ function exeinfo_user_dirs(){
 	XDG_PICTURES_DIR="$HOME/Pictures"
 	XDG_VIDEOS_DIR="$HOME/Videos"
 	# if user-dirs.dirs exists, it would replace the default setting
+	#zh# 如果找到了user-dirs.dirs文件，那么将会替换默认设置
 	if [[ -f "$XDG_CONFIG_HOME/user-dirs.dirs" ]];
 	then
 		source "$XDG_CONFIG_HOME/user-dirs.dirs"
@@ -109,6 +101,8 @@ function exeinfo_user_dirs(){
 	FAKE_TEMPLATES_DIR_NAME="$(basename "$XDG_TEMPLATES_DIR")"
 	FAKE_PUBLICSHARE_DIR_NAME="$(basename "$XDG_PUBLICSHARE_DIR")"
 	FAKE_DOCUMENTS_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")"
+	# maybe you can cat "/etc/xdg/user-dirs.defaults" for why I write below lines
+	#zh# 为什么这几个目录要写成这样，可以看一下系统文件"/etc/xdg/user-dirs.defaults"，可能会找到答案
 	if [[ "${XDG_MUSIC_DIR#"$XDG_DOCUMENTS_DIR"}" != "$XDG_MUSIC_DIR" ]];
 	then
 		FAKE_MUSIC_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")/$(basename "$XDG_MUSIC_DIR")"
@@ -129,18 +123,13 @@ function exeinfo_user_dirs(){
 	else
 		FAKE_VIDEOS_DIR_NAME="$(basename "$XDG_VIDEOS_DIR")"
 	fi
-
-	#PROTON_DESKTOP_DIR_NAME="Desktop"
-	#PROTON_DOWNLOAD_DIR_NAME="Downloads"
-	#PROTON_TEMPLATES_DIR_NAME="Templates"
-	#PROTON_PUBLICSHARE_DIR_NAME="Public"
-	#PROTON_DOCUMENTS_DIR_NAME="Documents"
-	#PROTON_MUSIC_DIR_NAME="Music"
-	#PROTON_PICTURES_DIR_NAME="Pictures"
-	#PROTON_VIDEOS_DIR_NAME="Videos"
 }
 
 function exeinfo_convert_xdg_path(){
+	# when write into exeinfo_profile
+	# write env name itself and prevent escaping
+	#zh# 直接打印变量名，避免被bash转义
+	#zh# 这个函数会用在写入exeinfo_profile的时候
 	[[ -z "$1" ]] && echo "[exeinfo_check_include_home] ERROR: no argument was input" >&2 && return
 	if [[ ${1#"$XDG_VIDEOS_DIR"} != "$1" ]];
 	then
@@ -207,6 +196,8 @@ function exeinfo_load_temp(){
 	do
 		eval TEMP_$i=\'$(grep '^[[:blank:]]*[^[:blank:]#]' "$EXEINFO_CURRENT_PROFILE" | grep "$i" | sed 's/^[^=]*//' | sed 's/=//' | sed 's/"//g' )\'
 	done
+
+	# NOTUSED: it would be wrong if they include other env name($WINEARCH, $XDG_DOCUMENTS_DIR...)
 	#TEMP_EXE_LDIR=$EXE_LDIR
 	#TEMP_EXE_WROOT=$EXE_WROOT
 	#TEMP_EXE_WDIR=$EXE_WDIR
@@ -248,6 +239,10 @@ function exeinfo_test_gui(){
 	# fallback solution
 	# launch from commandline but fail to find gui: go to CLI mode.
 	# launch by double click but fail to find gui: exit directly.
+	# avoid hangup in background when launch by double click
+	#zh# 如果在命令行启动但找不到图形程序(zenity,kdialog)，那就转用命令行模式
+	#zh# 如果双击启动但找不到图形程序，那就直接退出
+	#zh# 避免它在双击启动又找不到图形程序时永远在后台卡住
 	if [[ -t 0 ]];
 	then
 		echo "cannot find $EXEINFO_GEN_METHOD, using commandline to read input."
@@ -448,7 +443,7 @@ function exeinfo_savedata_location(){
 		read -e -p "input savedata directory path: " -i "$APPIMAGE_CACHE_DIR" TEMP_SAVEDATAPATH
 		RETURN_STATUS="$?"
 		TEMP_SAVEDATAPATH="$(readlink -f "$TEMP_SAVEDATAPATH")"
-		if [[ ! -d "$TEMP_SAVEDATAPATH" ]];
+		if [[ -n "$TEMP_SAVEDATAPATH" && ! -d "$TEMP_SAVEDATAPATH" ]];
 		then
 			clear
 			echo "########################################"

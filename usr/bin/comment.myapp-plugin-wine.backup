@@ -106,6 +106,11 @@ function wine_shutdown_prefix(){
 
 	#wineboot -es	# this command run too slow
 	wineboot -s
+	# to prevent launch the game too early(before complete reg patch)
+	# or
+	# to prevent unmount unionfs too early(before wine save changes)
+	# wait until winserver terminate
+	wineserver -w
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
@@ -121,6 +126,8 @@ function wine_patch_reg(){
 	#zh# 禁用自动开启后，程序崩溃时它会先弹窗问你要不要开启winedbg窗口，选择不开启的话它就会跳过然后正常结束进程
 	#zh# 我仍保留着导入注册表来更改这个设定，但好像不太行，"Auto"一栏一直都是"1"(崩溃时自动开启调试)，原因不明
 	#zh# 所以这里暂时也通过winetricks来关闭自动调试
+	# TODO: seems the imported reg were effected in wow6432node instead of the correct reg path
+	#zh# TODO: 原来导入的注册表在wow6432node下的路径生效了，原因未知
 	if [[ $MYAPPDEBUG -eq 1 ]];
 	then
 		winetricks autostart_winedbg=disabled
@@ -159,15 +166,26 @@ function wine_patch_reg(){
 function wine_run_winetricks(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
-	wine_restore_prefix
-	#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
-	wine_patch_reg
-	wine_shutdown_prefix
-
 	if [[ $MYAPPDEBUG -eq 1 ]];
 	then
+		echo "[20%] prepare prefix"
+		wine_restore_prefix
+		#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
+		echo "[60%] patch wine registry"
+		wine_patch_reg
+		echo "[70%] restore completed, shutdown prefix"
+		wine_shutdown_prefix
+		echo "[100%] launch"
 		"$APPDIR"/usr/bin/winetricks "$@"
 	else
+		echo "[20%] prepare prefix"
+		wine_restore_prefix >/dev/null 2>&1
+		#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
+		echo "[60%] patch wine registry"
+		wine_patch_reg >/dev/null 2>&1
+		echo "[70%] restore completed, shutdown prefix"
+		wine_shutdown_prefix >/dev/null 2>&1
+		echo "[100%] launch"
 		"$APPDIR"/usr/bin/winetricks "$@" >/dev/null 2>&1
 	fi
 
@@ -177,27 +195,48 @@ function wine_run_winetricks(){
 function wine_run_exe(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
-	#zh# 除了因为有可能第一次运行游戏要生成WINEPREFIX之外，
-	#zh# 还因为我重定向了D盘，所以无论如何都先重设一下WINEPREFIX，
-	#zh# 确保一个正确的WINEPREFIX已经存在了
-	wine_restore_prefix
-	#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
+	if [[ $MYAPPDEBUG -eq 1 ]];
+	then
+		#zh# 除了因为有可能第一次运行游戏要生成WINEPREFIX之外，
+		#zh# 还因为我重定向了D盘，所以无论如何都先重设一下WINEPREFIX，
+		#zh# 确保一个正确的WINEPREFIX已经存在了
+		echo "[20%] prepare prefix"
+		wine_restore_prefix
+		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
+		#zh# 如果有注册表补丁就导入
+		echo "[60%] patch wine registry"
+		wine_patch_reg
+		#zh# 导入后进行一次wine关机的操作，这会等待上一步的注册表导入完成(效果有待考察)，
+		#zh# 以防注册表还未写入就突然启动可执行文件，导致启动失败
+		echo "[70%] restore completed, shutdown prefix"
+		wine_shutdown_prefix
+	else
+		echo "[20%] prepare prefix"
+		wine_restore_prefix >/dev/null 2>&1
+		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
+		echo "[60%] patch wine registry"
+		wine_patch_reg >/dev/null 2>&1
+		echo "[70%] restore completed, shutdown prefix"
+		wine_shutdown_prefix >/dev/null 2>&1
+	fi
 
-	#zh# 如果指定了加载存档或显示攻略
-	[[ $WALKTHROUGH_FLAG -eq 1 ]] && walkthrough_browser
-	[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_replace
+	if [[ $WALKTHROUGH_FLAG -eq 1 ]];
+	then
+		echo "[80%] open walkthrough"
+		walkthrough_browser
+	fi
+
+	if [[ $SAVEDATA_FLAG -eq 1 ]];
+	then
+		echo "[90%] load full achieved savedata"
+		savedata_replace
+	fi
 
 	#zh# 启动游戏前先cd到可执行文件的所在目录，否则有些.exe文件无法正常运行
 	cd "$MNT_MYAPPSTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
 
-	#zh# 如果有注册表补丁就导入
-	wine_patch_reg
-
-	#zh# 导入后进行一次wine关机的操作，这会等待上一步的注册表导入完成(效果有待考察)，
-	#zh# 以防注册表还未写入就突然启动可执行文件，导致启动失败
-	wine_shutdown_prefix
-
 	#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path if winetricks sandbox was set.
+	echo "[100%] launch"
 	if [[ $MYAPPDEBUG -eq 1 ]];
 	then
 		#zh# 由于删除了C盘和D盘之外的所有链接，所以用DOS格式的路径传给wine

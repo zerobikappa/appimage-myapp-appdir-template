@@ -48,7 +48,7 @@ SELF=$(readlink -f "$0")
 [[ -z $APPDIR ]] && APPDIR=${SELF%/usr/bin/*}
 
 # if you already install unionfs in your system, it should be newer version than that I bundled in appimage, prefer to use system unionfs
-if [[ -n "$(command -v unionfs)" ]];
+if [[ -x "$(command -v unionfs)" ]];
 then
 	UNIONFS_BIN="$(command -v unionfs)"
 	[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env UNIONFS_BIN

@@ -110,6 +110,7 @@ function wine_patch_reg(){
 
 	# I tried to disable autostart winedbg via loading the .reg by regedit but failed.
 	# as a workaround I use winetricks to disable autostart debugger.
+	# TODO: seems the imported reg were effected in wow6432node instead of the correct reg path
 	if [[ $MYAPPDEBUG -eq 1 ]];
 	then
 		winetricks autostart_winedbg=disabled
