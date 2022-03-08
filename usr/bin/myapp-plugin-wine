@@ -163,7 +163,7 @@ function wine_run_winetricks(){
 		#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
 		echo "[60%] patch wine registry"
 		wine_patch_reg >/dev/null 2>&1
-		echo "[70%] restore completed, shutdown prefix"
+		echo "[70%] restore completed, wait shutdown prefix"
 		wine_wait_shutdown >/dev/null 2>&1
 		echo "[100%] launch"
 		"$APPDIR"/usr/bin/winetricks "$@" >/dev/null 2>&1
@@ -182,7 +182,7 @@ function wine_run_exe(){
 		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
 		echo "[60%] patch wine registry"
 		wine_patch_reg
-		echo "[70%] restore completed, shutdown prefix"
+		echo "[70%] restore completed, wait shutdown prefix"
 		wine_wait_shutdown
 	else
 		echo "[20%] prepare prefix"
@@ -190,7 +190,7 @@ function wine_run_exe(){
 		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
 		echo "[60%] patch wine registry"
 		wine_patch_reg >/dev/null 2>&1
-		echo "[70%] restore completed, shutdown prefix"
+		echo "[70%] restore completed, wait shutdown prefix"
 		wine_wait_shutdown >/dev/null 2>&1
 	fi
 

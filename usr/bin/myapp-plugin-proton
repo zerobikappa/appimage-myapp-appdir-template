@@ -260,7 +260,8 @@ function wine_restore_prefix(){
 function wine_wait_shutdown(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
-	"$HOME/$PROTON_DIR_FROM_HOME/proton" run wineboot -s
+	#"$HOME/$PROTON_DIR_FROM_HOME/proton" run wineboot -s
+
 	# to prevent launch the game too early(before complete reg patch)
 	# or
 	# to prevent unmount unionfs too early(before wine save changes)
@@ -323,7 +324,7 @@ function wine_run_winetricks(){
 		#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
 		echo "[60%] patch wine registry"
 		wine_patch_reg
-		echo "[70%] restore completed, shutdown prefix"
+		echo "[70%] restore completed, wait shutdown prefix"
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
 		wine_wait_shutdown
 		echo "[100%] launch"
@@ -334,7 +335,7 @@ function wine_run_winetricks(){
 		#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
 		echo "[60%] patch wine registry"
 		wine_patch_reg >/dev/null 2>&1
-		echo "[70%] restore completed, shutdown prefix"
+		echo "[70%] restore completed, wait shutdown prefix"
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
 		wine_wait_shutdown >/dev/null 2>&1
 		echo "[100%] launch"
@@ -355,7 +356,7 @@ function wine_run_exe(){
 		echo "[60%] patch wine registry"
 		wine_patch_reg
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
-		echo "[70%] restore completed, shutdown prefix"
+		echo "[70%] restore completed, wait shutdown prefix"
 		wine_wait_shutdown
 	else
 		echo "[20%] prepare prefix"
@@ -364,7 +365,7 @@ function wine_run_exe(){
 		echo "[60%] patch wine registry"
 		wine_patch_reg >/dev/null 2>&1
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
-		echo "[70%] restore completed, shutdown prefix"
+		echo "[70%] restore completed, wait shutdown prefix"
 		wine_wait_shutdown >/dev/null 2>&1
 	fi
 

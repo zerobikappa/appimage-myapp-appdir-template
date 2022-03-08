@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1646653293
+MYAPPRUN_VERSION=1646774889
 
 #############################################
 ## prevent running by root/sudo for security concern
@@ -698,7 +698,9 @@ function atexit() {
 	[[ -z "$APPDIR" ]] && echo "[myapp:atexit] ERROR:\$APPDIR not set, could not clean temp files" >&2 && return
 	[[ -z "$APPIMAGE_CACHE_DIR" ]] && echo "[myapp:atexit] ERROR:\$APPIMAGE_CACHE_DIR not set, could not clean temp files." >&2 && return
 
-	echo "[40%] killing $APPDIR/usr/bin/unionfs"
+	echo "[40%] removing drive symlink from wine prefix"
+	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
+	echo "[50%] killing $APPDIR/usr/bin/unionfs"
 	#killall "$APPDIR/usr/bin/unionfs"
 	kill -9 $PID_MYAPPSTORGE
 	kill -9 $PID_HOMESTORGE
