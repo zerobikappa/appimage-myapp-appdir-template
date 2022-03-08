@@ -116,6 +116,11 @@ function wine_set_env(){
 
 	wine_search_proton
 
+	[[ -z "$MNT_MYAPPSTORGE" ]] && echo "[wine_restore_prefix] ERROR:\$MNT_MYAPPSTORGE not set" >&2 && exit
+	# not necessary to set WINEPREFIX because proton uses $STEAM_COMPAT_DATA_PATH/pfx to decide the WINEPREFIX directory
+	# however, we still set the WINEPREFIX because below lines need $WINEPREFIX
+	export WINEPREFIX="$MNT_MYAPPSTORGE/myapp_prefix/proton.$WINEARCH/pfx"
+
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 ##############################################
@@ -146,9 +151,6 @@ function wine_restore_prefix(){
 	export STEAM_COMPAT_CLIENT_INSTALL_PATH="$HOME/$SEARCH_COMPAT_CLIENT_PATH"
 	export PATH="$HOME/$PROTON_DIR_FROM_HOME/dist/bin/:$PATH"
 	export STEAM_COMPAT_DATA_PATH="$MNT_MYAPPSTORGE/myapp_prefix/proton.$WINEARCH"
-	# not necessary to set WINEPREFIX because proton uses $STEAM_COMPAT_DATA_PATH/pfx to decide the WINEPREFIX directory
-	# however, we still set the WINEPREFIX because below lines need $WINEPREFIX
-	export WINEPREFIX="$MNT_MYAPPSTORGE/myapp_prefix/proton.$WINEARCH/pfx"
 
 	# "rm -rf" included, must check $WINEPREFIX first
 	#[[ -z "$WINEPREFIX" ]] && echo "[myapp:wine_restore_prefix] ERROR:\$WINEPREFIX not set, could not restore wine prefix." >&2 && return

@@ -406,6 +406,7 @@ else
 	source "$APPDIR"/usr/bin/myapp-plugin-wine
 fi
 wine_set_env
+debug_print_env "APPDIR" "WINEPREFIX"
 ##############################################
 
 
@@ -468,7 +469,7 @@ mkdir -p "$MNT_HOMESTORGE" "$TMP_HOMESTORGE_OVERLAY"
 
 PID_MYAPPSTORGE="$(pgrep -a unionfs | grep "$MNT_MYAPPSTORGE" | awk '{print $1}')"
 PID_HOMESTORGE="$(pgrep -a unionfs | grep "$MNT_HOMESTORGE" | awk '{print $1}')"
-[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env PID_MYAPPSTORGE PID_HOMESTORGE
+debug_print_env "PID_MYAPPSTORGE" "PID_HOMESTORGE"
 ##############################################
 
 
@@ -614,7 +615,7 @@ then
 	[[ -n $MYAPPLANG ]] && LANG=$MYAPPLANG || echo "MYAPPLANG not set, using current LANG:$LANG"
 	export HOME="$HOME_FAKE"
 	export XDG_CONFIG_HOME="$HOME_FAKE/.config"
-	debug_print_env "APPDIR" "PID_MYAPPSTORGE" "PID_HOMESTORGE" "HOME" "XDG_CONFIG_HOME" "WINEPREFIX"
+	debug_print_env "HOME" "XDG_CONFIG_HOME"
 	echo "*****using $WINEARCH"
 	if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
 	then

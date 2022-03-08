@@ -38,6 +38,10 @@ function wine_set_env(){
 	#zh# 安装软件进prefix时阻止程序建立开始菜单选项，不确定是否生效了，有待观察
 	export WINEDLLOVERRIDES=winemenubuilder.exe=d
 
+	#zh# 因为$WINEPREFIX路径包含挂载点，要先确保unionfs已经挂载了
+	[[ -z "$MNT_MYAPPSTORGE" ]] && echo "[wine_restore_prefix] ERROR:\$MNT_MYAPPSTORGE not set" >&2 && exit
+	export WINEPREFIX="$MNT_MYAPPSTORGE/myapp_prefix/wine.$WINEARCH/pfx"
+
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 ##############################################
@@ -49,12 +53,11 @@ function wine_restore_prefix(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
 	#zh# 这个函数用来还原wineprefix
+
 	#zh# 因为$WINEPREFIX路径包含挂载点，要先确保unionfs已经挂载了
 	[[ -z "$MNT_MYAPPSTORGE" ]] && echo "[wine_restore_prefix] ERROR:\$MNT_MYAPPSTORGE not set" >&2 && exit
-
-	export WINEPREFIX="$MNT_MYAPPSTORGE/myapp_prefix/wine.$WINEARCH/pfx"
 	# "rm -rf" included, must check $WINEPREFIX first
-	#[[ -z "$WINEPREFIX" ]] && echo "[myapp:wine_restore_prefix] ERROR:\$WINEPREFIX not set, could not restore wine prefix." >&2 && return
+	[[ -z "$WINEPREFIX" ]] && echo "[myapp:wine_restore_prefix] ERROR:\$WINEPREFIX not set, could not restore wine prefix." >&2 && return
 
 	mkdir -p "$MNT_MYAPPSTORGE/myapp_prefix/wine.$WINEARCH"
 
