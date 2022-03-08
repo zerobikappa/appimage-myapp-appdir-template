@@ -290,7 +290,7 @@ function wine_restore_prefix(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
-function wine_shutdown_prefix(){
+function wine_wait_shutdown(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
 	"$HOME/$PROTON_DIR_FROM_HOME/proton" run wineboot -s
@@ -368,7 +368,7 @@ function wine_run_winetricks(){
 		wine_patch_reg
 		echo "[70%] restore completed, shutdown prefix"
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
-		wine_shutdown_prefix
+		wine_wait_shutdown
 		echo "[100%] launch"
 		"$APPDIR"/usr/bin/winetricks "$@"
 	else
@@ -379,7 +379,7 @@ function wine_run_winetricks(){
 		wine_patch_reg >/dev/null 2>&1
 		echo "[70%] restore completed, shutdown prefix"
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
-		wine_shutdown_prefix >/dev/null 2>&1
+		wine_wait_shutdown >/dev/null 2>&1
 		echo "[100%] launch"
 		"$APPDIR"/usr/bin/winetricks "$@" >/dev/null 2>&1
 	fi
@@ -398,11 +398,14 @@ function wine_run_exe(){
 		echo "[20%] prepare prefix"
 		wine_restore_prefix
 		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
+		#zh# 如果有注册表补丁就导入
 		echo "[60%] patch wine registry"
 		wine_patch_reg
+		#zh# 导入后进行一次wine关机的操作，这会等待上一步的注册表导入完成(效果有待考察)，
+		#zh# 以防注册表还未写入就突然启动可执行文件，导致启动失败
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
 		echo "[70%] restore completed, shutdown prefix"
-		wine_shutdown_prefix
+		wine_wait_shutdown
 	else
 		echo "[20%] prepare prefix"
 		wine_restore_prefix >/dev/null 2>&1
@@ -411,7 +414,7 @@ function wine_run_exe(){
 		wine_patch_reg >/dev/null 2>&1
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
 		echo "[70%] restore completed, shutdown prefix"
-		wine_shutdown_prefix >/dev/null 2>&1
+		wine_wait_shutdown >/dev/null 2>&1
 	fi
 
 	if [[ $WALKTHROUGH_FLAG -eq 1 ]];
@@ -428,14 +431,6 @@ function wine_run_exe(){
 
 	#zh# 启动游戏前先cd到可执行文件的所在目录，否则有些.exe文件无法正常运行
 	cd "$MNT_MYAPPSTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
-
-	#zh# 如果有注册表补丁就导入
-	wine_patch_reg
-
-	#zh# 导入后进行一次wine关机的操作，这会等待上一步的注册表导入完成(效果有待考察)，
-	#zh# 以防注册表还未写入就突然启动可执行文件，导致启动失败
-	#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
-	wine_shutdown_prefix
 
 	#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path if winetricks sandbox was set.
 	echo "[100%] launch"

@@ -257,7 +257,7 @@ function wine_restore_prefix(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
-function wine_shutdown_prefix(){
+function wine_wait_shutdown(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
 	"$HOME/$PROTON_DIR_FROM_HOME/proton" run wineboot -s
@@ -325,7 +325,7 @@ function wine_run_winetricks(){
 		wine_patch_reg
 		echo "[70%] restore completed, shutdown prefix"
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
-		wine_shutdown_prefix
+		wine_wait_shutdown
 		echo "[100%] launch"
 		"$APPDIR"/usr/bin/winetricks "$@"
 	else
@@ -336,7 +336,7 @@ function wine_run_winetricks(){
 		wine_patch_reg >/dev/null 2>&1
 		echo "[70%] restore completed, shutdown prefix"
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
-		wine_shutdown_prefix >/dev/null 2>&1
+		wine_wait_shutdown >/dev/null 2>&1
 		echo "[100%] launch"
 		"$APPDIR"/usr/bin/winetricks "$@" >/dev/null 2>&1
 	fi
@@ -356,7 +356,7 @@ function wine_run_exe(){
 		wine_patch_reg
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
 		echo "[70%] restore completed, shutdown prefix"
-		wine_shutdown_prefix
+		wine_wait_shutdown
 	else
 		echo "[20%] prepare prefix"
 		wine_restore_prefix >/dev/null 2>&1
@@ -365,7 +365,7 @@ function wine_run_exe(){
 		wine_patch_reg >/dev/null 2>&1
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
 		echo "[70%] restore completed, shutdown prefix"
-		wine_shutdown_prefix >/dev/null 2>&1
+		wine_wait_shutdown >/dev/null 2>&1
 	fi
 
 	if [[ $WALKTHROUGH_FLAG -eq 1 ]];

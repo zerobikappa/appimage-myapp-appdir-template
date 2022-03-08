@@ -614,7 +614,7 @@ then
 	[[ -n $MYAPPLANG ]] && LANG=$MYAPPLANG || echo "MYAPPLANG not set, using current LANG:$LANG"
 	export HOME="$HOME_FAKE"
 	export XDG_CONFIG_HOME="$HOME_FAKE/.config"
-	debug_print_env "APPDIR" "HOME" "XDG_CONFIG_HOME"
+	debug_print_env "APPDIR" "PID_MYAPPSTORGE" "PID_HOMESTORGE" "HOME" "XDG_CONFIG_HOME" "WINEPREFIX"
 	echo "*****using $WINEARCH"
 	if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
 	then
@@ -667,13 +667,13 @@ function monitor_exe_running(){
 		then
 			echo "[10%] restore wine drive symlink entries..."
 			wine_restore_prefix
-			echo "[30%] shutdown prefix..."
-			wine_shutdown_prefix
+			echo "[30%] wait shutdown prefix..."
+			wine_wait_shutdown
 		else
 			echo "[10%] restore wine drive symlink entries..."
 			wine_restore_prefix >/dev/null 2>&1
-			echo "[30%] shutdown prefix..."
-			wine_shutdown_prefix >/dev/null 2>&1
+			echo "[30%] wait shutdown prefix..."
+			wine_wait_shutdown >/dev/null 2>&1
 		fi
 		[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_restore
 	fi
@@ -709,13 +709,13 @@ function atexit() {
 	echo "[90%] removing unionfs hidden files"
 	rm -rf "$APPIMAGE_CACHE_DIR/usr/share/myapp"/.unionfs* >/dev/null 2>&1
 	rm -rf "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
-	echo "[100%] ended"
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 #set -e
 #trap atexit EXIT	#NOT USED: due to some .exe(as game launcher) would pass EXIT signal after it completed to launch other .exe files. 
 atexit
+echo "[100%] ended"
 
 
 ##############################################

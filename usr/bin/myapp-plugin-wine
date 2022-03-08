@@ -89,11 +89,12 @@ function wine_restore_prefix(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
-function wine_shutdown_prefix(){
+function wine_wait_shutdown(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
 	#wineboot -es	# this command run too slow
-	wineboot -s
+	#wineboot -s
+
 	# to prevent launch the game too early(before complete reg patch)
 	# or
 	# to prevent unmount unionfs too early(before wine save changes)
@@ -152,8 +153,8 @@ function wine_run_winetricks(){
 		#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
 		echo "[60%] patch wine registry"
 		wine_patch_reg
-		echo "[70%] restore completed, shutdown prefix"
-		wine_shutdown_prefix
+		echo "[70%] restore completed, wait shutdown prefix"
+		wine_wait_shutdown
 		echo "[100%] launch"
 		"$APPDIR"/usr/bin/winetricks "$@"
 	else
@@ -163,7 +164,7 @@ function wine_run_winetricks(){
 		echo "[60%] patch wine registry"
 		wine_patch_reg >/dev/null 2>&1
 		echo "[70%] restore completed, shutdown prefix"
-		wine_shutdown_prefix >/dev/null 2>&1
+		wine_wait_shutdown >/dev/null 2>&1
 		echo "[100%] launch"
 		"$APPDIR"/usr/bin/winetricks "$@" >/dev/null 2>&1
 	fi
@@ -182,7 +183,7 @@ function wine_run_exe(){
 		echo "[60%] patch wine registry"
 		wine_patch_reg
 		echo "[70%] restore completed, shutdown prefix"
-		wine_shutdown_prefix
+		wine_wait_shutdown
 	else
 		echo "[20%] prepare prefix"
 		wine_restore_prefix >/dev/null 2>&1
@@ -190,7 +191,7 @@ function wine_run_exe(){
 		echo "[60%] patch wine registry"
 		wine_patch_reg >/dev/null 2>&1
 		echo "[70%] restore completed, shutdown prefix"
-		wine_shutdown_prefix >/dev/null 2>&1
+		wine_wait_shutdown >/dev/null 2>&1
 	fi
 
 	if [[ $WALKTHROUGH_FLAG -eq 1 ]];

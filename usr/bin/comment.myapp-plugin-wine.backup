@@ -101,11 +101,13 @@ function wine_restore_prefix(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
-function wine_shutdown_prefix(){
+function wine_wait_shutdown(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
 	#wineboot -es	# this command run too slow
-	wineboot -s
+	#wineboot -s
+	#zh# 原本的构想是用wineboot对wineprefix进行手动关机的操作。但感觉真的效果不佳，不确定是不是这个原因而导致下次启动的读写错误
+
 	# to prevent launch the game too early(before complete reg patch)
 	# or
 	# to prevent unmount unionfs too early(before wine save changes)
@@ -173,8 +175,8 @@ function wine_run_winetricks(){
 		#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
 		echo "[60%] patch wine registry"
 		wine_patch_reg
-		echo "[70%] restore completed, shutdown prefix"
-		wine_shutdown_prefix
+		echo "[70%] restore completed, wait shutdown prefix"
+		wine_wait_shutdown
 		echo "[100%] launch"
 		"$APPDIR"/usr/bin/winetricks "$@"
 	else
@@ -184,7 +186,7 @@ function wine_run_winetricks(){
 		echo "[60%] patch wine registry"
 		wine_patch_reg >/dev/null 2>&1
 		echo "[70%] restore completed, shutdown prefix"
-		wine_shutdown_prefix >/dev/null 2>&1
+		wine_wait_shutdown >/dev/null 2>&1
 		echo "[100%] launch"
 		"$APPDIR"/usr/bin/winetricks "$@" >/dev/null 2>&1
 	fi
@@ -209,7 +211,7 @@ function wine_run_exe(){
 		#zh# 导入后进行一次wine关机的操作，这会等待上一步的注册表导入完成(效果有待考察)，
 		#zh# 以防注册表还未写入就突然启动可执行文件，导致启动失败
 		echo "[70%] restore completed, shutdown prefix"
-		wine_shutdown_prefix
+		wine_wait_shutdown
 	else
 		echo "[20%] prepare prefix"
 		wine_restore_prefix >/dev/null 2>&1
@@ -217,7 +219,7 @@ function wine_run_exe(){
 		echo "[60%] patch wine registry"
 		wine_patch_reg >/dev/null 2>&1
 		echo "[70%] restore completed, shutdown prefix"
-		wine_shutdown_prefix >/dev/null 2>&1
+		wine_wait_shutdown >/dev/null 2>&1
 	fi
 
 	if [[ $WALKTHROUGH_FLAG -eq 1 ]];
