@@ -1,5 +1,9 @@
 # appimage-myapp-appdir-template
 
+[English](https://github.com/zerobikappa/appimage-myapp-appdir-template/blob/main/README.md) - [简体中文](https://github.com/zerobikappa/appimage-myapp-appdir-template/blob/main/README.zh.md)
+
+(some content may be outdate due to project holder was too lazy to update README (´･ω･`) )
+
 My bash script tool to install or test windows .exe before bundle it into .appimage package.
 
 ---
@@ -218,9 +222,9 @@ vim myapp-template/other-name.desktop	# then modify the content of *.desktop fil
 
 for more information, please refer below project to learn about how to bundle your *.appimage:
 
-[AppImageKit](https://github.com/AppImage/AppImageKit)  
-[Wine_Appimage](https://github.com/Hackerl/Wine_Appimage)  
-[Create metadata](https://www.freedesktop.org/software/appstream/metainfocreator/#/guiapp)  
+[AppImageKit](https://github.com/AppImage/AppImageKit)
+[Wine_Appimage](https://github.com/Hackerl/Wine_Appimage)
+[Create metadata](https://www.freedesktop.org/software/appstream/metainfocreator/#/guiapp)
 
 now you can run:
 
@@ -229,9 +233,5 @@ ARCH=x86_64 ./appimagetool.AppImage myapp-template/
 ```
 
 to bundle your .appimage file.
-
-
-
-
 
 

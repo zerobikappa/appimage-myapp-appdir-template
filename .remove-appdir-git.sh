@@ -20,6 +20,7 @@ echo "remove git related files from AppDir"
 find "$HERE" -name ".git*" -exec rm -rfv "{}" \;
 rm -rfv "$HERE"/usr/bin/comment.myapp*.backup
 rm -rfv "$HERE"/backup/screenshot.backup
+rm -rfv "$HERE"/README.zh.md
 rm -rfv "$HERE"/README.md
 rm -rfv "$HERE"/readme-todo
 rm -rfv "$HERE"/.remove-appdir-git.sh
