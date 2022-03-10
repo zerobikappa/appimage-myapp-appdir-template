@@ -2,6 +2,8 @@
 
 [English](https://github.com/zerobikappa/appimage-myapp-appdir-template/blob/main/README.md) - [简体中文](https://github.com/zerobikappa/appimage-myapp-appdir-template/blob/main/README.zh.md)
 
+(some content may be outdate due to project holder was too lazy to update README (´･ω･`) )
+
 My bash script tool to install or test windows .exe before bundle it into .appimage package.
 
 ---
