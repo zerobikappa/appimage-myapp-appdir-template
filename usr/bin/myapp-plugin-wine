@@ -53,6 +53,7 @@ function wine_restore_prefix(){
 	[[ -z "$WINEPREFIX" ]] && echo "[myapp:wine_restore_prefix] ERROR:\$WINEPREFIX not set, could not restore wine prefix." >&2 && return
 
 	mkdir -p "$MNT_MYAPPSTORGE/myapp_prefix/wine.$WINEARCH"
+	[[ ! -d "$APPIMAGE_CACHE_DIR/usr/share/myapp/drive_d" ]] && mkdir -p "$APPIMAGE_CACHE_DIR/usr/share/myapp/drive_d"
 
 	# only setup wineprefix and do nothing
 	if [[ $MYAPPDEBUG -eq 1 ]];
