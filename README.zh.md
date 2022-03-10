@@ -234,9 +234,9 @@ vim myproject/游戏的名字.desktop
 
 更多有关信息，你可以查看以下项目，学习一下如何打包你的appimage包：
 
-[AppImageKit](https://github.com/AppImage/AppImageKit)
-[Wine_Appimage](https://github.com/Hackerl/Wine_Appimage)
-[Create metadata](https://www.freedesktop.org/software/appstream/metainfocreator/#/guiapp)
+[AppImageKit](https://github.com/AppImage/AppImageKit)  
+[Wine_Appimage](https://github.com/Hackerl/Wine_Appimage)  
+[Create metadata](https://www.freedesktop.org/software/appstream/metainfocreator/#/guiapp)  
 
 准备好了吗，现在用刚刚下载的appimagetool，来打包你的项目目录：
 
