@@ -5,3 +5,5 @@
 #
 #
 # 无论是wine模式还是proton模式，第一次(有时也不一定是第一次)生成prefix时会有读取错误的情况发生
+# 需要更改保留的盘符，wine restore 里留cdy盘，结束时留cd盘。
+# 需要更改savedata restore的机制，删除原本是没有的文件。
