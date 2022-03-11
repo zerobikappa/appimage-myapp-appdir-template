@@ -69,7 +69,7 @@ function wine_restore_prefix(){
 	# only keep C: and D: drive and remove other drive symlink, to prevent wine motifing local files through Z: drive
 	# it is not necessary to package other drive symlink into appimage
 	# however, wine will recreate other drive symlink every time when you open explorer in wine/winetricks, we should delete them again after game is ended
-	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
+	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" ! -name "y:" -exec rm -rf "{}" \;
 	[[ ! -L "$WINEPREFIX/dosdevices/c:" ]] && ln -sfn ../drive_c "$WINEPREFIX/dosdevices/c:"
 	# D: drive is moved outside of $WINEPREFIX
 	# you can feel free to delete your WINEPREFIX and just package D: drive into appimage

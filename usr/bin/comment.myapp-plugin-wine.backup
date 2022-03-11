@@ -60,6 +60,7 @@ function wine_restore_prefix(){
 	[[ -z "$WINEPREFIX" ]] && echo "[myapp:wine_restore_prefix] ERROR:\$WINEPREFIX not set, could not restore wine prefix." >&2 && return
 
 	mkdir -p "$MNT_MYAPPSTORGE/myapp_prefix/wine.$WINEARCH"
+	[[ ! -d "$APPIMAGE_CACHE_DIR/usr/share/myapp/drive_d" ]] && mkdir -p "$APPIMAGE_CACHE_DIR/usr/share/myapp/drive_d"
 
 	# only setup wineprefix and do nothing
 	#zh# 只建立prefix，不做其他任何操作
@@ -79,7 +80,7 @@ function wine_restore_prefix(){
 	#zh# 在这里我仅保留C盘和D盘，其它盘的软链接全删除了，避免wine透过Z盘(linux系统的根目录)对本地系统进行写入
 	#zh# 是否真的有用还有待考察，就算删除了，只要在wine/winetricks里打开内置的文件管理窗，还是会重新生成，游戏结束后还要再删一次
 	#zh# 不过删除多余盘符链接至少能避免打包一些不必要的东西进去appimage包里
-	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
+	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" ! -name "y:" -exec rm -rf "{}" \;
 	[[ ! -L "$WINEPREFIX/dosdevices/c:" ]] && ln -sfn ../drive_c "$WINEPREFIX/dosdevices/c:"
 	# D: drive is moved outside of $WINEPREFIX
 	# you can feel free to delete your WINEPREFIX and just package D: drive into appimage

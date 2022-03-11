@@ -794,6 +794,7 @@ function atexit() {
 	[[ -z "$APPIMAGE_CACHE_DIR" ]] && echo "[myapp:atexit] ERROR:\$APPIMAGE_CACHE_DIR not set, could not clean temp files." >&2 && return
 
 	echo "[40%] removing drive symlink from wine prefix"
+	#zh# 在wine_restore_prefix里只保留C、D、Y盘，而在这里，也就是游戏结束时，只保留C、D盘
 	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
 	echo "[50%] killing unionfs"
 	#killall "$APPDIR/usr/bin/unionfs"
