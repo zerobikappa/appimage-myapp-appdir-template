@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1646774889
+MYAPPRUN_VERSION=1647042478
 
 #############################################
 ## prevent running by root/sudo for security concern
@@ -482,15 +482,26 @@ function walkthrough_browser(){
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @
 @
-  you can also click below html file to show game walkthrough:
+  you can also click below files to show game walkthrough:
 @
 EOF
 
-	for i in $(ls "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.html);
+	# NOTUSED: cannot handle file name with whitespace
+	#for i in $(ls "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.html);
+	#do
+	#	#echo "  file://$MNT_MYAPPSTORGE/drive_d/myapp_walkthrough/$i"
+	#	# ls will output the full path if run -> ls /full/path/to/file/*.html
+	#	echo "  file://$i"
+	#done
+
+	# althrough it can handle file name including whitespace character, it is still recommanded to remove all whitespace from filename
+	find "$MNT_MYAPPSTORGE/myapp_walkthrough" -mindepth 1 -maxdepth 1 -name "*.html" -print0 | while read -d $'\0' WALKTHROUGH_TEMP;
 	do
-		#echo "  file://$MNT_MYAPPSTORGE/drive_d/myapp_walkthrough/$i"
-		# ls will output the full path if run -> ls /full/path/to/file/*.html
-		echo "  file://$i"
+		echo "  file://$WALKTHROUGH_TEMP"
+	done
+	find "$MNT_MYAPPSTORGE/myapp_walkthrough" -mindepth 1 -maxdepth 1 -name "*.pdf" -print0 | while read -d $'\0' WALKTHROUGH_TEMP;
+	do
+		echo "  file://$WALKTHROUGH_TEMP"
 	done
 
 	cat << EOF
@@ -501,6 +512,7 @@ EOF
 EOF
 	#TODO: failed to using xdg-open to open html file.
 	i3-sensible-browser "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.html
+	i3-sensible-browser "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.pdf
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
@@ -533,24 +545,31 @@ function savedata_restore(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
 	HOME="$HOME_FAKE"
-	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
+	if [[ -z "$SAVEDATA_DIR" ]];
 	then
-		FIND_DIR="$SAVEDATA_DIR"
-	elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
-	then
-		FIND_DIR="$SAVEDATA_DIR"
-	else
-		echo "[AppRun:savedata_restore] error: invalid FIND_DIR, cannot recover user savedata"
+		echo "[savedata_restore] ERROR:\$SAVEDATA_DIR is empty" >&2
+		return
 	fi
 
+	echo ""
+	echo "remove temp savedata..."
+	find "$MNT_MYAPPSTORGE/myapp_savedata/" -mindepth 1 -type f -print0 | while read -d $'\0' SAVEDATA_TEMP;
+	do
+		rm -fv "$SAVEDATA_DIR/${SAVEDATA_TEMP#"$MNT_MYAPPSTORGE/myapp_savedata/"}" 2>/dev/null
+	done
+	unset SAVEDATA_TEMP
+
+	echo ""
 	echo "restore user savedata..."
 	#SAVEDATA_RESTORE_LIST="$(find "$FIND_DIR" -type f -name "*.myapp.$USER.backup")"
 	#for SAVEDATA_BACKUP in $SAVEDATA_RESTORE_LIST ; do	#NOT USED: could not handle filename with whitespace
-	find "$FIND_DIR" -mindepth 1 -name "*.myapp.$USER.backup" -print0 | while read -d $'\0' SAVEDATA_BACKUP;
+	find "$SAVEDATA_DIR" -mindepth 1 -name "*.myapp.$USER.backup" -print0 | while read -d $'\0' SAVEDATA_BACKUP;
 	do
-		echo  "$SAVEDATA_BACKUP" ' >>to>> ' "${SAVEDATA_BACKUP%".myapp.$USER.backup"}"
-		mv -f "$SAVEDATA_BACKUP" "${SAVEDATA_BACKUP%".myapp.$USER.backup"}"
+		#echo  "$SAVEDATA_BACKUP" ' >>to>> ' "${SAVEDATA_BACKUP%".myapp.$USER.backup"}"
+		mv -fv "$SAVEDATA_BACKUP" "${SAVEDATA_BACKUP%".myapp.$USER.backup"}"
 	done
+	echo ""
+	unset SAVEDATA_BACKUP
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
