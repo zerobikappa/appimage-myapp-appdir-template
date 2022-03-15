@@ -192,10 +192,22 @@ function exeinfo_load_file(){
 
 function exeinfo_load_temp(){
 	[[ -z "$EXEINFO_CURRENT_PROFILE" ]] && exeinfo_load_file
-	for i in "EXE_LDIR" "EXE_WROOT" "EXE_WDIR" "EXENAME" "SAVEDATA_IN_HOME" "SAVEDATA_DIR" "MYAPPLANG"
-	do
-		eval TEMP_$i=\'$(grep '^[[:blank:]]*[^[:blank:]#]' "$EXEINFO_CURRENT_PROFILE" | grep "$i" | sed 's/^[^=]*//' | sed 's/=//' | sed 's/"//g' )\'
-	done
+	if [[ -n "$EXEINFO_CURRENT_PROFILE" ]];
+	then
+		for i in "EXE_LDIR" "EXE_WROOT" "EXE_WDIR" "EXENAME" "SAVEDATA_IN_HOME" "SAVEDATA_DIR" "MYAPPLANG"
+		do
+			eval TEMP_$i=\'$(grep '^[[:blank:]]*[^[:blank:]#]' "$EXEINFO_CURRENT_PROFILE" | grep "$i" | sed 's/^[^=]*//' | sed 's/=//' | sed 's/"//g' )\'
+		done
+	else
+		# if not found exeinfo_profile, initialize below variables to empty
+		TEMP_EXE_LDIR=""
+		TEMP_EXE_WROOT=""
+		TEMP_EXE_WDIR=""
+		TEMP_EXENAME=""
+		TEMP_SAVEDATA_IN_HOME=""
+		TEMP_SAVEDATA_DIR=""
+		TEMP_MYAPPLANG=""
+	fi
 
 	# NOTUSED: it would be wrong if they include other env name($WINEARCH, $XDG_DOCUMENTS_DIR...)
 	#TEMP_EXE_LDIR=$EXE_LDIR
@@ -697,8 +709,11 @@ SAVEDATA_DIR="$TEMP_SAVEDATA_DIR"
 MYAPPLANG="$TEMP_MYAPPLANG"
 EOF
 	echo "saved into $APPIMAGE_CACHE_DIR/usr/share/myapp/myapp_exeinfo/exeinfo_profile"
-	cat "$APPIMAGE_CACHE_DIR/usr/share/myapp/myapp_exeinfo/exeinfo_profile" > "$APPIMAGE_CACHE_DIR/usr/share/myapp/myapp_exeinfo/exeinfo_profile.$TEMP_MYAPPLANG"
-	echo "saved into $APPIMAGE_CACHE_DIR/usr/share/myapp/myapp_exeinfo/exeinfo_profile.$TEMP_MYAPPLANG"
+	if [[ -n "$TEMP_MYAPPLANG" ]];
+	then
+		cat "$APPIMAGE_CACHE_DIR/usr/share/myapp/myapp_exeinfo/exeinfo_profile" > "$APPIMAGE_CACHE_DIR/usr/share/myapp/myapp_exeinfo/exeinfo_profile.$TEMP_MYAPPLANG"
+		echo "saved into $APPIMAGE_CACHE_DIR/usr/share/myapp/myapp_exeinfo/exeinfo_profile.$TEMP_MYAPPLANG"
+	fi
 	EXIT_MAIN_MENU=1
 
 }
