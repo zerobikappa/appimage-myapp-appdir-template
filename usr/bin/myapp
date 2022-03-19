@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1647334503
+MYAPPRUN_VERSION=1647722660
 
 #############################################
 ## prevent running by root/sudo for security concern
@@ -511,8 +511,8 @@ EOF
 
 EOF
 	#TODO: failed to using xdg-open to open html file.
-	i3-sensible-browser "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.html
-	i3-sensible-browser "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.pdf
+	[[ -n "$(find "$MNT_MYAPPSTORGE/myapp_walkthrough" -mindepth 1 -maxdepth 1 -name "*.html")" ]] && i3-sensible-browser "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.html
+	[[ -n "$(find "$MNT_MYAPPSTORGE/myapp_walkthrough" -mindepth 1 -maxdepth 1 -name "*.pdf")" ]] && i3-sensible-browser "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.pdf
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }

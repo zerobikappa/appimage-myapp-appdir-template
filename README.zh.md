@@ -391,4 +391,9 @@ userdef.reg2
 
 （更多FAQ有待补充）
 
+## 其他链接
 
+[AppImageKit](https://github.com/AppImage/AppImageKit)  
+[Wine_Appimage](https://github.com/Hackerl/Wine_Appimage)  
+[Create metadata](https://www.freedesktop.org/software/appstream/metainfocreator/#/guiapp)  
+[markdowntohtml](https://markdowntohtml.com/)  

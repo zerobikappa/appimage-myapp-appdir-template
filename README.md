@@ -234,4 +234,7 @@ ARCH=x86_64 ./appimagetool.AppImage myapp-template/
 
 to bundle your .appimage file.
 
+#### other useful link
+
+[markdowntohtml](https://markdowntohtml.com/)  
 

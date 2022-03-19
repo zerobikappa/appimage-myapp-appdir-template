@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1647334503
+MYAPPRUN_VERSION=1647722660
 
 #############################################
 ## prevent running by root/sudo for security concern
@@ -578,8 +578,8 @@ EOF
 	#TODO: failed to using xdg-open to open html file.
 	#zh#TODO: 改用了i3-sensible-browser脚本，因为使用xdg-open时系统不是用浏览器而是用文本编辑器打开.html文件
 	#zh#TODO: 另外也考虑要不要为这个语句单独配一个选项，让它变为可选的，因为如果用户在 myapp_walkthrough 目录里放了很多.html的话，一旦使用-w(--walkthrough)选项要求打开攻略，那么这里会一次过打开所有html文件。
-	i3-sensible-browser "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.html
-	i3-sensible-browser "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.pdf
+	[[ -n "$(find "$MNT_MYAPPSTORGE/myapp_walkthrough" -mindepth 1 -maxdepth 1 -name "*.html")" ]] && i3-sensible-browser "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.html
+	[[ -n "$(find "$MNT_MYAPPSTORGE/myapp_walkthrough" -mindepth 1 -maxdepth 1 -name "*.pdf")" ]] && i3-sensible-browser "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.pdf
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
