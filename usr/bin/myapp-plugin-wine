@@ -88,6 +88,16 @@ function wine_restore_prefix(){
 		ln -sfnv ../../../../../myapp_fonts "$WINEPREFIX/drive_c/windows/Fonts"
 	fi
 
+	if [[ -d "$WINEPREFIX/drive_c/users/$USER/AppData/Roaming" ]];
+	then
+		mkdir -p "$MNT_HOMESTORGE/AppData"
+		mv -f "$WINEPREFIX/drive_c/users/$USER/AppData/Roaming" "$MNT_HOMESTORGE/AppData"
+		rm -rf "$WINEPREFIX/drive_c/users/$USER/AppData/Roaming"
+		#refer path: .../myapp/myapp_fonts
+		#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/windows/Fonts
+		ln -sfnv ../../../../../../../../../../home/public_user/AppData/Roaming "$WINEPREFIX/drive_c/users/$USER/AppData/Roaming"
+	fi
+
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
 
