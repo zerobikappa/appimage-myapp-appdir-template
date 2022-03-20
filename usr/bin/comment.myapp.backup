@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1647801605
+MYAPPRUN_VERSION=1647804505
 
 #############################################
 ## prevent running by root/sudo for security concern
@@ -525,7 +525,14 @@ mkdir -p "$MNT_MYAPPSTORGE" "$TMP_MYAPPSTORGE_OVERLAY"
 
 mkdir -p "$MNT_HOMESTORGE" "$TMP_HOMESTORGE_OVERLAY"
 #"$APPDIR"/usr/bin/unionfs -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_HOMESTORGE_OVERLAY"=RW:"$RO_HOMESTORGE"=RO "$MNT_HOMESTORGE" || exit 1
-"$UNIONFS_BIN" -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_HOMESTORGE_OVERLAY"=RW:"$RO_HOMESTORGE"=RO "$MNT_HOMESTORGE" || exit 1
+if [[ -d "$APPDIR/home/public_user" ]];
+then
+	# should also refer home/public_user directory in $APPDIR, if user also add this directory into appimage
+	#zh# 如果用户将 home/public_user 也打包进appimage，那也要将这个目录加入到参考路径
+	"$UNIONFS_BIN" -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_HOMESTORGE_OVERLAY"=RW:"$APPDIR/home/public_user"=RO:"$RO_HOMESTORGE"=RO "$MNT_HOMESTORGE" || exit 1
+else
+	"$UNIONFS_BIN" -o use_ino,auto_unmount,nonempty,uid=$UID -ocow "$TMP_HOMESTORGE_OVERLAY"=RW:"$RO_HOMESTORGE"=RO "$MNT_HOMESTORGE" || exit 1
+fi
 
 #zh# 提取unionfs挂载点的进程号，之后关闭进程时会用到，避免用killall unionfs乱杀
 PID_MYAPPSTORGE="$(pgrep -a unionfs | grep "$MNT_MYAPPSTORGE" | awk '{print $1}')"
