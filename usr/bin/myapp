@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1647954087
+MYAPPRUN_VERSION=1647961804
 
 #############################################
 ## prevent running by root/sudo for security concern
@@ -57,7 +57,11 @@ else
 	[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env UNIONFS_BIN
 fi
 
+# keep a backup of $PATH location. Because later I will compare the version number of local winetricks and builtin winetricks.
+export PATH_OLD="$PATH"
 export PATH="${APPDIR}/usr/bin/:${APPDIR}/usr/sbin/:${APPDIR}/usr/games/:${APPDIR}/bin/:${APPDIR}/sbin/${PATH:+:$PATH}"
+export PATH_NEW="$PATH"
+
 export LD_LIBRARY_PATH="${APPDIR}/usr/lib/:${APPDIR}/usr/lib/i386-linux-gnu/:${APPDIR}/usr/lib/x86_64-linux-gnu/:${APPDIR}/usr/lib32/:${APPDIR}/usr/lib64/:${APPDIR}/lib/:${APPDIR}/lib/i386-linux-gnu/:${APPDIR}/lib/x86_64-linux-gnu/:${APPDIR}/lib32/:${APPDIR}/lib64/${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export PYTHONPATH="${APPDIR}/usr/share/pyshared/${PYTHONPATH:+:$PYTHONPATH}"
 # if XDG_DATA_DIRS is empyt, after add ${APPDIR}/user/share/ into XDG_DATA_DIRS, also need to manual add default data path, otherwise local zenity could not load data files.
@@ -643,7 +647,7 @@ then
 	[[ -n $MYAPPLANG ]] && LANG=$MYAPPLANG || echo "MYAPPLANG not set, using current LANG:$LANG"
 	export HOME="$HOME_FAKE"
 	export XDG_CONFIG_HOME="$HOME_FAKE/.config"
-	debug_print_env "HOME" "XDG_CONFIG_HOME"
+	debug_print_env "HOME" "XDG_CONFIG_HOME" "WINETRICKS_BIN"
 	echo "*****using $WINEARCH"
 	if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
 	then
