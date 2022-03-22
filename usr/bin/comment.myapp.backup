@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1647804505
+MYAPPRUN_VERSION=1647954087
 
 #############################################
 ## prevent running by root/sudo for security concern
@@ -77,8 +77,8 @@ export QT_PLUGIN_PATH="${APPDIR}/usr/lib/qt4/plugins/:${APPDIR}/usr/lib/i386-lin
 
 
 ##############################################
-## check *.cache directory
-#zh# 检查 *.cache 目录
+## check if it is running from appimage or running from appdir
+#zh# 检查现在是运行appimage包还是直接从appdir运行
 
 # if run directly from AppDir. 
 #zh# 如果是直接从APPDIR里运行AppRun的情况
@@ -86,100 +86,6 @@ if [[ -z ${APPIMAGE} ]];
 then
 	export APPIMAGE="$APPDIR"
 fi
-
-#zh# 在这里我使用"appimage包的名字.cache"的目录，用作保存本地设置
-#zh# 如果在APPIMAGE的同级目录里已经存在这个目录，那么就直接使用，电脑重启后不会消失
-#zh# 如果这个目录不存在，那么就在/tmp/里建立这个目录，电脑重启后会消失
-if [[ -d ${APPIMAGE}.cache ]];
-then
-	APPIMAGE_CACHE_DIR="${APPIMAGE}.cache"
-else
-	echo "directory  ${APPIMAGE}.cache/ not exist."
-	echo "all data will be saved in /tmp/$(basename "$APPIMAGE").cache/ , which will be deleted after restart computer."
-	echo "to keep your data, please run:"
-	echo ""
-	[[ -n $ARGV0 ]] && echo "  $ARGV0 --portable-cache" || echo "  ${APPIMAGE}/AppRun --portable-cache"
-	echo ""
-	echo "to create a cache directory."
-	mkdir -p "/tmp/$(basename "$APPIMAGE").cache"
-	APPIMAGE_CACHE_DIR="/tmp/$(basename "$APPIMAGE").cache"
-fi
-##############################################
-
-
-##############################################
-## setup unionfs temp directory for this app
-#zh# 设定unionfs的挂载点和参数
-
-#zh# 工程目录，用来放置所有与打包的这个游戏相关的所有文件。包括：游戏exe文件，全通关存档，攻略离线网页文件，exeinfo文件，注册表补丁，字体文件，wine和proton的prefix（如果你真的要连这个也打包进来的话）……
-RO_MYAPPSTORGE="$APPDIR/usr/share/myapp"
-
-#zh# Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
-#zh# wine 程序实际是从这个挂载点读写数据的，这里用了$APPDIR的名字，因为appimage文件的名字($APPIMAGE)如果太长而且包含unicode字符，会导致wine无法处理路径。appimage包释放时会自动生成一个不含unicode的短名字(也就是$APPDIR)，用这个作为挂载点的目录名。这个挂载点目录将会在游戏结束后被删除
-MNT_MYAPPSTORGE="/tmp/$(basename "$APPDIR").unionfs/usr/share/myapp"
-
-#zh# 对挂载点的写入更改会保存在 appimage包名字.cache 目录里，不会对本地目录造成任何更改
-TMP_MYAPPSTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share/myapp"
-
-
-#zh# 读取数据从用户原本的家目录读取数据，这是有必要的。例如使用本地的图形界面kdialog时会需要从原本的$HOME目录里读取配置数据
-#zh# 如果是用原本的经典配置(简单将 $XDG_CONFIG_HOME 变量重定向到 appimage包名字.config 目录)，会导致外部程序找不到配置文件
-RO_HOMESTORGE="/home/$USER/"
-
-#zh# Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
-#zh# $HOME将会重定向到这个挂载点。这个挂载点目录将会在游戏结束后被删除
-MNT_HOMESTORGE="/tmp/$(basename "$APPDIR").unionfs/home/public_user"
-
-#zh# 对家目录$HOME的写入更改会保存在 appimage包名字.cache 目录里，不会对本地目录造成任何更改
-TMP_HOMESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/home/public_user"
-
-# backup the path of $HOME because exeinfo-gen need to read the real $HOME instead of the fake one
-#zh# 把原本的家目录的路径备份下来，因为exeinfo-gen功能需要用来原本的路径
-HOME_REAL="$HOME"
-HOME_FAKE="$MNT_HOMESTORGE"
-
-##############################################
-
-
-##############################################
-## setup standalone $HOME and $XDG_CONFIG_HOME directory
-## not redirect $HOME and $XDG_CONFIG_HOME at this moment because exeinfo plugin need original $HOME and $XDG_CONFIG_HOME env.
-#zh# 建立家目录与配置目录，这个时候不会立刻就将$HOME和$XDG_CONFIG_HOME重定向过去，因为之后的exeinfo-gen插件需要用到原本的环境变量
-
-#zh# 为了让APPDIR与系统根目录保持相同结构，建立了public_user目录作为家目录，里面的.config目录作为配置目录
-if [[ ! -d ${APPIMAGE_CACHE_DIR}/home/public_user/.config ]];
-then
-	mkdir -p "${APPIMAGE_CACHE_DIR}/home/public_user/.config"
-fi
-
-#zh# 如果用户自己使用了--appimage-portable-home(config) 选项建立了*.home和*.config的情况
-if [[ -d ${APPIMAGE}.home ]];
-then
-	echo "${APPIMAGE}.home exists but is not necessary."
-	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/ to save related files."
-fi
-
-if [[ -d ${APPIMAGE}.config ]];
-then
-	echo "${APPIMAGE}.config exists but is not necessary."
-	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/.config to save related files."
-fi
-
-##############################################
-
-
-##############################################
-## test runtime env
-#function debug_show(){
-#	cat << EOF
-#APPIMAGE=$APPIMAGE
-#APPDIR=$APPDIR
-#OWD=$OWD
-#ARGV0=$ARGV0
-#\$0=$0
-#EOF
-#}
-[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env APPIMAGE APPDIR OWD ARGV0 0
 ##############################################
 
 
@@ -444,6 +350,105 @@ done
 #zh# 过滤后的剩余选项/参数会继续传递到下面的wine里
 eval set -- "$next_parameters"
 
+##############################################
+
+
+##############################################
+## setup *.cache directory
+#zh# 建立缓存目录
+#zh# 在这里我使用"appimage包的名字.cache"的目录，用作保存本地设置
+#zh# 如果在APPIMAGE的同级目录里已经存在这个目录，那么就直接使用，电脑重启后不会消失
+#zh# 如果这个目录不存在，那么就在/tmp/里建立这个目录，电脑重启后会消失
+if [[ -d ${APPIMAGE}.cache ]];
+then
+	APPIMAGE_CACHE_DIR="${APPIMAGE}.cache"
+else
+	echo "directory  ${APPIMAGE}.cache/ not exist."
+	echo "all data will be saved in /tmp/$(basename "$APPIMAGE").cache/ , which will be deleted after restart computer."
+	echo "to keep your data, please run:"
+	echo ""
+	[[ -n $ARGV0 ]] && echo "  $ARGV0 --portable-cache" || echo "  ${APPIMAGE}/AppRun --portable-cache"
+	echo ""
+	echo "to create a cache directory."
+	mkdir -p "/tmp/$(basename "$APPIMAGE").cache"
+	APPIMAGE_CACHE_DIR="/tmp/$(basename "$APPIMAGE").cache"
+fi
+##############################################
+
+
+##############################################
+## setup unionfs temp directory for this app
+#zh# 设定unionfs的挂载点和参数
+
+#zh# 工程目录，用来放置所有与打包的这个游戏相关的所有文件。包括：游戏exe文件，全通关存档，攻略离线网页文件，exeinfo文件，注册表补丁，字体文件，wine和proton的prefix（如果你真的要连这个也打包进来的话）……
+RO_MYAPPSTORGE="$APPDIR/usr/share/myapp"
+
+#zh# Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
+#zh# wine 程序实际是从这个挂载点读写数据的，这里用了$APPDIR的名字，因为appimage文件的名字($APPIMAGE)如果太长而且包含unicode字符，会导致wine无法处理路径。appimage包释放时会自动生成一个不含unicode的短名字(也就是$APPDIR)，用这个作为挂载点的目录名。这个挂载点目录将会在游戏结束后被删除
+MNT_MYAPPSTORGE="/tmp/$(basename "$APPDIR").unionfs/usr/share/myapp"
+
+#zh# 对挂载点的写入更改会保存在 appimage包名字.cache 目录里，不会对本地目录造成任何更改
+TMP_MYAPPSTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share/myapp"
+
+
+#zh# 读取数据从用户原本的家目录读取数据，这是有必要的。例如使用本地的图形界面kdialog时会需要从原本的$HOME目录里读取配置数据
+#zh# 如果是用原本的经典配置(简单将 $XDG_CONFIG_HOME 变量重定向到 appimage包名字.config 目录)，会导致外部程序找不到配置文件
+RO_HOMESTORGE="/home/$USER/"
+
+#zh# Use $APPDIR instead of $APPIMAGE, due to wine failed to handle too long file name with UNICODE characters.
+#zh# $HOME将会重定向到这个挂载点。这个挂载点目录将会在游戏结束后被删除
+MNT_HOMESTORGE="/tmp/$(basename "$APPDIR").unionfs/home/public_user"
+
+#zh# 对家目录$HOME的写入更改会保存在 appimage包名字.cache 目录里，不会对本地目录造成任何更改
+TMP_HOMESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/home/public_user"
+
+# backup the path of $HOME because exeinfo-gen need to read the real $HOME instead of the fake one
+#zh# 把原本的家目录的路径备份下来，因为exeinfo-gen功能需要用来原本的路径
+HOME_REAL="$HOME"
+HOME_FAKE="$MNT_HOMESTORGE"
+
+##############################################
+
+
+##############################################
+## setup standalone $HOME and $XDG_CONFIG_HOME directory
+## not redirect $HOME and $XDG_CONFIG_HOME at this moment because exeinfo plugin need original $HOME and $XDG_CONFIG_HOME env.
+#zh# 建立家目录与配置目录，这个时候不会立刻就将$HOME和$XDG_CONFIG_HOME重定向过去，因为之后的exeinfo-gen插件需要用到原本的环境变量
+
+#zh# 为了让APPDIR与系统根目录保持相同结构，建立了public_user目录作为家目录，里面的.config目录作为配置目录
+if [[ ! -d ${APPIMAGE_CACHE_DIR}/home/public_user/.config ]];
+then
+	mkdir -p "${APPIMAGE_CACHE_DIR}/home/public_user/.config"
+fi
+
+#zh# 如果用户自己使用了--appimage-portable-home(config) 选项建立了*.home和*.config的情况
+if [[ -d ${APPIMAGE}.home ]];
+then
+	echo "${APPIMAGE}.home exists but is not necessary."
+	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/ to save related files."
+fi
+
+if [[ -d ${APPIMAGE}.config ]];
+then
+	echo "${APPIMAGE}.config exists but is not necessary."
+	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/.config to save related files."
+fi
+
+##############################################
+
+
+##############################################
+## test runtime env
+#function debug_show(){
+#	cat << EOF
+#APPIMAGE=$APPIMAGE
+#APPDIR=$APPDIR
+#OWD=$OWD
+#ARGV0=$ARGV0
+#\$0=$0
+#EOF
+#}
+[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env APPIMAGE APPDIR OWD ARGV0 0
 ##############################################
 
 

@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1647804505
+MYAPPRUN_VERSION=1647954087
 
 #############################################
 ## prevent running by root/sudo for security concern
@@ -72,90 +72,12 @@ export QT_PLUGIN_PATH="${APPDIR}/usr/lib/qt4/plugins/:${APPDIR}/usr/lib/i386-lin
 
 
 ##############################################
-## check *.cache directory
+## check if it is running from appimage or running from appdir
 
-# if run directly from AppDir. 
 if [[ -z ${APPIMAGE} ]];
 then
 	export APPIMAGE="$APPDIR"
 fi
-
-if [[ -d ${APPIMAGE}.cache ]];
-then
-	APPIMAGE_CACHE_DIR="${APPIMAGE}.cache"
-else
-	echo "directory  ${APPIMAGE}.cache/ not exist."
-	echo "all data will be saved in /tmp/$(basename "$APPIMAGE").cache/ , which will be deleted after restart computer."
-	echo "to keep your data, please run:"
-	echo ""
-	[[ -n $ARGV0 ]] && echo "  $ARGV0 --portable-cache" || echo "  ${APPIMAGE}/AppRun --portable-cache"
-	echo ""
-	echo "to create a cache directory."
-	mkdir -p "/tmp/$(basename "$APPIMAGE").cache"
-	APPIMAGE_CACHE_DIR="/tmp/$(basename "$APPIMAGE").cache"
-fi
-##############################################
-
-
-##############################################
-## setup unionfs temp directory for this app
-
-RO_MYAPPSTORGE="$APPDIR/usr/share/myapp"
-
-MNT_MYAPPSTORGE="/tmp/$(basename "$APPDIR").unionfs/usr/share/myapp"
-
-TMP_MYAPPSTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share/myapp"
-
-
-RO_HOMESTORGE="/home/$USER/"
-
-MNT_HOMESTORGE="/tmp/$(basename "$APPDIR").unionfs/home/public_user"
-
-TMP_HOMESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/home/public_user"
-
-# backup the path of $HOME because exeinfo-gen need to read the real $HOME instead of the fake one
-HOME_REAL="$HOME"
-HOME_FAKE="$MNT_HOMESTORGE"
-
-##############################################
-
-
-##############################################
-## setup standalone $HOME and $XDG_CONFIG_HOME directory
-## not redirect $HOME and $XDG_CONFIG_HOME at this moment because exeinfo plugin need original $HOME and $XDG_CONFIG_HOME env.
-
-if [[ ! -d ${APPIMAGE_CACHE_DIR}/home/public_user/.config ]];
-then
-	mkdir -p "${APPIMAGE_CACHE_DIR}/home/public_user/.config"
-fi
-
-if [[ -d ${APPIMAGE}.home ]];
-then
-	echo "${APPIMAGE}.home exists but is not necessary."
-	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/ to save related files."
-fi
-
-if [[ -d ${APPIMAGE}.config ]];
-then
-	echo "${APPIMAGE}.config exists but is not necessary."
-	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/.config to save related files."
-fi
-
-##############################################
-
-
-##############################################
-## test runtime env
-#function debug_show(){
-#	cat << EOF
-#APPIMAGE=$APPIMAGE
-#APPDIR=$APPDIR
-#OWD=$OWD
-#ARGV0=$ARGV0
-#\$0=$0
-#EOF
-#}
-[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env APPIMAGE APPDIR OWD ARGV0 0
 ##############################################
 
 
@@ -395,6 +317,87 @@ done
 # unused option/argument will be passed to wine
 eval set -- "$next_parameters"
 
+##############################################
+
+
+##############################################
+## setup *.cache directory
+if [[ -d ${APPIMAGE}.cache ]];
+then
+	APPIMAGE_CACHE_DIR="${APPIMAGE}.cache"
+else
+	echo "directory  ${APPIMAGE}.cache/ not exist."
+	echo "all data will be saved in /tmp/$(basename "$APPIMAGE").cache/ , which will be deleted after restart computer."
+	echo "to keep your data, please run:"
+	echo ""
+	[[ -n $ARGV0 ]] && echo "  $ARGV0 --portable-cache" || echo "  ${APPIMAGE}/AppRun --portable-cache"
+	echo ""
+	echo "to create a cache directory."
+	mkdir -p "/tmp/$(basename "$APPIMAGE").cache"
+	APPIMAGE_CACHE_DIR="/tmp/$(basename "$APPIMAGE").cache"
+fi
+##############################################
+
+
+##############################################
+## setup unionfs temp directory for this app
+
+RO_MYAPPSTORGE="$APPDIR/usr/share/myapp"
+
+MNT_MYAPPSTORGE="/tmp/$(basename "$APPDIR").unionfs/usr/share/myapp"
+
+TMP_MYAPPSTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share/myapp"
+
+
+RO_HOMESTORGE="/home/$USER/"
+
+MNT_HOMESTORGE="/tmp/$(basename "$APPDIR").unionfs/home/public_user"
+
+TMP_HOMESTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/home/public_user"
+
+# backup the path of $HOME because exeinfo-gen need to read the real $HOME instead of the fake one
+HOME_REAL="$HOME"
+HOME_FAKE="$MNT_HOMESTORGE"
+
+##############################################
+
+
+##############################################
+## setup standalone $HOME and $XDG_CONFIG_HOME directory
+## not redirect $HOME and $XDG_CONFIG_HOME at this moment because exeinfo plugin need original $HOME and $XDG_CONFIG_HOME env.
+
+if [[ ! -d ${APPIMAGE_CACHE_DIR}/home/public_user/.config ]];
+then
+	mkdir -p "${APPIMAGE_CACHE_DIR}/home/public_user/.config"
+fi
+
+if [[ -d ${APPIMAGE}.home ]];
+then
+	echo "${APPIMAGE}.home exists but is not necessary."
+	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/ to save related files."
+fi
+
+if [[ -d ${APPIMAGE}.config ]];
+then
+	echo "${APPIMAGE}.config exists but is not necessary."
+	echo "Because we default to use $APPIMAGE_CACHE_DIR/home/public_user/.config to save related files."
+fi
+
+##############################################
+
+
+##############################################
+## test runtime env
+#function debug_show(){
+#	cat << EOF
+#APPIMAGE=$APPIMAGE
+#APPDIR=$APPDIR
+#OWD=$OWD
+#ARGV0=$ARGV0
+#\$0=$0
+#EOF
+#}
+[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env APPIMAGE APPDIR OWD ARGV0 0
 ##############################################
 
 
