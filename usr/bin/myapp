@@ -487,6 +487,36 @@ debug_print_env "PID_MYAPPSTORGE" "PID_HOMESTORGE"
 
 
 ##############################################
+## trap exit setting
+function atexit() {
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+
+	# "rm -rf" included, must check env first.
+	[[ -z "$APPDIR" ]] && echo "[myapp:atexit] ERROR:\$APPDIR not set, could not clean temp files" >&2 && return
+	[[ -z "$APPIMAGE_CACHE_DIR" ]] && echo "[myapp:atexit] ERROR:\$APPIMAGE_CACHE_DIR not set, could not clean temp files." >&2 && return
+
+	echo "[40%] removing drive symlink from wine prefix"
+	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
+	echo "[50%] killing unionfs"
+	#killall "$APPDIR/usr/bin/unionfs"
+	kill -9 $PID_MYAPPSTORGE
+	kill -9 $PID_HOMESTORGE
+	sleep 1
+	echo "[70%] removing /tmp/$(basename "$APPDIR").unionfs"
+	rm -rf "/tmp/$(basename "$APPDIR").unionfs"
+	# if not clean up unionfs hide files, may encounter some read file error next time.
+	echo "[90%] removing unionfs hidden files"
+	rm -rf "$APPIMAGE_CACHE_DIR/usr/share/myapp"/.unionfs* >/dev/null 2>&1
+	rm -rf "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
+
+	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+	echo "[100%] ended"
+}
+trap atexit EXIT SIGHUP SIGINT SIGQUIT SIGKILL SIGTERM
+##############################################
+
+
+##############################################
 ## show the game walkthrough, you can see this info when using commandline to launch this app.
 function walkthrough_browser(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
@@ -719,38 +749,9 @@ function monitor_exe_running(){
 
 
 ##############################################
-## cleanup temp file
+## show saved file location
 
 [[ ! $EXEINFO_GEN_FLAG -eq 1 ]] && savedata_show_location
-
-
-function atexit() {
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
-
-	# "rm -rf" included, must check env first.
-	[[ -z "$APPDIR" ]] && echo "[myapp:atexit] ERROR:\$APPDIR not set, could not clean temp files" >&2 && return
-	[[ -z "$APPIMAGE_CACHE_DIR" ]] && echo "[myapp:atexit] ERROR:\$APPIMAGE_CACHE_DIR not set, could not clean temp files." >&2 && return
-
-	echo "[40%] removing drive symlink from wine prefix"
-	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
-	echo "[50%] killing unionfs"
-	#killall "$APPDIR/usr/bin/unionfs"
-	kill -9 $PID_MYAPPSTORGE
-	kill -9 $PID_HOMESTORGE
-	sleep 1
-	echo "[70%] removing /tmp/$(basename "$APPDIR").unionfs"
-	rm -rf "/tmp/$(basename "$APPDIR").unionfs"
-	# if not clean up unionfs hide files, may encounter some read file error next time.
-	echo "[90%] removing unionfs hidden files"
-	rm -rf "$APPIMAGE_CACHE_DIR/usr/share/myapp"/.unionfs* >/dev/null 2>&1
-	rm -rf "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
-
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
-}
-#set -e
-#trap atexit EXIT	#NOT USED: due to some .exe(as game launcher) would pass EXIT signal after it completed to launch other .exe files. 
-atexit
-echo "[100%] ended"
 
 
 ##############################################
