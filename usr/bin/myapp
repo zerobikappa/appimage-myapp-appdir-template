@@ -554,7 +554,8 @@ function atexit() {
 function preexit(){
 	if [[ $ATEXIT_FLAG -eq 0 ]];
 	then
-		debug_fd_switch "on"
+		#TODO: unable to redirect fd when running
+		#debug_fd_switch "on"
 		exit $?
 	else
 		return
