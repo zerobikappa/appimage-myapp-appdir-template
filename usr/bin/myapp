@@ -491,9 +491,35 @@ debug_print_env "PID_MYAPPSTORGE" "PID_HOMESTORGE"
 function atexit() {
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
+	ATEXIT_FLAG=1
+
 	# "rm -rf" included, must check env first.
 	[[ -z "$APPDIR" ]] && echo "[myapp:atexit] ERROR:\$APPDIR not set, could not clean temp files" >&2 && return
 	[[ -z "$APPIMAGE_CACHE_DIR" ]] && echo "[myapp:atexit] ERROR:\$APPIMAGE_CACHE_DIR not set, could not clean temp files." >&2 && return
+
+	# some application will change the reg in wine.
+	# if return out of this function directly without waiting wine shutdown,
+	# unionfs drive will be unmount immediately.
+	# therefore we can add a "wineboot" command to wait for wine saving the registry.
+	if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
+	then
+		#go back to $APPDIR, then remove temp file
+		cd "$APPDIR" || exit 2
+	
+		if [[ $MYAPPDEBUG -eq 1 ]];
+		then
+			echo "[10%] restore wine drive symlink entries..."
+			wine_restore_prefix
+			echo "[30%] wait shutdown prefix..."
+			wine_wait_shutdown
+		else
+			echo "[10%] restore wine drive symlink entries..."
+			wine_restore_prefix >/dev/null 2>&1
+			echo "[30%] wait shutdown prefix..."
+			wine_wait_shutdown >/dev/null 2>&1
+		fi
+		[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_restore
+	fi
 
 	echo "[40%] removing drive symlink from wine prefix"
 	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
@@ -512,7 +538,20 @@ function atexit() {
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 	echo "[100%] ended"
 }
-trap atexit EXIT SIGHUP SIGINT SIGQUIT SIGKILL SIGTERM
+
+function preexit(){
+	if [[ $ATEXIT_FLAG -eq 0 ]];
+	then
+		exit $?
+	else
+		return
+	fi
+}
+# atexit function takes too much time, use a flag to indicate the running status of atexit()
+# to prevent triggering atexit() again during running atexit()
+ATEXIT_FLAG=0
+trap atexit EXIT
+trap preexit SIGHUP SIGINT SIGQUIT SIGKILL SIGTERM
 ##############################################
 
 
@@ -659,33 +698,36 @@ EOF
 ##############################################
 ## launch app
 
-if [[ $EXEINFO_GEN_FLAG -eq 1 ]];
-then
-	# should use real $HOME to run
-	# otherwise zenity/kdialog may output wrong path in file selection dialog
-	HOME="$HOME_REAL" exeinfo_main
-
-	# if I need to remove some file before end the program
-	# I may forgot to change $HOME to fake home
-	# it is better to switch to fake home immediately
-	HOME="$HOME_FAKE"
-fi
-
-
-if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
-then
-	[[ -n $MYAPPLANG ]] && LANG=$MYAPPLANG || echo "MYAPPLANG not set, using current LANG:$LANG"
-	export HOME="$HOME_FAKE"
-	export XDG_CONFIG_HOME="$HOME_FAKE/.config"
-	debug_print_env "HOME" "XDG_CONFIG_HOME" "WINETRICKS_BIN"
-	echo "*****using $WINEARCH"
-	if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
+function myapp_launch(){
+	if [[ $EXEINFO_GEN_FLAG -eq 1 ]];
 	then
-		wine_run_winetricks "$@"
-	else
-		wine_run_exe "$@"
+		# should use real $HOME to run
+		# otherwise zenity/kdialog may output wrong path in file selection dialog
+		HOME="$HOME_REAL" exeinfo_main
+	
+		# if I need to remove some file before end the program
+		# I may forgot to change $HOME to fake home
+		# it is better to switch to fake home immediately
+		HOME="$HOME_FAKE"
 	fi
-fi
+	
+	
+	if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
+	then
+		[[ -n $MYAPPLANG ]] && LANG=$MYAPPLANG || echo "MYAPPLANG not set, using current LANG:$LANG"
+		export HOME="$HOME_FAKE"
+		export XDG_CONFIG_HOME="$HOME_FAKE/.config"
+		debug_print_env "HOME" "XDG_CONFIG_HOME" "WINETRICKS_BIN"
+		echo "*****using $WINEARCH"
+		if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
+		then
+			wine_run_winetricks "$@"
+		else
+			wine_run_exe "$@"
+		fi
+	fi
+}
+myapp_launch
 
 
 ##############################################
@@ -717,29 +759,6 @@ function monitor_exe_running(){
 			break	# the $EXENAME exe is no longer running
 		fi
 	done
-	# some application will change the reg in wine.
-	# if return out of this function directly without waiting wine shutdown,
-	# unionfs drive will be unmount immediately.
-	# therefore we can add a "wineboot" command to wait for wine saving the registry.
-	if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
-	then
-		#go back to $APPDIR, then remove temp file
-		cd "$APPDIR" || exit 2
-	
-		if [[ $MYAPPDEBUG -eq 1 ]];
-		then
-			echo "[10%] restore wine drive symlink entries..."
-			wine_restore_prefix
-			echo "[30%] wait shutdown prefix..."
-			wine_wait_shutdown
-		else
-			echo "[10%] restore wine drive symlink entries..."
-			wine_restore_prefix >/dev/null 2>&1
-			echo "[30%] wait shutdown prefix..."
-			wine_wait_shutdown >/dev/null 2>&1
-		fi
-		[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_restore
-	fi
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
