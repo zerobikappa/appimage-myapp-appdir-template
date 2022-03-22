@@ -205,14 +205,8 @@ function wine_restore_prefix(){
 	[[ ! -d "$APPIMAGE_CACHE_DIR/usr/share/myapp/drive_d" ]] && mkdir -p "$APPIMAGE_CACHE_DIR/usr/share/myapp/drive_d"
 
 	# only setup wineprefix and do nothing
-	if [[ $MYAPPDEBUG -eq 1 ]];
-	then
-		#[[ ! -d $WINEPREFIX ]] && "$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" cmd /C exit
-		[[ ! -d $WINEPREFIX ]] && "$HOME/$PROTON_DIR_FROM_HOME/proton" run cmd /C exit
-	else
-		#[[ ! -d $WINEPREFIX ]] && "$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" cmd /C exit >/dev/null 2>&1
-		[[ ! -d $WINEPREFIX ]] && "$HOME/$PROTON_DIR_FROM_HOME/proton" run cmd /C exit >/dev/null 2>&1
-	fi
+	#[[ ! -d $WINEPREFIX ]] && "$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" cmd /C exit
+	[[ ! -d $WINEPREFIX ]] && "$HOME/$PROTON_DIR_FROM_HOME/proton" run cmd /C exit >&3 2>&4
 
 	# proton seems has file tracking and repair function
 	# mybe it can be more stable to update proton prefix every time
@@ -302,15 +296,15 @@ function wine_restore_prefix(){
 		ln -sfn "../../../../../../../../../home/public_user/$FAKE_VIDEOS_DIR_NAME" "$WINEPREFIX/drive_c/users/steamuser/Videos"
 	fi
 
-	if [[ -d "$WINEPREFIX/drive_c/users/steamuser/AppData/Roaming" ]];
+	if [[ -d "$WINEPREFIX/drive_c/users/steamuser/AppData/Roaming" && ! -L "$WINEPREFIX/drive_c/users/steamuser/AppData/Roaming" ]];
 	then
 		mkdir -p "$MNT_HOMESTORGE/AppData"
 		mv -f "$WINEPREFIX/drive_c/users/steamuser/AppData/Roaming" "$MNT_HOMESTORGE/AppData"
 		rm -rf "$WINEPREFIX/drive_c/users/steamuser/AppData/Roaming"
-		#refer path: .../myapp/myapp_fonts
-		#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/windows/Fonts
-		ln -sfnv ../../../../../../../../../../home/public_user/AppData/Roaming "$WINEPREFIX/drive_c/users/steamuser/AppData/Roaming"
 	fi
+	#refer path: .../myapp/myapp_fonts
+	#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/windows/Fonts
+	ln -sfnv ../../../../../../../../../../home/public_user/AppData/Roaming "$WINEPREFIX/drive_c/users/steamuser/AppData/Roaming"
 	
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
@@ -340,14 +334,8 @@ function wine_patch_reg(){
 	# I tried to disable autostart winedbg via loading the .reg by regedit but failed.
 	# as a workaround I use winetricks to disable autostart debugger.
 	# TODO: seems the imported reg were effected in wow6432node instead of the correct reg path
-	if [[ $MYAPPDEBUG -eq 1 ]];
-	then
-		#winetricks autostart_winedbg=disabled
-		"$WINETRICKS_BIN" autostart_winedbg=disabled
-	else
-		#winetricks autostart_winedbg=disabled >/dev/null 2>&1
-		"$WINETRICKS_BIN" autostart_winedbg=disabled >/dev/null 2>&1
-	fi
+	#winetricks autostart_winedbg=disabled
+	"$WINETRICKS_BIN" autostart_winedbg=disabled >&3 2>&4 &
 
 	if [[ -n "$(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg 2>/dev/null )" ]];
 	then
@@ -378,32 +366,17 @@ function wine_patch_reg(){
 function wine_run_winetricks(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
-	if [[ $MYAPPDEBUG -eq 1 ]];
-	then
-		echo "[20%] prepare prefix"
-		wine_restore_prefix
-		#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
-		echo "[60%] patch wine registry"
-		wine_patch_reg
-		echo "[70%] restore completed, wait shutdown prefix"
-		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
-		wine_wait_shutdown
-		echo "[100%] launch"
-		#"$APPDIR"/usr/bin/winetricks "$@"
-		"$WINETRICKS_BIN" "$@"
-	else
-		echo "[20%] prepare prefix"
-		wine_restore_prefix >/dev/null 2>&1
-		#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
-		echo "[60%] patch wine registry"
-		wine_patch_reg >/dev/null 2>&1
-		echo "[70%] restore completed, wait shutdown prefix"
-		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
-		wine_wait_shutdown >/dev/null 2>&1
-		echo "[100%] launch"
-		#"$APPDIR"/usr/bin/winetricks "$@" >/dev/null 2>&1
-		"$WINETRICKS_BIN" "$@" >/dev/null 2>&1
-	fi
+	echo "[20%] prepare prefix"
+	wine_restore_prefix >&3 2>&4
+	#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
+	echo "[60%] patch wine registry"
+	wine_patch_reg >&3 2>&4
+	echo "[70%] restore completed, wait shutdown prefix"
+	#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
+	wine_wait_shutdown >&3 2>&4
+	echo "[100%] launch"
+	#"$APPDIR"/usr/bin/winetricks "$@"
+	"$WINETRICKS_BIN" "$@" >&3 2>&4
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }
@@ -411,26 +384,14 @@ function wine_run_winetricks(){
 function wine_run_exe(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
-	if [[ $MYAPPDEBUG -eq 1 ]];
-	then
-		echo "[20%] prepare prefix"
-		wine_restore_prefix
-		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
-		echo "[60%] patch wine registry"
-		wine_patch_reg
-		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
-		echo "[70%] restore completed, wait shutdown prefix"
-		wine_wait_shutdown
-	else
-		echo "[20%] prepare prefix"
-		wine_restore_prefix >/dev/null 2>&1
-		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
-		echo "[60%] patch wine registry"
-		wine_patch_reg >/dev/null 2>&1
-		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
-		echo "[70%] restore completed, wait shutdown prefix"
-		wine_wait_shutdown >/dev/null 2>&1
-	fi
+	echo "[20%] prepare prefix"
+	wine_restore_prefix >&3 2>&4
+	#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
+	echo "[60%] patch wine registry"
+	wine_patch_reg >&3 2>&4
+	#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
+	echo "[70%] restore completed, wait shutdown prefix"
+	wine_wait_shutdown >&3 2>&4
 
 	if [[ $WALKTHROUGH_FLAG -eq 1 ]];
 	then
@@ -448,14 +409,8 @@ function wine_run_exe(){
 
 	#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path if winetricks sandbox was set.
 	echo "[100%] launch"
-	if [[ $MYAPPDEBUG -eq 1 ]];
-	then
-		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@"
-		"$HOME/$PROTON_DIR_FROM_HOME/proton" run "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@"
-	else
-		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" >/dev/null 2>&1
-		"$HOME/$PROTON_DIR_FROM_HOME/proton" run "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" >/dev/null 2>&1
-	fi
+	#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" >/dev/null 2>&1
+	"$HOME/$PROTON_DIR_FROM_HOME/proton" run "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" >&3 2>&4
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
 }

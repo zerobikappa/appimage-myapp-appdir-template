@@ -23,20 +23,39 @@ function debug_print_env(){
 	done
 }
 
-if [[ "$MYAPPDEBUG" -eq 2 ]];
-then
-	# use bash debug + buildin debug info
-	set -x
-	MYAPPDEBUG=1
-elif [[ "$MYAPPDEBUG" -eq 1 ]];
-then
-	# only use buildin debug info
-	set +x
-else
-	# invalid value, reset to empty
-	set +x
-	unset MYAPPDEBUG
-fi
+function debug_fd_switch(){
+	# on: show debug info
+	# off: redirect debug info to /dev/null
+	if [[ "$1" == "on" ]];
+	then
+		exec 3>&1
+		exec 4>&2
+	else
+		exec 3>/dev/null
+		exec 4>/dev/null
+	fi
+}
+
+function debug_set(){
+	if [[ "$MYAPPDEBUG" -eq 2 ]];
+	then
+		# use bash debug + buildin debug info
+		set -x
+		MYAPPDEBUG=1
+		debug_fd_switch "on"
+	elif [[ "$MYAPPDEBUG" -eq 1 ]];
+	then
+		# only use buildin debug info
+		set +x
+		debug_fd_switch "on"
+	else
+		# invalid value, reset to empty
+		set +x
+		unset MYAPPDEBUG
+		debug_fd_switch "off"
+	fi
+}
+debug_set
 #############################################
 
 
@@ -506,18 +525,11 @@ function atexit() {
 		#go back to $APPDIR, then remove temp file
 		cd "$APPDIR" || exit 2
 	
-		if [[ $MYAPPDEBUG -eq 1 ]];
-		then
-			echo "[10%] restore wine drive symlink entries..."
-			wine_restore_prefix
-			echo "[30%] wait shutdown prefix..."
-			wine_wait_shutdown
-		else
-			echo "[10%] restore wine drive symlink entries..."
-			wine_restore_prefix >/dev/null 2>&1
-			echo "[30%] wait shutdown prefix..."
-			wine_wait_shutdown >/dev/null 2>&1
-		fi
+		echo "[10%] restore wine drive symlink entries..."
+		wine_restore_prefix >&3 2>&4
+		echo "[30%] wait shutdown prefix..."
+		wine_wait_shutdown >&3 2>&4
+
 		[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_restore
 	fi
 
@@ -542,6 +554,7 @@ function atexit() {
 function preexit(){
 	if [[ $ATEXIT_FLAG -eq 0 ]];
 	then
+		debug_fd_switch "on"
 		exit $?
 	else
 		return
