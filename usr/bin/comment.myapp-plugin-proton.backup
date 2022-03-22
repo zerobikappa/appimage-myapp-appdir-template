@@ -14,6 +14,52 @@ function wine_test_env(){
 
 
 ##############################################
+## detect winetricks bin
+function wine_detect_winetricks(){
+	LOCAL_WINETRICKS_BIN=""
+	APPIMAGE_WINETRICKS_BIN=""
+
+	export PATH="$PATH_OLD"
+	if [[ -x "$(command -v winetricks)" ]];
+	then
+		LOCAL_WINETRICKS_BIN="$(command -v winetricks)"
+	fi
+	export PATH="$PATH_NEW"
+
+	if [[ -x "$APPDIR/usr/bin/winetricks" ]];
+	then
+		APPIMAGE_WINETRICKS_BIN="$APPDIR/usr/bin/winetricks"
+	fi
+
+	# both are not exist
+	if [[ -z "$LOCAL_WINETRICKS_BIN" && -z "$APPIMAGE_WINETRICKS_BIN" ]];
+	then
+		echo "command not found: winetricks"
+		exit 1
+	fi
+
+	# only one of them is exist
+	if [[ -z "$LOCAL_WINETRICKS_BIN" ]];
+	then
+		[[ -n "$APPIMAGE_WINETRICKS_BIN" ]] && WINETRICKS_BIN="$APPIMAGE_WINETRICKS_BIN"
+	else
+		[[ -z "$APPIMAGE_WINETRICKS_BIN" ]] && WINETRICKS_BIN="$LOCAL_WINETRICKS_BIN"
+	fi
+
+	# both are exist
+	LOCAL_WINETRICKS_VERSION="$($LOCAL_WINETRICKS_BIN --version | awk '{print $1}')"
+	APPIMAGE_WINETRICKS_VERSION="$($APPIMAGE_WINETRICKS_BIN --version | awk '{print $1}')"
+	if [[ "$LOCAL_WINETRICKS_VERSION" > "$APPIMAGE_WINETRICKS_VERSION" ]];
+	then
+		WINETRICKS_BIN="$LOCAL_WINETRICKS_BIN"
+	else
+		WINETRICKS_BIN="$APPIMAGE_WINETRICKS_BIN"
+	fi
+}
+##############################################
+
+
+##############################################
 function wine_search_proton(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 	# you need to install steam proton before you use proton mode
@@ -336,9 +382,11 @@ function wine_patch_reg(){
 	#zh# TODO: 原来导入的注册表在wow6432node下的路径生效了，原因未知
 	if [[ $MYAPPDEBUG -eq 1 ]];
 	then
-		winetricks autostart_winedbg=disabled
+		#winetricks autostart_winedbg=disabled
+		"$WINETRICKS_BIN" autostart_winedbg=disabled
 	else
-		winetricks autostart_winedbg=disabled >/dev/null 2>&1
+		#winetricks autostart_winedbg=disabled >/dev/null 2>&1
+		"$WINETRICKS_BIN" autostart_winedbg=disabled >/dev/null 2>&1
 	fi
 
 	#zh# 有些安装版的游戏会写入信息在注册表里，如果删除了WINEPREFIX，就算游戏文件还在也无法运行游戏
@@ -385,7 +433,8 @@ function wine_run_winetricks(){
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
 		wine_wait_shutdown
 		echo "[100%] launch"
-		"$APPDIR"/usr/bin/winetricks "$@"
+		#"$APPDIR"/usr/bin/winetricks "$@"
+		"$WINETRICKS_BIN" "$@"
 	else
 		echo "[20%] prepare prefix"
 		wine_restore_prefix >/dev/null 2>&1
@@ -396,7 +445,8 @@ function wine_run_winetricks(){
 		#"$HOME/$PROTON_DIR_FROM_HOME/temprun.$WINEARCH.proton" run wineboot -s
 		wine_wait_shutdown >/dev/null 2>&1
 		echo "[100%] launch"
-		"$APPDIR"/usr/bin/winetricks "$@" >/dev/null 2>&1
+		#"$APPDIR"/usr/bin/winetricks "$@" >/dev/null 2>&1
+		"$WINETRICKS_BIN" "$@" >/dev/null 2>&1
 	fi
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
@@ -473,6 +523,7 @@ then
 	[[ -n $EXEINFO_GEN_METHOD ]] || echo "[AppRun:plugin_exeinfo] required \$EXEINFO_GEN_METHOD but it was not set"
 	[[ -n $APPDIR || -n $APPIMAGE_CACHE_DIR || -n $EXEINFO_GEN_METHOD ]] || exit
 fi
+wine_detect_winetricks
 
 ##############################################
 
