@@ -475,7 +475,7 @@ fi
 
 ##############################################
 ## mount unionfs
-echo "[10%] mount unionfs"
+echo "[unionfs:0%] mount unionfs"
 
 # before setup unionfs temp directory, check if exe is already running
 if [[ -n "$EXENAME" && -n "$(pgrep -fi "$EXENAME")" ]];
@@ -502,6 +502,7 @@ fi
 PID_MYAPPSTORGE="$(pgrep -a unionfs | grep "$MNT_MYAPPSTORGE" | awk '{print $1}')"
 PID_HOMESTORGE="$(pgrep -a unionfs | grep "$MNT_HOMESTORGE" | awk '{print $1}')"
 debug_print_env "PID_MYAPPSTORGE" "PID_HOMESTORGE"
+echo "[unionfs:100%] mount unionfs"
 ##############################################
 
 
@@ -525,30 +526,30 @@ function atexit() {
 		#go back to $APPDIR, then remove temp file
 		cd "$APPDIR" || exit 2
 	
-		echo "[10%] restore wine drive symlink entries..."
+		echo "[${FUNCNAME[0]}:10%] restore wine drive symlink entries..."
 		wine_restore_prefix >&3 2>&4
-		echo "[30%] wait shutdown prefix..."
+		echo "[${FUNCNAME[0]}:30%] wait shutdown prefix..."
 		wine_wait_shutdown >&3 2>&4
 
 		[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_restore
 	fi
 
-	echo "[40%] removing drive symlink from wine prefix"
+	echo "[${FUNCNAME[0]}:40%] removing drive symlink from wine prefix"
 	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
-	echo "[50%] killing unionfs"
+	echo "[${FUNCNAME[0]}:50%] killing unionfs"
 	#killall "$APPDIR/usr/bin/unionfs"
 	kill -9 $PID_MYAPPSTORGE
 	kill -9 $PID_HOMESTORGE
 	sleep 1
-	echo "[70%] removing /tmp/$(basename "$APPDIR").unionfs"
+	echo "[${FUNCNAME[0]}:70%] removing /tmp/$(basename "$APPDIR").unionfs"
 	rm -rf "/tmp/$(basename "$APPDIR").unionfs"
 	# if not clean up unionfs hide files, may encounter some read file error next time.
-	echo "[90%] removing unionfs hidden files"
+	echo "[${FUNCNAME[0]}:90%] removing unionfs hidden files"
 	rm -rf "$APPIMAGE_CACHE_DIR/usr/share/myapp"/.unionfs* >/dev/null 2>&1
 	rm -rf "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
-	echo "[100%] ended"
+	echo "[${FUNCNAME[0]}:100%] ended"
 }
 
 function preexit(){

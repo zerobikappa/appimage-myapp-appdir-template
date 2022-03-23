@@ -166,7 +166,7 @@ function wine_patch_reg(){
 	# as a workaround I use winetricks to disable autostart debugger.
 	# TODO: seems the imported reg were effected in wow6432node instead of the correct reg path
 	#winetricks autostart_winedbg=disabled
-	"$WINETRICKS_BIN" autostart_winedbg=disabled >&3 2>&4 &
+	"$WINETRICKS_BIN" autostart_winedbg=disabled >&3 2>&4
 
 	if [[ -n "$(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg 2>/dev/null )" ]];
 	then
@@ -195,14 +195,16 @@ function wine_patch_reg(){
 function wine_run_winetricks(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
-	echo "[20%] prepare prefix"
-	wine_restore_prefix >&3 2>&4
+	echo "[${FUNCNAME[0]}:20%] prepare prefix"
+	wine_restore_prefix >&3 2>&4 &
+	wait
 	#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
-	echo "[60%] patch wine registry"
-	wine_patch_reg >&3 2>&4
-	echo "[70%] restore completed, wait shutdown prefix"
+	echo "[${FUNCNAME[0]}:60%] patch wine registry"
+	wine_patch_reg >&3 2>&4 &
+	wait
+	echo "[${FUNCNAME[0]}:70%] restore completed, wait shutdown prefix"
 	wine_wait_shutdown >&3 2>&4
-	echo "[100%] launch"
+	echo "[${FUNCNAME[0]}:100%] launch"
 	#"$APPDIR"/usr/bin/winetricks "$@"
 	"$WINETRICKS_BIN" "$@" >&3 2>&4
 
@@ -212,30 +214,32 @@ function wine_run_winetricks(){
 function wine_run_exe(){
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
 
-	echo "[20%] prepare prefix"
-	wine_restore_prefix >&3 2>&4
+	echo "[${FUNCNAME[0]}:20%] prepare prefix"
+	wine_restore_prefix >&3 2>&4 &
+	wait
 	#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
-	echo "[60%] patch wine registry"
-	wine_patch_reg >&3 2>&4
-	echo "[70%] restore completed, wait shutdown prefix"
+	echo "[${FUNCNAME[0]}:60%] patch wine registry"
+	wine_patch_reg >&3 2>&4 &
+	wait
+	echo "[${FUNCNAME[0]}:70%] restore completed, wait shutdown prefix"
 	wine_wait_shutdown >&3 2>&4
 
 	if [[ $WALKTHROUGH_FLAG -eq 1 ]];
 	then
-		echo "[80%] open walkthrough"
+		echo "[${FUNCNAME[0]}:80%] open walkthrough"
 		walkthrough_browser
 	fi
 
 	if [[ $SAVEDATA_FLAG -eq 1 ]];
 	then
-		echo "[90%] load full achieved savedata"
+		echo "[${FUNCNAME[0]}:90%] load full achieved savedata"
 		savedata_replace
 	fi
 
 	cd "$MNT_MYAPPSTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
 
 	#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path if winetricks sandbox was set.
-	echo "[100%] launch"
+	echo "[${FUNCNAME[0]}:100%] launch"
 	wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" >&3 2>&4
 
 	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
