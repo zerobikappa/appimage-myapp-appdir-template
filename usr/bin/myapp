@@ -2,14 +2,14 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1647961804
+MYAPPRUN_VERSION=1648144296
 
 #############################################
 ## prevent running by root/sudo for security concern
 if [[ $(id -u) -eq 0 ]];
 then
-	echo "[AppRun]: prevent running by root/sudo"
-	echo "[AppRun]: you should not using root/sudo to run this application"
+	echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: prevent running by root/sudo"
+	echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: you should not using root/sudo to run this application"
 	exit
 fi
 #############################################
@@ -17,26 +17,54 @@ fi
 
 #############################################
 function debug_print_env(){
-	for i in "$@";
-	do
-		eval echo "\ \ \ \ $i=\$$i"
-	done
+	if [[ $MYAPPDEBUG_COLOR -eq 1 ]];
+	then
+		for i in "$@";
+		do
+			#eval echo -e "\ \ \ \ '\033[43m'$i'\033[0m'=\$$i"
+			eval echo -e "\ \ \ \ '\033[1;93m'$i'\033[0m'=\$$i"
+		done
+	else
+		for i in "$@";
+		do
+			eval echo "\ \ \ \ $i=\$$i"
+		done
+	fi
 }
 
-if [[ "$MYAPPDEBUG" -eq 2 ]];
-then
-	# use bash debug + buildin debug info
-	set -x
-	MYAPPDEBUG=1
-elif [[ "$MYAPPDEBUG" -eq 1 ]];
-then
-	# only use buildin debug info
-	set +x
-else
-	# invalid value, reset to empty
-	set +x
-	unset MYAPPDEBUG
-fi
+function debug_fd_switch(){
+	# on: show debug info
+	# off: redirect debug info to /dev/null
+	if [[ "$1" == "on" ]];
+	then
+		exec 3>&1
+		exec 4>&2
+	else
+		exec 3>/dev/null
+		exec 4>/dev/null
+	fi
+}
+
+function debug_set(){
+	if [[ "$MYAPPDEBUG" -eq 2 ]];
+	then
+		# use bash debug + buildin debug info
+		set -x
+		MYAPPDEBUG=1
+		debug_fd_switch "on"
+	elif [[ "$MYAPPDEBUG" -eq 1 ]];
+	then
+		# only use buildin debug info
+		set +x
+		debug_fd_switch "on"
+	else
+		# invalid value, reset to empty
+		set +x
+		unset MYAPPDEBUG
+		debug_fd_switch "off"
+	fi
+}
+debug_set
 #############################################
 
 
@@ -51,10 +79,10 @@ SELF=$(readlink -f "$0")
 if [[ -x "$(command -v unionfs)" ]];
 then
 	UNIONFS_BIN="$(command -v unionfs)"
-	[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env UNIONFS_BIN
+	debug_print_env UNIONFS_BIN >&3 2>&4
 else
 	UNIONFS_BIN="$APPDIR/usr/bin/unionfs"
-	[[ $MYAPPDEBUG -eq 1 ]] && debug_print_env UNIONFS_BIN
+	debug_print_env UNIONFS_BIN >&3 2>&4
 fi
 
 # keep a backup of $PATH location. Because later I will compare the version number of local winetricks and builtin winetricks.
@@ -78,6 +106,7 @@ export QT_PLUGIN_PATH="${APPDIR}/usr/lib/qt4/plugins/:${APPDIR}/usr/lib/i386-lin
 ##############################################
 ## check if it is running from appimage or running from appdir
 
+# if run directly from AppDir. 
 if [[ -z ${APPIMAGE} ]];
 then
 	export APPIMAGE="$APPDIR"
@@ -202,6 +231,9 @@ EOF
 #parameters=$(getopt -o swth --long save-data,walkthrough,browser:,test-winetricks,help -n "$0" -- "$@")	# NOTUSED: because $(getopt) cannot ignore unknown options
 
 parameters=$(echo "$@"|tr "=" " ")
+# in this script, if I initialize a variable to empty,
+# that means I want to avoid some unexpected error,
+# in case user pass an initial value in command line
 next_parameters=""
 eval set -- "$parameters"
 
@@ -235,7 +267,7 @@ while [[ -n "$1" ]] ; do
 			shift ;;
 		--browser)
 			#i3-sensible-browser will choose $BROWSER to open walkthrough first
-			[[ $(option_check "$2") != "none" ]] && echo "invalid option $1" >&2 && exit 1
+			[[ $(option_check "$2") != "none" ]] && echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: invalid option $1" >&2 && exit 1
 			BROWSER="$2"
 			shift 2;;
 		-t| --test-winetricks)
@@ -279,8 +311,8 @@ while [[ -n "$1" ]] ; do
 				break
 			elif [[ ! $MYAPPDEBUG -eq 1 ]];
 			then
-				echo "[AppRun] error: not MYAPPDEBUG mode now. prevent to pass any unknown option." >&2
-				echo "[AppRun] error: unknown options: $next_parameters $@" >&2
+				echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: not MYAPPDEBUG mode now. prevent to pass any unknown option." >&2
+				echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: unknown options: $next_parameters $@" >&2
 				exit
 			else
 				# then $next_parameters will be passed to wine
@@ -302,8 +334,8 @@ while [[ -n "$1" ]] ; do
 				[[ -z $next_parameters ]] && next_parameters="$1" || next_parameters="$next_parameters $1"
 				shift
 			else
-				echo "[AppRun] error: not MYAPPDEBUG mode now. prevent to pass any unknow option." >&2
-				echo "[AppRun] error: unknown options: $1" >&2
+				echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: not MYAPPDEBUG mode now. prevent to pass any unknow option." >&2
+				echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: unknown options: $1" >&2
 				exit
 			fi
 			;;
@@ -330,13 +362,17 @@ if [[ -d ${APPIMAGE}.cache ]];
 then
 	APPIMAGE_CACHE_DIR="${APPIMAGE}.cache"
 else
-	echo "directory  ${APPIMAGE}.cache/ not exist."
-	echo "all data will be saved in /tmp/$(basename "$APPIMAGE").cache/ , which will be deleted after restart computer."
-	echo "to keep your data, please run:"
+	echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+	echo "@"
+	echo "  directory ${APPIMAGE}.cache/ not exist."
+	echo "  all data will be saved in /tmp/$(basename "$APPIMAGE").cache/ , which will be deleted after restart computer."
+	echo "  to keep your data, please run:"
 	echo ""
-	[[ -n $ARGV0 ]] && echo "  $ARGV0 --portable-cache" || echo "  ${APPIMAGE}/AppRun --portable-cache"
+	[[ -n $ARGV0 ]] && echo "    $ARGV0 --portable-cache" || echo "    ${APPIMAGE}/AppRun --portable-cache"
 	echo ""
-	echo "to create a cache directory."
+	echo "  to create a cache directory."
+	echo "@"
+	echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 	mkdir -p "/tmp/$(basename "$APPIMAGE").cache"
 	APPIMAGE_CACHE_DIR="/tmp/$(basename "$APPIMAGE").cache"
 fi
@@ -413,7 +449,7 @@ else
 	source "$APPDIR"/usr/bin/myapp-plugin-wine
 fi
 wine_set_env
-debug_print_env "APPDIR" "WINEPREFIX"
+MYAPPDEBUG_COLOR=1 debug_print_env "APPDIR" "WINEPREFIX"
 ##############################################
 
 
@@ -456,12 +492,12 @@ fi
 
 ##############################################
 ## mount unionfs
-echo "[10%] mount unionfs"
+echo "[unionfs:0%] mount unionfs"
 
 # before setup unionfs temp directory, check if exe is already running
 if [[ -n "$EXENAME" && -n "$(pgrep -fi "$EXENAME")" ]];
 then 
-	echo "seems $EXENAME has been launched and is still running, plsease kill the process if the application encountered error" >&2
+	echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: seems $EXENAME has been launched and is still running, plsease kill the process if the application encountered error" >&2
 	exit 1
 fi
 
@@ -482,14 +518,85 @@ fi
 
 PID_MYAPPSTORGE="$(pgrep -a unionfs | grep "$MNT_MYAPPSTORGE" | awk '{print $1}')"
 PID_HOMESTORGE="$(pgrep -a unionfs | grep "$MNT_HOMESTORGE" | awk '{print $1}')"
-debug_print_env "PID_MYAPPSTORGE" "PID_HOMESTORGE"
+MYAPPDEBUG_COLOR=1 debug_print_env "PID_MYAPPSTORGE" "PID_HOMESTORGE"
+echo "[unionfs:100%] mount unionfs"
+##############################################
+
+
+##############################################
+## trap exit setting
+function atexit() {
+	echo "start >>>>>>>> [${FUNCNAME[0]}]" >&3
+
+	export ATEXIT_FLAG=1
+
+	# "rm -rf" included, must check env first.
+	[[ -z "$APPDIR" ]] && echo "[myapp:atexit] ERROR:\$APPDIR not set, could not clean temp files" >&2 && return
+	[[ -z "$APPIMAGE_CACHE_DIR" ]] && echo "[myapp:atexit] ERROR:\$APPIMAGE_CACHE_DIR not set, could not clean temp files." >&2 && return
+
+	# some application will change the reg in wine.
+	# if return out of this function directly without waiting wine shutdown,
+	# unionfs drive will be unmount immediately.
+	# therefore we can add a "wineboot" command to wait for wine saving the registry.
+	if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
+	then
+		#go back to $APPDIR, then remove temp file
+		cd "$APPDIR" || exit 2
+	
+		echo "[${FUNCNAME[0]}:10%] restore wine drive symlink entries..."
+		wine_restore_prefix >&3 2>&4
+		echo "[${FUNCNAME[0]}:30%] wait shutdown prefix..."
+		wine_wait_shutdown >&3 2>&4
+		# "wineserver -k" was included in wine_wait_shutdown, but still make second attempt here if previous step was interrupted.
+		# to ensure all the exe process are killed
+		if [[ $? -ne 0 ]];
+		then
+			wineserver -k
+		fi
+
+		[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_restore
+	fi
+
+	echo "[${FUNCNAME[0]}:40%] removing drive symlink from wine prefix"
+	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
+	echo "[${FUNCNAME[0]}:50%] killing unionfs"
+	#killall "$APPDIR/usr/bin/unionfs"
+	kill -9 $PID_MYAPPSTORGE
+	kill -9 $PID_HOMESTORGE
+	sleep 1
+	echo "[${FUNCNAME[0]}:70%] removing /tmp/$(basename "$APPDIR").unionfs"
+	rm -rf "/tmp/$(basename "$APPDIR").unionfs"
+	# if not clean up unionfs hide files, may encounter some read file error next time.
+	echo "[${FUNCNAME[0]}:90%] removing unionfs hidden files"
+	rm -rf "$APPIMAGE_CACHE_DIR/usr/share/myapp"/.unionfs* >/dev/null 2>&1
+	rm -rf "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
+
+	echo "[${FUNCNAME[0]}:100%] ended"
+	echo "end >>>>>>>> [${FUNCNAME[0]}]" >&3
+}
+
+function preexit(){
+	if [[ $ATEXIT_FLAG -eq 0 ]];
+	then
+		#TODO: unable to redirect fd when running
+		#debug_fd_switch "on"
+		exit $?
+	else
+		return
+	fi
+}
+# atexit function takes too much time, use a flag to indicate the running status of atexit()
+# to prevent triggering atexit() again during running atexit()
+ATEXIT_FLAG=0
+trap atexit EXIT
+trap preexit SIGHUP SIGINT SIGQUIT SIGKILL SIGTERM
 ##############################################
 
 
 ##############################################
 ## show the game walkthrough, you can see this info when using commandline to launch this app.
 function walkthrough_browser(){
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+	echo "start >>>>>>>> [${FUNCNAME[0]}]" >&3
 
 	cat << EOF
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -527,7 +634,7 @@ EOF
 	[[ -n "$(find "$MNT_MYAPPSTORGE/myapp_walkthrough" -mindepth 1 -maxdepth 1 -name "*.html")" ]] && i3-sensible-browser "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.html
 	[[ -n "$(find "$MNT_MYAPPSTORGE/myapp_walkthrough" -mindepth 1 -maxdepth 1 -name "*.pdf")" ]] && i3-sensible-browser "$MNT_MYAPPSTORGE/myapp_walkthrough"/*.pdf
 
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+	echo "end >>>>>>>> [${FUNCNAME[0]}]" >&3
 }
 
 ##############################################
@@ -536,7 +643,7 @@ EOF
 ##############################################
 ## game savedata
 function savedata_replace(){
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+	echo "start >>>>>>>> [${FUNCNAME[0]}]" >&3
 
 	HOME="$HOME_FAKE"
 	exeinfo_user_dirs
@@ -551,11 +658,11 @@ function savedata_replace(){
 		cp -r --suffix=.myapp."$USER".backup "$MNT_MYAPPSTORGE/myapp_savedata"/* "$SAVEDATA_DIR"
 	fi
 
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+	echo "end >>>>>>>> [${FUNCNAME[0]}]" >&3
 }
 
 function savedata_restore(){
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+	echo "start >>>>>>>> [${FUNCNAME[0]}]" >&3
 
 	HOME="$HOME_FAKE"
 	if [[ -z "$SAVEDATA_DIR" ]];
@@ -584,25 +691,28 @@ function savedata_restore(){
 	echo ""
 	unset SAVEDATA_BACKUP
 
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+	echo "end >>>>>>>> [${FUNCNAME[0]}]" >&3
 }
 
 function savedata_show_location(){
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+	echo "start >>>>>>>> [${FUNCNAME[0]}]" >&3
 
 cat << EOF
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @
 @
 @
-  your savedata will be saved at file://$TMP_MYAPPSTORGE_OVERLAY/
+  your files are saved in:
+@
+    file://$TMP_MYAPPSTORGE_OVERLAY/
+    file://$TMP_HOMESTORGE_OVERLAY/
 @
 @
 @
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 EOF
 
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+	echo "end >>>>>>>> [${FUNCNAME[0]}]" >&3
 }
 
 ##############################################
@@ -629,33 +739,40 @@ EOF
 ##############################################
 ## launch app
 
-if [[ $EXEINFO_GEN_FLAG -eq 1 ]];
-then
-	# should use real $HOME to run
-	# otherwise zenity/kdialog may output wrong path in file selection dialog
-	HOME="$HOME_REAL" exeinfo_main
-
-	# if I need to remove some file before end the program
-	# I may forgot to change $HOME to fake home
-	# it is better to switch to fake home immediately
-	HOME="$HOME_FAKE"
-fi
-
-
-if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
-then
-	[[ -n $MYAPPLANG ]] && LANG=$MYAPPLANG || echo "MYAPPLANG not set, using current LANG:$LANG"
-	export HOME="$HOME_FAKE"
-	export XDG_CONFIG_HOME="$HOME_FAKE/.config"
-	debug_print_env "HOME" "XDG_CONFIG_HOME" "WINETRICKS_BIN"
-	echo "*****using $WINEARCH"
-	if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
+function myapp_launch(){
+	# should mount unionfs before run exeinfo generator
+	# because zenity and kdialog may read the config files in $HOME
+	# what is more, it may need to use $XDG_{DOCUMENTS,DOWNLOAD,...}_DIR to 
+	# calculate the relative path.
+	if [[ $EXEINFO_GEN_FLAG -eq 1 ]];
 	then
-		wine_run_winetricks "$@"
-	else
-		wine_run_exe "$@"
+		# should use real $HOME to run
+		# otherwise zenity/kdialog may output wrong path in file selection dialog
+		HOME="$HOME_REAL" exeinfo_main
+	
+		# if I need to remove some file before end the program
+		# I may forgot to change $HOME to fake home
+		# it is better to switch to fake home immediately
+		HOME="$HOME_FAKE"
 	fi
-fi
+	
+	
+	if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
+	then
+		[[ -n $MYAPPLANG ]] && LANG=$MYAPPLANG || echo "MYAPPLANG not set, using current LANG:$LANG"
+		export HOME="$HOME_FAKE"
+		export XDG_CONFIG_HOME="$HOME_FAKE/.config"
+		MYAPPDEBUG_COLOR=1 debug_print_env "HOME" "XDG_CONFIG_HOME" "WINETRICKS_BIN"
+		echo "*****using $WINEARCH"
+		if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
+		then
+			wine_run_winetricks "$@"
+		else
+			wine_run_exe "$@"
+		fi
+	fi
+}
+myapp_launch
 
 
 ##############################################
@@ -665,7 +782,7 @@ fi
 # monitor if the .exe is still running
 # however, if the .exe file is only a launcher to launch other .exe files. pls change below code to monitor other the correct *.exe files.
 function monitor_exe_running(){
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+	echo "start >>>>>>>> [${FUNCNAME[0]}]" >&3
 
 	# if you find the $EXENAME is only a launcher to launch other *.exe,
 	# you can uncomment below line to change the $EXENAME to another name.
@@ -687,31 +804,8 @@ function monitor_exe_running(){
 			break	# the $EXENAME exe is no longer running
 		fi
 	done
-	# some application will change the reg in wine.
-	# if return out of this function directly without waiting wine shutdown,
-	# unionfs drive will be unmount immediately.
-	# therefore we can add a "wineboot" command to wait for wine saving the registry.
-	if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
-	then
-		#go back to $APPDIR, then remove temp file
-		cd "$APPDIR" || exit 2
-	
-		if [[ $MYAPPDEBUG -eq 1 ]];
-		then
-			echo "[10%] restore wine drive symlink entries..."
-			wine_restore_prefix
-			echo "[30%] wait shutdown prefix..."
-			wine_wait_shutdown
-		else
-			echo "[10%] restore wine drive symlink entries..."
-			wine_restore_prefix >/dev/null 2>&1
-			echo "[30%] wait shutdown prefix..."
-			wine_wait_shutdown >/dev/null 2>&1
-		fi
-		[[ $SAVEDATA_FLAG -eq 1 ]] && savedata_restore
-	fi
 
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+	echo "end >>>>>>>> [${FUNCNAME[0]}]" >&3
 }
 [[ ! $EXEINFO_GEN_FLAG -eq 1 ]] && monitor_exe_running
 
@@ -719,38 +813,9 @@ function monitor_exe_running(){
 
 
 ##############################################
-## cleanup temp file
+## show saved file location
 
 [[ ! $EXEINFO_GEN_FLAG -eq 1 ]] && savedata_show_location
-
-
-function atexit() {
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
-
-	# "rm -rf" included, must check env first.
-	[[ -z "$APPDIR" ]] && echo "[myapp:atexit] ERROR:\$APPDIR not set, could not clean temp files" >&2 && return
-	[[ -z "$APPIMAGE_CACHE_DIR" ]] && echo "[myapp:atexit] ERROR:\$APPIMAGE_CACHE_DIR not set, could not clean temp files." >&2 && return
-
-	echo "[40%] removing drive symlink from wine prefix"
-	find "$WINEPREFIX/dosdevices" -mindepth 1 -maxdepth 1 ! -name "c:" ! -name "d:" -exec rm -rf "{}" \;
-	echo "[50%] killing unionfs"
-	#killall "$APPDIR/usr/bin/unionfs"
-	kill -9 $PID_MYAPPSTORGE
-	kill -9 $PID_HOMESTORGE
-	sleep 1
-	echo "[70%] removing /tmp/$(basename "$APPDIR").unionfs"
-	rm -rf "/tmp/$(basename "$APPDIR").unionfs"
-	# if not clean up unionfs hide files, may encounter some read file error next time.
-	echo "[90%] removing unionfs hidden files"
-	rm -rf "$APPIMAGE_CACHE_DIR/usr/share/myapp"/.unionfs* >/dev/null 2>&1
-	rm -rf "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
-
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
-}
-#set -e
-#trap atexit EXIT	#NOT USED: due to some .exe(as game launcher) would pass EXIT signal after it completed to launch other .exe files. 
-atexit
-echo "[100%] ended"
 
 
 ##############################################

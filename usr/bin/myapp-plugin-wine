@@ -34,7 +34,7 @@ function wine_detect_winetricks(){
 	# both are not exist
 	if [[ -z "$LOCAL_WINETRICKS_BIN" && -z "$APPIMAGE_WINETRICKS_BIN" ]];
 	then
-		echo "command not found: winetricks"
+		echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: command not found: winetricks"
 		exit 1
 	fi
 
@@ -62,7 +62,7 @@ function wine_detect_winetricks(){
 ##############################################
 ## setup WINE env
 function wine_set_env(){
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+	echo "start >>>>>>>> [${FUNCNAME[0]}]" >&3
 
 	# default to run win64
 	if [[ "$WINEARCH" == "win32" || $(getconf LONG_BIT) -eq 32 ]];
@@ -81,10 +81,10 @@ function wine_set_env(){
 	# prevent wine setup application menu，no confirm if this setting was effected or not
 	export WINEDLLOVERRIDES=winemenubuilder.exe=d
 
-	[[ -z "$MNT_MYAPPSTORGE" ]] && echo "[wine_restore_prefix] ERROR:\$MNT_MYAPPSTORGE not set" >&2 && exit
+	[[ -z "$MNT_MYAPPSTORGE" ]] && echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: \$MNT_MYAPPSTORGE not set" >&2 && exit
 	export WINEPREFIX="$MNT_MYAPPSTORGE/myapp_prefix/wine.$WINEARCH/pfx"
 
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+	echo "end >>>>>>>> [${FUNCNAME[0]}]" >&3
 }
 ##############################################
 
@@ -92,22 +92,17 @@ function wine_set_env(){
 ##############################################
 ## restore wine prefix, should ensure unionfs is mounted before run this function, because $WINEPREFIX path include the unionfs drive
 function wine_restore_prefix(){
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+	echo "start >>>>>>>> [${FUNCNAME[0]}]" >&3
 
 
 	# "rm -rf" included, must check $WINEPREFIX first
-	[[ -z "$WINEPREFIX" ]] && echo "[myapp:wine_restore_prefix] ERROR:\$WINEPREFIX not set, could not restore wine prefix." >&2 && return
+	[[ -z "$WINEPREFIX" ]] && echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: \$WINEPREFIX not set, could not restore wine prefix." >&2 && exit 1
 
 	mkdir -p "$MNT_MYAPPSTORGE/myapp_prefix/wine.$WINEARCH"
 	[[ ! -d "$APPIMAGE_CACHE_DIR/usr/share/myapp/drive_d" ]] && mkdir -p "$APPIMAGE_CACHE_DIR/usr/share/myapp/drive_d"
 
 	# only setup wineprefix and do nothing
-	if [[ $MYAPPDEBUG -eq 1 ]];
-	then
-		[[ ! -d $WINEPREFIX ]] && wine cmd /C exit
-	else
-		[[ ! -d $WINEPREFIX ]] && wine cmd /C exit >/dev/null 2>&1
-	fi
+	[[ ! -d $WINEPREFIX ]] && wine cmd /C exit >&3 2>&4
 
 	# not necessary to update WINEPREFIX automatically every time
 	echo "disable" > "$WINEPREFIX/.update-timestamp"
@@ -134,21 +129,21 @@ function wine_restore_prefix(){
 		ln -sfnv ../../../../../myapp_fonts "$WINEPREFIX/drive_c/windows/Fonts"
 	fi
 
-	if [[ -d "$WINEPREFIX/drive_c/users/$USER/AppData/Roaming" ]];
+	if [[ -d "$WINEPREFIX/drive_c/users/$USER/AppData/Roaming" && ! -L "$WINEPREFIX/drive_c/users/$USER/AppData/Roaming" ]];
 	then
 		mkdir -p "$MNT_HOMESTORGE/AppData"
 		mv -f "$WINEPREFIX/drive_c/users/$USER/AppData/Roaming" "$MNT_HOMESTORGE/AppData"
 		rm -rf "$WINEPREFIX/drive_c/users/$USER/AppData/Roaming"
-		#refer path: .../myapp/myapp_fonts
-		#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/windows/Fonts
-		ln -sfnv ../../../../../../../../../../home/public_user/AppData/Roaming "$WINEPREFIX/drive_c/users/$USER/AppData/Roaming"
 	fi
+	#refer path: .../myapp/myapp_fonts
+	#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/windows/Fonts
+	ln -sfnv ../../../../../../../../../../home/public_user/AppData/Roaming "$WINEPREFIX/drive_c/users/$USER/AppData/Roaming"
 
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+	echo "end >>>>>>>> [${FUNCNAME[0]}]" >&3
 }
 
 function wine_wait_shutdown(){
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+	echo "start >>>>>>>> [${FUNCNAME[0]}]" >&3
 
 	#wineboot -es	# this command run too slow
 	#wineboot -s
@@ -158,26 +153,28 @@ function wine_wait_shutdown(){
 	# to prevent unmount unionfs too early(before wine save changes)
 	# wait until winserver terminate
 	wineserver -w
+	if [[ $? -ne 0 ]];
+	then
+		echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: wineserver did not shutdown normally. exit code=$?" >&2
+		wineserver -k
+		#NOTUSED: should not exit here. it may skip atexit() and let unionfs remain in background
+		#exit
+	fi
 
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+	echo "end >>>>>>>> [${FUNCNAME[0]}]" >&3
 }
 
 function wine_patch_reg(){
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+	echo "start >>>>>>>> [${FUNCNAME[0]}]" >&3
 
-	[[ -z "$MNT_MYAPPSTORGE" ]] && echo "[wine_restore_prefix] ERROR:\$MNT_MYAPPSTORGE not set" >&2 && exit
+	[[ -z "$MNT_MYAPPSTORGE" ]] && echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: \$MNT_MYAPPSTORGE not set" >&2 && exit
 
 	# I tried to disable autostart winedbg via loading the .reg by regedit but failed.
 	# as a workaround I use winetricks to disable autostart debugger.
 	# TODO: seems the imported reg were effected in wow6432node instead of the correct reg path
-	if [[ $MYAPPDEBUG -eq 1 ]];
-	then
-		#winetricks autostart_winedbg=disabled
-		"$WINETRICKS_BIN" autostart_winedbg=disabled
-	else
-		#winetricks autostart_winedbg=disabled >/dev/null 2>&1
-		"$WINETRICKS_BIN" autostart_winedbg=disabled >/dev/null 2>&1
-	fi
+	# update on 2022/3/25: No need to disable autostart_winedbg now because I fixed trap-exit function. Now I can easily use <Ctrl-C> to stop the process even when wine crash.
+	#winetricks autostart_winedbg=disabled
+	#"$WINETRICKS_BIN" autostart_winedbg=disabled >&3 2>&4
 
 	if [[ -n "$(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg 2>/dev/null )" ]];
 	then
@@ -197,89 +194,64 @@ function wine_patch_reg(){
 		done
 	fi
 
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+	echo "end >>>>>>>> [${FUNCNAME[0]}]" >&3
 }
 ##############################################
 
 
 ##############################################
 function wine_run_winetricks(){
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+	echo "start >>>>>>>> [${FUNCNAME[0]}]" >&3
 
-	if [[ $MYAPPDEBUG -eq 1 ]];
-	then
-		echo "[20%] prepare prefix"
-		wine_restore_prefix
-		#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
-		echo "[60%] patch wine registry"
-		wine_patch_reg
-		echo "[70%] restore completed, wait shutdown prefix"
-		wine_wait_shutdown
-		echo "[100%] launch"
-		#"$APPDIR"/usr/bin/winetricks "$@"
-		"$WINETRICKS_BIN" "$@"
-	else
-		echo "[20%] prepare prefix"
-		wine_restore_prefix >/dev/null 2>&1
-		#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
-		echo "[60%] patch wine registry"
-		wine_patch_reg >/dev/null 2>&1
-		echo "[70%] restore completed, wait shutdown prefix"
-		wine_wait_shutdown >/dev/null 2>&1
-		echo "[100%] launch"
-		#"$APPDIR"/usr/bin/winetricks "$@" >/dev/null 2>&1
-		"$WINETRICKS_BIN" "$@" >/dev/null 2>&1
-	fi
+	echo "[${FUNCNAME[0]}:20%] prepare prefix"
+	# move the command to background then wait, so that I can use ctrl-C to interrupt wine if wine encounter crash
+	wine_restore_prefix >&3 2>&4 &
+	wait
+	#"$APPDIR"/usr/bin/winetricks sandbox	# this command run too slow
+	echo "[${FUNCNAME[0]}:60%] patch wine registry"
+	wine_patch_reg >&3 2>&4 &
+	wait
+	echo "[${FUNCNAME[0]}:70%] restore completed, wait shutdown prefix"
+	wine_wait_shutdown >&3 2>&4
+	echo "[${FUNCNAME[0]}:100%] launch"
+	#"$APPDIR"/usr/bin/winetricks "$@"
+	"$WINETRICKS_BIN" "$@" >&3 2>&4
 
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+	echo "end >>>>>>>> [${FUNCNAME[0]}]" >&3
 }
 
 function wine_run_exe(){
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "start >>>>>>>> [${FUNCNAME[0]}]"
+	echo "start >>>>>>>> [${FUNCNAME[0]}]" >&3
 
-	if [[ $MYAPPDEBUG -eq 1 ]];
-	then
-		echo "[20%] prepare prefix"
-		wine_restore_prefix
-		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
-		echo "[60%] patch wine registry"
-		wine_patch_reg
-		echo "[70%] restore completed, wait shutdown prefix"
-		wine_wait_shutdown
-	else
-		echo "[20%] prepare prefix"
-		wine_restore_prefix >/dev/null 2>&1
-		#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
-		echo "[60%] patch wine registry"
-		wine_patch_reg >/dev/null 2>&1
-		echo "[70%] restore completed, wait shutdown prefix"
-		wine_wait_shutdown >/dev/null 2>&1
-	fi
+	echo "[${FUNCNAME[0]}:20%] prepare prefix"
+	wine_restore_prefix >&3 2>&4 &
+	wait
+	#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1	#NOTUSED: this command run too slow
+	echo "[${FUNCNAME[0]}:60%] patch wine registry"
+	wine_patch_reg >&3 2>&4 &
+	wait
+	echo "[${FUNCNAME[0]}:70%] restore completed, wait shutdown prefix"
+	wine_wait_shutdown >&3 2>&4
 
 	if [[ $WALKTHROUGH_FLAG -eq 1 ]];
 	then
-		echo "[80%] open walkthrough"
+		echo "[${FUNCNAME[0]}:80%] open walkthrough"
 		walkthrough_browser
 	fi
 
 	if [[ $SAVEDATA_FLAG -eq 1 ]];
 	then
-		echo "[90%] load full achieved savedata"
+		echo "[${FUNCNAME[0]}:90%] load full achieved savedata"
 		savedata_replace
 	fi
 
 	cd "$MNT_MYAPPSTORGE/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
 
 	#"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" 	# must use dos-style path instead of unix-style path if winetricks sandbox was set.
-	echo "[100%] launch"
-	if [[ $MYAPPDEBUG -eq 1 ]];
-	then
-		wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@"
-	else
-		wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" >/dev/null 2>&1
-	fi
+	echo "[${FUNCNAME[0]}:100%] launch"
+	wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" >&3 2>&4
 
-	[[ $MYAPPDEBUG -eq 1 ]] && echo "end <<<<<<<< [${FUNCNAME[0]}]"
+	echo "end >>>>>>>> [${FUNCNAME[0]}]" >&3
 }
 ##############################################
 
@@ -288,9 +260,9 @@ function wine_run_exe(){
 [[ "$0" == "${BASH_SOURCE[0]}" && $MYAPPDEBUG -eq 1 ]] && wine_test_env
 if [[ "$0" == "${BASH_SOURCE[0]}" ]];
 then
-	[[ -n $APPDIR ]] || echo "[AppRun:plugin_exeinfo] required \$APPDIR but it was not set"
-	[[ -n $APPIMAGE_CACHE_DIR ]] || echo "[AppRun:plugin_exeinfo] required \$APPIMAGE_CACHE_DIR but it was not set"
-	[[ -n $EXEINFO_GEN_METHOD ]] || echo "[AppRun:plugin_exeinfo] required \$EXEINFO_GEN_METHOD but it was not set"
+	[[ -n $APPDIR ]] || echo "[$(basename "${BASH_SOURCE[0]}")] required \$APPDIR but it was not set" >&2
+	[[ -n $APPIMAGE_CACHE_DIR ]] || echo "[$(basename "${BASH_SOURCE[0]}")] required \$APPIMAGE_CACHE_DIR but it was not set" >&2
+	[[ -n $EXEINFO_GEN_METHOD ]] || echo "[$(basename "${BASH_SOURCE[0]}")] required \$EXEINFO_GEN_METHOD but it was not set" >&2
 	[[ -n $APPDIR || -n $APPIMAGE_CACHE_DIR || -n $EXEINFO_GEN_METHOD ]] || exit
 fi
 wine_detect_winetricks
