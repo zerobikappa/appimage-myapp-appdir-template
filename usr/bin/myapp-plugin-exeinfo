@@ -35,7 +35,7 @@ function apprun_realpath(){
 	
 	if [[ -z $1 || -z $2 ]];
 	then
-		echo "[apprun_realpath] error: please inpute two variables." >&2
+		echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: please inpute two variables." >&2
 		exit 1
 	fi
 	
@@ -126,7 +126,7 @@ function exeinfo_user_dirs(){
 function exeinfo_convert_xdg_path(){
 	# when write into exeinfo_profile
 	# write env name itself and prevent escaping
-	[[ -z "$1" ]] && echo "[exeinfo_check_include_home] ERROR: no argument was input" >&2 && return
+	[[ -z "$1" ]] && echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: no argument was input" >&2 && return
 	if [[ ${1#"$XDG_VIDEOS_DIR"} != "$1" ]];
 	then
 		echo '$XDG_VIDEOS_DIR'"${1#"$XDG_VIDEOS_DIR"}"
@@ -178,9 +178,10 @@ function exeinfo_load_file(){
 		return
 	fi
 
+	# only for test
 	if (cat "$EXEINFO_CURRENT_PROFILE" |grep '^[[:blank:]]*[^[:blank:]#]' |grep --quiet -e '$WINEARCH' -e '${WINEARCH}' -e '${WINEARCH:.*}' -e '${WINEARCH%.*}' -e '${WINEARCH#.*}');
 	then
-		[[ -z $WINEARCH ]] && echo "[exeinfo_load_file] ERROR: $EXEINFO_CURRENT_PROFILE includes \$WINEARCH but \$WINEARCH was not set. Failed to load exeinfo." >&2 && return
+		[[ -z $WINEARCH ]] && echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: $EXEINFO_CURRENT_PROFILE includes \$WINEARCH but \$WINEARCH was not set. Failed to load exeinfo." >&2 && return
 	fi
 
 	source "$EXEINFO_CURRENT_PROFILE"
@@ -240,7 +241,7 @@ function exeinfo_test_gui(){
 	then
 		return
 	else
-		echo "unknow option $EXEINFO_GEN_METHOD" >&2
+		echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: unknow option $EXEINFO_GEN_METHOD" >&2
 		EXIT_MAIN_MENU=1
 	fi
 
@@ -353,7 +354,7 @@ function exeinfo_exe_location(){
 		then
 			clear
 			echo "########################################"
-			echo "invalid file name: $TEMP_EXEPATH"
+			echo "ERROR: invalid file name: $TEMP_EXEPATH" >&2
 			echo "########################################"
 			echo ""
 			TEMP_EXEPATH=""
@@ -452,7 +453,7 @@ function exeinfo_savedata_location(){
 		then
 			clear
 			echo "########################################"
-			echo "invalid directory name: $TEMP_SAVEDATAPATH"
+			echo "ERROR: invalid directory name: $TEMP_SAVEDATAPATH" >&2
 			echo "########################################"
 			echo ""
 			TEMP_SAVEDATAPATH=""
@@ -518,7 +519,7 @@ function exeinfo_savedata_location(){
 			[[ $EXEINFO_GEN_METHOD == "zenity" ]] && zenity --width=300 --height=100 --error --text="you selected savedata directory outside of appimage dir."
 			echo "########################################"
 			# outside of AppDir and *.appimage.
-			echo "ERROR: savedata directory outside of appimage dir."
+			echo "ERROR: savedata directory outside of appimage dir." >&2
 			echo "########################################"
 			echo ""
 			TEMP_SAVEDATAPATH=""
@@ -566,6 +567,7 @@ please use locale-gen to generate locale setting first.\n" \
 		echo "  set \$LANG for this game:"
 		echo "  supported locale in current system:"
 		echo ""
+		#TODO: only show *.UTF-8 in result
 		localectl list-locales
 		echo ""
 		echo "  you can only choose one of above items to setup."
@@ -587,7 +589,7 @@ please use locale-gen to generate locale setting first.\n" \
 			TEMP_MYAPPLANG=$TEMP_LANG
 		else	
 			echo "########################################"
-			echo "ERROR: unsupport MYAPPLANG: $TEMP_LANG"
+			echo "ERROR: unsupport MYAPPLANG: $TEMP_LANG" >&2
 			echo "########################################"
 			echo ""
 		fi
@@ -749,7 +751,7 @@ function exeinfo_confirm_exit(){
 		clear
 		return
 	else
-		echo "[AppRun_exeinfo_gen:exeinfo_confirm_exit] unknow error"
+		echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] unknow error" >&2
 		EXIT_MAIN_MENU=1
 	fi
 }
@@ -778,7 +780,7 @@ function exeinfo_main(){
 		then
 			exeinfo_confirm_exit
 		else
-			echo "[AppRun:plugin_exeinfo] unknown \$MENU_SELECT_ITEM=$MENU_SELECT_ITEM"
+			echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: unknown \$MENU_SELECT_ITEM=$MENU_SELECT_ITEM"
 			EXIT_MAIN_MENU=1
 		fi
 	done
@@ -787,9 +789,9 @@ function exeinfo_main(){
 [[ "$0" == "${BASH_SOURCE[0]}" && $MYAPPDEBUG -eq 1 ]] && exeinfo_test_env
 if [[ "$0" == "${BASH_SOURCE[0]}" ]];
 then
-	[[ -n $APPDIR ]] || echo "[AppRun:plugin_exeinfo] required \$APPDIR but it was not set"
-	[[ -n $APPIMAGE_CACHE_DIR ]] || echo "[AppRun:plugin_exeinfo] required \$APPIMAGE_CACHE_DIR but it was not set"
-	[[ -n $EXEINFO_GEN_METHOD ]] || echo "[AppRun:plugin_exeinfo] required \$EXEINFO_GEN_METHOD but it was not set"
+	[[ -n $APPDIR ]] || echo "[$(basename "${BASH_SOURCE[0]}")] required \$APPDIR but it was not set" >&2
+	[[ -n $APPIMAGE_CACHE_DIR ]] || echo "[$(basename "${BASH_SOURCE[0]}")] required \$APPIMAGE_CACHE_DIR but it was not set" >&2
+	[[ -n $EXEINFO_GEN_METHOD ]] || echo "[$(basename "${BASH_SOURCE[0]}")] required \$EXEINFO_GEN_METHOD but it was not set" >&2
 	[[ -n $APPDIR || -n $APPIMAGE_CACHE_DIR || -n $EXEINFO_GEN_METHOD ]] || return
 	exeinfo_main
 fi
