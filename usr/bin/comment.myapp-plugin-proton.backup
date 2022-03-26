@@ -34,7 +34,7 @@ function wine_detect_winetricks(){
 	# both are not exist
 	if [[ -z "$LOCAL_WINETRICKS_BIN" && -z "$APPIMAGE_WINETRICKS_BIN" ]];
 	then
-		echo "command not found: winetricks"
+		echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: command not found: winetricks"
 		exit 1
 	fi
 
@@ -176,7 +176,7 @@ function wine_set_env(){
 	wine_search_proton
 
 	#zh# 因为$WINEPREFIX路径包含挂载点，要先确保unionfs已经挂载了
-	[[ -z "$MNT_MYAPPSTORGE" ]] && echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR:\$MNT_MYAPPSTORGE not set" >&2 && exit
+	[[ -z "$MNT_MYAPPSTORGE" ]] && echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: \$MNT_MYAPPSTORGE not set" >&2 && exit
 	# not necessary to set WINEPREFIX because proton uses $STEAM_COMPAT_DATA_PATH/pfx to decide the WINEPREFIX directory
 	# however, we still set the WINEPREFIX because below lines need $WINEPREFIX
 	export WINEPREFIX="$MNT_MYAPPSTORGE/myapp_prefix/proton.$WINEARCH/pfx"
@@ -356,13 +356,15 @@ function wine_wait_shutdown(){
 	#zh# NOTUSED: 这里没有用"proton run wineserver"而是直接用wineserver，因为proton会将进程转到后台，并不能起到在前台等待的作用
 	#"$HOME/$PROTON_DIR_FROM_HOME/proton" run wineserver -w
 	wineserver -w
-	if [[ $? -ne 0 ]];
+	WINE_WINESERVER_EXIT=$?
+	if [[ $WINE_WINESERVER_EXIT -ne 0 ]];
 	then
-		echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: wineserver did not shutdown normally. exit code=$?" >&2
+		echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: wineserver did not shutdown normally. exit code=$WINE_WINESERVER_EXIT" >&2
 		wineserver -k
 		#NOTUSED: should not exit here. it may skip atexit() and let unionfs remain in background
 		#exit
 	fi
+	unset WINE_WINESERVER_EXIT
 
 	echo "end >>>>>>>> [${FUNCNAME[0]}]" >&3
 }

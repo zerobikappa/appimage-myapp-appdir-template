@@ -4,7 +4,7 @@
 ## test env
 function wine_test_env(){
 	# these env should be passed to this script
-	echo "[myapp-exeinfo-plugin-gen]: test env"
+	echo "[$(basename "${BASH_SOURCE[0]}")]: test env"
 	echo "required:"
 	debug_print_env APPDIR APPIMAGE_CACHE_DIR EXEINFO_GEN_METHOD
 	echo "optional:"

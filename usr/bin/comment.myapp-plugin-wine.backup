@@ -4,7 +4,7 @@
 ## test env
 function wine_test_env(){
 	# these env should be passed to this script
-	echo "[myapp-exeinfo-plugin-gen]: test env"
+	echo "[$(basename "${BASH_SOURCE[0]}")]: test env"
 	echo "required:"
 	debug_print_env APPDIR APPIMAGE_CACHE_DIR EXEINFO_GEN_METHOD
 	echo "optional:"
@@ -167,13 +167,15 @@ function wine_wait_shutdown(){
 	# to prevent unmount unionfs too early(before wine save changes)
 	# wait until winserver terminate
 	wineserver -w
-	if [[ $? -ne 0 ]];
+	WINE_WINESERVER_EXIT=$?
+	if [[ $WINE_WINESERVER_EXIT -ne 0 ]];
 	then
-		echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: wineserver did not shutdown normally. exit code=$?" >&2
+		echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: wineserver did not shutdown normally. exit code=$WINE_WINESERVER_EXIT" >&2
 		wineserver -k
 		#NOTUSED: should not exit here. it may skip atexit() and let unionfs remain in background
 		#exit
 	fi
+	unset WINE_WINESERVER_EXIT
 
 	echo "end >>>>>>>> [${FUNCNAME[0]}]" >&3
 }
