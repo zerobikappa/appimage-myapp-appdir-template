@@ -1,0 +1,34 @@
+name: "pre-release"
+
+on:
+  push:
+    branches:
+      - "main"
+
+jobs:
+  pre-release:
+    name: "build pre-release"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: checkout current repo code
+        uses: actions/checkout@v3
+        with:
+          repository: zerobikappa/appimage-myapp-appdir-template
+          path: appimage-myapp-appdir-template
+      - name: update and build
+        run: |
+          ./appimage-myapp-appdir-template/.remove-appdir-git.sh
+          wget -c "https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks" -O appimage-myapp-appdir-template/usr/bin/winetricks
+          chmod u+x appimage-myapp-appdir-template/usr/bin/winetricks
+          wget -c "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage" -O  appimagetool.AppImage
+          chmod u+x appimagetool.AppImage
+          ARCH=x86_64 ./appimagetool.AppImage appimage-myapp-appdir-template
+      - name: auto release
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          title: "Continuous Build"
+          prerelease: true
+          files: |
+            myapp-template-x86_64.AppImage
