@@ -29,6 +29,6 @@ jobs:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: "latest"
           title: "Continuous Build"
-          prerelease: false
+          prerelease: true
           files: |
             myapp-template-x86_64.AppImage
