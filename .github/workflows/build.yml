@@ -24,20 +24,20 @@ jobs:
           mv ./appimage-myapp-appdir-template/backup/unionfs-fuse*.deb .
           ./appimage-myapp-appdir-template/.remove-appdir-git.sh
 
-          ar x unionfs-fuse_1.0-1ubuntu2_amd64.deb
+          ar x unionfs-fuse*amd64.deb
           tar Jxvf data.tar.xz
           mv -f usr/bin/unionfs appimage-myapp-appdir-template/usr/bin/
           ARCH=x86_64 ./appimagetool.AppImage appimage-myapp-appdir-template
 
-          #ar x unionfs-fuse_1.0-1ubuntu2_arm64.deb
+          #ar x unionfs-fuse*arm64.deb
           #tar Jxvf data.tar.xz
           #mv -f usr/bin/unionfs appimage-myapp-appdir-template/usr/bin/
           #ARCH=aarch64 ./appimagetool.AppImage appimage-myapp-appdir-template
 
-          ar x unionfs-fuse_1.0-1ubuntu2_i386.deb
-          tar Jxvf data.tar.xz
-          mv -f usr/bin/unionfs appimage-myapp-appdir-template/usr/bin/
-          ARCH=i386 ./appimagetool.AppImage appimage-myapp-appdir-template
+          #ar x unionfs-fuse*i386.deb
+          #tar Jxvf data.tar.xz
+          #mv -f usr/bin/unionfs appimage-myapp-appdir-template/usr/bin/
+          #ARCH=i386 ./appimagetool.AppImage appimage-myapp-appdir-template
       - name: auto release
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
@@ -48,4 +48,4 @@ jobs:
           files: |
             myapp-template-x86_64.AppImage
             #myapp-template-aarch64.AppImage
-            myapp-template-i386.AppImage
+            #myapp-template-i386.AppImage
