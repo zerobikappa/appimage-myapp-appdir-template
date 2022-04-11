@@ -8,7 +8,7 @@ on:
 jobs:
   pre-release:
     name: "build pre-release"
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-18.04"
     steps:
       - name: checkout current repo code
         uses: actions/checkout@v3
