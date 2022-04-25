@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1649199626
+MYAPPRUN_VERSION=1650916722
 
 #############################################
 ## prevent running by root/sudo for security concern
@@ -648,15 +648,23 @@ function savedata_replace(){
 	HOME="$HOME_FAKE"
 	exeinfo_user_dirs
 	exeinfo_load_file
-	if [[ $SAVEDATA_IN_HOME -eq 0 ]];
+	#if [[ $SAVEDATA_IN_HOME -eq 0 ]];
+	#then
+	#	mkdir -p "$SAVEDATA_DIR"
+	#	cp -r --suffix=.myapp."$USER".backup "$MNT_MYAPPSTORGE/myapp_savedata"/* "$SAVEDATA_DIR"
+	#elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
+	#then
+	#	mkdir -p "$SAVEDATA_DIR"
+	#	cp -r --suffix=.myapp."$USER".backup "$MNT_MYAPPSTORGE/myapp_savedata"/* "$SAVEDATA_DIR"
+	#fi
+	mkdir -p "$SAVEDATA_DIR"
+	if [[ $? -eq 0 ]];
 	then
-		mkdir -p "$SAVEDATA_DIR"
 		cp -r --suffix=.myapp."$USER".backup "$MNT_MYAPPSTORGE/myapp_savedata"/* "$SAVEDATA_DIR"
-	elif [[ $SAVEDATA_IN_HOME -eq 1 ]];
-	then
-		mkdir -p "$SAVEDATA_DIR"
-		cp -r --suffix=.myapp."$USER".backup "$MNT_MYAPPSTORGE/myapp_savedata"/* "$SAVEDATA_DIR"
+	else
+		echo "failed to setup savedate directory: $SAVEDATA_DIR" >&2
 	fi
+
 
 	echo "end >>>>>>>> [${FUNCNAME[0]}]" >&3
 }
