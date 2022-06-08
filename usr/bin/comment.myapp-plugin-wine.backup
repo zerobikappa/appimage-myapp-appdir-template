@@ -126,7 +126,8 @@ function wine_restore_prefix(){
 	# you can feel free to delete your WINEPREFIX and just package D: drive into appimage
 	#zh# 把D盘放在了WINEPREFIX的外面，只要游戏安装在D盘里，就算删除了WINEPREFIX也不需要重新安装游戏
 	#zh# WINEPREFIX 应当根据不同电脑的wine版本当场生成，而不应打包进appimage包里
-	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfn ../../../../drive_d "$WINEPREFIX/dosdevices/d:"
+	#zh# 每次都重建d:的软链接，因为发现每一次生成prefix时有可能会将其他硬盘分配到d:的软链接上。
+	ln -sfn ../../../../drive_d "$WINEPREFIX/dosdevices/d:"
 	#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/myapp_patch_reg
 	[[ ! -L "$MNT_MYAPPSTORGE/myapp_patch_reg" ]] && ln -sfn ../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
 

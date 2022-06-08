@@ -222,7 +222,7 @@ function wine_restore_prefix(){
 	[[ ! -L "$WINEPREFIX/dosdevices/c:" ]] && ln -sfn ../drive_c "$WINEPREFIX/dosdevices/c:"
 	# D: drive is moved outside of $WINEPREFIX
 	# you can feel free to delete your WINEPREFIX and just package D: drive into appimage
-	[[ ! -L "$WINEPREFIX/dosdevices/d:" ]] && ln -sfn ../../../../drive_d "$WINEPREFIX/dosdevices/d:"
+	ln -sfn ../../../../drive_d "$WINEPREFIX/dosdevices/d:"
 	#refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/myapp_patch_reg
 	[[ ! -L "$MNT_MYAPPSTORGE/myapp_patch_reg" ]] && ln -sfn ../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
 
