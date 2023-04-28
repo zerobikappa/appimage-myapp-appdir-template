@@ -99,7 +99,7 @@ function wine_restore_prefix(){
 	[[ -z "$WINEPREFIX" ]] && echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: \$WINEPREFIX not set, could not restore wine prefix." >&2 && exit 1
 
 	mkdir -p "$MNT_MYAPPSTORGE/myapp_prefix/wine.$WINEARCH"
-	[[ ! -d "$APPIMAGE_CACHE_DIR/usr/share/myapp/drive_d" ]] && mkdir -p "$APPIMAGE_CACHE_DIR/usr/share/myapp/drive_d"
+	[[ ! -d "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp/drive_d" ]] && mkdir -p "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp/drive_d"
 
 	# only setup wineprefix and do nothing
 	[[ ! -d $WINEPREFIX ]] && wine cmd /C exit >&3 2>&4
@@ -180,16 +180,17 @@ function wine_patch_reg(){
 
 	if [[ -n "$(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg 2>/dev/null )" ]];
 	then
-		for i in $(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg); do
+		#for i in $(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg); do
+		for i in "$MNT_MYAPPSTORGE"/myapp_patch_reg/*.reg; do
 			# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
 			[[ -f "$i" ]] && i=$(basename "$i") || continue
 			wine regedit "c:\\myapp_patch_reg\\$i"
 		done
 	fi
 
-	if [[ -n "$(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/$WINEARCH/*.reg 2>/dev/null )" ]];
+	if [[ -n "$(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/"$WINEARCH"/*.reg 2>/dev/null )" ]];
 	then
-		for i in $(ls "$MNT_MYAPPSTORGE"/myapp_patch_reg/$WINEARCH/*.reg); do
+		for i in "$MNT_MYAPPSTORGE"/myapp_patch_reg/"$WINEARCH"/*.reg; do
 			# ls /full/path/of/*.reg will output full path of file, need to use $(basename "$i") to get the file name.
 			[[ -f "$i" ]] && i=$(basename "$i") || continue
 			wine regedit "c:\\myapp_patch_reg\\$WINEARCH\\$i"
