@@ -82,7 +82,7 @@ debug_print_env UNIONFS_BIN >&3 2>&4
 
 # keep a backup of $PATH location. Because later I will compare the version number of local winetricks and builtin winetricks.
 export PATH_OLD="$PATH"
-export PATH="${SELF}/:${APPDIR}/usr/bin/:${APPDIR}/usr/sbin/:${APPDIR}/usr/games/:${APPDIR}/bin/:${APPDIR}/sbin/${PATH:+:$PATH}"
+export PATH="${SELF%/*}/:${APPDIR}/usr/bin/:${APPDIR}/usr/sbin/:${APPDIR}/usr/games/:${APPDIR}/bin/:${APPDIR}/sbin/${PATH:+:$PATH}"
 export PATH_NEW="$PATH"
 
 export LD_LIBRARY_PATH="${APPDIR}/usr/lib/:${APPDIR}/usr/lib/i386-linux-gnu/:${APPDIR}/usr/lib/x86_64-linux-gnu/:${APPDIR}/usr/lib32/:${APPDIR}/usr/lib64/:${APPDIR}/lib/:${APPDIR}/lib/i386-linux-gnu/:${APPDIR}/lib/x86_64-linux-gnu/:${APPDIR}/lib32/:${APPDIR}/lib64/${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
@@ -366,7 +366,7 @@ fi
 ##############################################
 ## setup unionfs temp directory for this app
 
-RO_MYAPPSTORGE="${SELF}/.."
+RO_MYAPPSTORGE="${SELF%/myapp_script/*}"
 RO_MYAPPSTORGE=$( readlink -m "${RO_MYAPPSTORGE}" )
 
 MNT_MYAPPSTORGE="/tmp/$(basename "$APPDIR").unionfs/opt/${MYAPP_NAME}/myapp"
@@ -454,7 +454,8 @@ if [[ -z $EXENAME ]];
 then
 	[[ ! $TEST_WINETRICKS_FLAG -eq 1 ]] && echo "EXENAME not found in config file. auto set --test-winetricks , redirect to launch winetricks"
 	TEST_WINETRICKS_FLAG=1
-	EXENAME="$APPDIR/usr/bin/winetricks"
+	#EXENAME="$APPDIR/usr/bin/winetricks"
+	EXENAME="$WINETRICKS_BIN"
 fi
 
 # if --exeinfo-gen or --test-winetricks is set, then -s and -w will be ignored.

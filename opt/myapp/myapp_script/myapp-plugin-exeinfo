@@ -75,53 +75,53 @@ function apprun_realpath(){
 
 }
 
-function exeinfo_user_dirs(){
-	XDG_DESKTOP_DIR="$HOME/Desktop"
-	XDG_DOWNLOAD_DIR="$HOME/Downloads"
-	XDG_TEMPLATES_DIR="$HOME/Templates"
-	XDG_PUBLICSHARE_DIR="$HOME/Public"
-	XDG_DOCUMENTS_DIR="$HOME/Documents"
-	XDG_MUSIC_DIR="$HOME/Music"
-	XDG_PICTURES_DIR="$HOME/Pictures"
-	XDG_VIDEOS_DIR="$HOME/Videos"
-	# if user-dirs.dirs exists, it would replace the default setting
-	if [[ -f "$XDG_CONFIG_HOME/user-dirs.dirs" ]];
-	then
-		source "$XDG_CONFIG_HOME/user-dirs.dirs"
-	elif [[ -f "$HOME/.config/user-dirs.dirs" ]];
-	then
-		source "$HOME/.config/user-dirs.dirs"
-	else
-		echo "cannot find user-dirs.dirs setting, using default setting"
-	fi
-
-	FAKE_DESKTOP_DIR_NAME="$(basename "$XDG_DESKTOP_DIR")"
-	FAKE_DOWNLOAD_DIR_NAME="$(basename "$XDG_DOWNLOAD_DIR")"
-	FAKE_TEMPLATES_DIR_NAME="$(basename "$XDG_TEMPLATES_DIR")"
-	FAKE_PUBLICSHARE_DIR_NAME="$(basename "$XDG_PUBLICSHARE_DIR")"
-	FAKE_DOCUMENTS_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")"
-	# maybe you can cat "/etc/xdg/user-dirs.defaults" for why I write below lines
-	if [[ "${XDG_MUSIC_DIR#"$XDG_DOCUMENTS_DIR"}" != "$XDG_MUSIC_DIR" ]];
-	then
-		FAKE_MUSIC_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")/$(basename "$XDG_MUSIC_DIR")"
-	else
-		FAKE_MUSIC_DIR_NAME="$(basename "$XDG_MUSIC_DIR")"
-	fi
-
-	if [[ "${XDG_PICTURES_DIR#"$XDG_DOCUMENTS_DIR"}" != "$XDG_PICTURES_DIR" ]];
-	then
-		FAKE_PICTURES_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")/$(basename "$XDG_PICTURES_DIR")"
-	else
-		FAKE_PICTURES_DIR_NAME="$(basename "$XDG_PICTURES_DIR")"
-	fi
-
-	if [[ "${XDG_VIDEOS_DIR#"$XDG_DOCUMENTS_DIR"}" != "$XDG_VIDEOS_DIR" ]];
-	then
-		FAKE_VIDEOS_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")/$(basename "$XDG_VIDEOS_DIR")"
-	else
-		FAKE_VIDEOS_DIR_NAME="$(basename "$XDG_VIDEOS_DIR")"
-	fi
-}
+#function exeinfo_user_dirs(){
+#	# if user-dirs.dirs exists, it would replace the default setting
+#	if [[ -f "$XDG_CONFIG_HOME/user-dirs.dirs" ]];
+#	then
+#		source "$XDG_CONFIG_HOME/user-dirs.dirs"
+#	elif [[ -f "$HOME/.config/user-dirs.dirs" ]];
+#	then
+#		source "$HOME/.config/user-dirs.dirs"
+#	else
+#		echo "cannot find user-dirs.dirs setting, using default setting"
+#		XDG_DESKTOP_DIR="$HOME/Desktop"
+#		XDG_DOWNLOAD_DIR="$HOME/Downloads"
+#		XDG_TEMPLATES_DIR="$HOME/Templates"
+#		XDG_PUBLICSHARE_DIR="$HOME/Public"
+#		XDG_DOCUMENTS_DIR="$HOME/Documents"
+#		XDG_MUSIC_DIR="$HOME/Music"
+#		XDG_PICTURES_DIR="$HOME/Pictures"
+#		XDG_VIDEOS_DIR="$HOME/Videos"
+#	fi
+#
+#	FAKE_DESKTOP_DIR_NAME="$(basename "$XDG_DESKTOP_DIR")"
+#	FAKE_DOWNLOAD_DIR_NAME="$(basename "$XDG_DOWNLOAD_DIR")"
+#	FAKE_TEMPLATES_DIR_NAME="$(basename "$XDG_TEMPLATES_DIR")"
+#	FAKE_PUBLICSHARE_DIR_NAME="$(basename "$XDG_PUBLICSHARE_DIR")"
+#	FAKE_DOCUMENTS_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")"
+#	# maybe you can cat "/etc/xdg/user-dirs.defaults" for why I write below lines
+#	if [[ "${XDG_MUSIC_DIR#"$XDG_DOCUMENTS_DIR"}" != "$XDG_MUSIC_DIR" ]];
+#	then
+#		FAKE_MUSIC_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")/$(basename "$XDG_MUSIC_DIR")"
+#	else
+#		FAKE_MUSIC_DIR_NAME="$(basename "$XDG_MUSIC_DIR")"
+#	fi
+#
+#	if [[ "${XDG_PICTURES_DIR#"$XDG_DOCUMENTS_DIR"}" != "$XDG_PICTURES_DIR" ]];
+#	then
+#		FAKE_PICTURES_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")/$(basename "$XDG_PICTURES_DIR")"
+#	else
+#		FAKE_PICTURES_DIR_NAME="$(basename "$XDG_PICTURES_DIR")"
+#	fi
+#
+#	if [[ "${XDG_VIDEOS_DIR#"$XDG_DOCUMENTS_DIR"}" != "$XDG_VIDEOS_DIR" ]];
+#	then
+#		FAKE_VIDEOS_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")/$(basename "$XDG_VIDEOS_DIR")"
+#	else
+#		FAKE_VIDEOS_DIR_NAME="$(basename "$XDG_VIDEOS_DIR")"
+#	fi
+#}
 
 function exeinfo_convert_xdg_path(){
 	# when write into exeinfo_profile
@@ -129,31 +129,31 @@ function exeinfo_convert_xdg_path(){
 	[[ -z "$1" ]] && echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: no argument was input" >&2 && return
 	if [[ ${1#"$XDG_VIDEOS_DIR"} != "$1" ]];
 	then
-		echo '$XDG_VIDEOS_DIR'"${1#"$XDG_VIDEOS_DIR"}"
+		echo '${XDG_VIDEOS_DIR}'"${1#"$XDG_VIDEOS_DIR"}"
 	elif [[ ${1#"$XDG_PICTURES_DIR"} != "$1" ]];
 	then
-		echo '$XDG_PICTURES_DIR'"${1#"$XDG_PICTURES_DIR"}"
+		echo '${XDG_PICTURES_DIR}'"${1#"$XDG_PICTURES_DIR"}"
 	elif [[ ${1#"$XDG_MUSIC_DIR"} != "$1" ]];
 	then
-		echo '$XDG_MUSIC_DIR'"${1#"$XDG_MUSIC_DIR"}"
+		echo '${XDG_MUSIC_DIR}'"${1#"$XDG_MUSIC_DIR"}"
 	elif [[ ${1#"$XDG_DOCUMENTS_DIR"} != "$1" ]];
 	then
-		echo '$XDG_DOCUMENTS_DIR'"${1#"$XDG_DOCUMENTS_DIR"}"
+		echo '${XDG_DOCUMENTS_DIR}'"${1#"$XDG_DOCUMENTS_DIR"}"
 	elif [[ ${1#"$XDG_PUBLICSHARE_DIR"} != "$1" ]];
 	then
-		echo '$XDG_PUBLICSHARE_DIR'"${1#"$XDG_PUBLICSHARE_DIR"}"
+		echo '${XDG_PUBLICSHARE_DIR}'"${1#"$XDG_PUBLICSHARE_DIR"}"
 	elif [[ ${1#"$XDG_TEMPLATES_DIR"} != "$1" ]];
 	then
-		echo '$XDG_TEMPLATES_DIR'"${1#"$XDG_TEMPLATES_DIR"}"
+		echo '${XDG_TEMPLATES_DIR}'"${1#"$XDG_TEMPLATES_DIR"}"
 	elif [[ ${1#"$XDG_DOWNLOAD_DIR"} != "$1" ]];
 	then
-		echo '$XDG_DOWNLOAD_DIR'"${1#"$XDG_DOWNLOAD_DIR"}"
+		echo '${XDG_DOWNLOAD_DIR}'"${1#"$XDG_DOWNLOAD_DIR"}"
 	elif [[ ${1#"$XDG_DESKTOP_DIR"} != "$1" ]];
 	then
-		echo '$XDG_DESKTOP_DIR'"${1#"$XDG_DESKTOP_DIR"}"
+		echo '${XDG_DESKTOP_DIR}'"${1#"$XDG_DESKTOP_DIR"}"
 	elif [[ ${1#"$HOME"} != "$1" ]];
 	then
-		echo '$HOME'"${1#"$HOME"}"
+		echo '${HOME}'"${1#"$HOME"}"
 	fi
 
 }
@@ -163,22 +163,22 @@ function exeinfo_load_file(){
 	if [[ -f "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile.$LANG" ]];
 	then
 		EXEINFO_CURRENT_PROFILE="${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile.$LANG"
-	elif [[ -f "${SELF}/../myapp_exeinfo/exeinfo_profile.$LANG" ]];
+	elif [[ -f "${SELF%/myapp_script/*}/myapp_exeinfo/exeinfo_profile.$LANG" ]];
 	then
-		EXEINFO_CURRENT_PROFILE="${SELF}/../myapp_exeinfo/exeinfo_profile.$LANG"
-        EXEINFO_CURRENT_PROFILE=$(readlink -m "$EXEINFO_CURRENT_PROFILE")
+		EXEINFO_CURRENT_PROFILE="${SELF%/myapp_script/*}/myapp_exeinfo/exeinfo_profile.$LANG"
 	elif [[ -f "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile" ]];
 	then
 		EXEINFO_CURRENT_PROFILE="${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile"
-	elif [[ -f "${SELF}/../myapp_exeinfo/exeinfo_profile" ]];
+	elif [[ -f "${SELF%/myapp_script/*}/myapp_exeinfo/exeinfo_profile" ]];
 	then
-		EXEINFO_CURRENT_PROFILE="${SELF}/../myapp_exeinfo/exeinfo_profile"
-        EXEINFO_CURRENT_PROFILE=$(readlink -m "$EXEINFO_CURRENT_PROFILE")
+		EXEINFO_CURRENT_PROFILE="${SELF%/myapp_script/*}/myapp_exeinfo/exeinfo_profile"
 	else
 		echo "cannot find exeinfo_profile for your LANG:$LANG"
 		echo "also cannot find default exeinfo_profile"
 		return
 	fi
+    # remove duplicate '/' in the result path in case ${MYAPP_NAME} is empty value.
+    EXEINFO_CURRENT_PROFILE=$(readlink -m "$EXEINFO_CURRENT_PROFILE")
 
 	# only for test
 	if (cat "$EXEINFO_CURRENT_PROFILE" |grep '^[[:blank:]]*[^[:blank:]#]' |grep --quiet -e '$WINEARCH' -e '${WINEARCH}' -e '${WINEARCH:.*}' -e '${WINEARCH%.*}' -e '${WINEARCH#.*}');
@@ -326,11 +326,12 @@ EOF
 function exeinfo_exe_location(){
 	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
 	then
-		TEMP_EXEPATH="$(kdialog --geometry 800x600 --title "select the .exe file" --getopenfilename "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp" )"
+        TEMP_FILENAME=$(readlink -m "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp")
+		TEMP_EXEPATH="$(kdialog --geometry 800x600 --title "select the .exe file" --getopenfilename "$TEMP_FILENAME" )"
 		RETURN_STATUS="$?"
 	elif [[ $EXEINFO_GEN_METHOD == "zenity" ]];
 	then
-		TEMP_EXEPATH="$(zenity --width=800 --height=600 --file-selection --title="select the .exe file" --filename="$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp" )"
+		TEMP_EXEPATH="$(zenity --width=800 --height=600 --file-selection --title="select the .exe file" --filename="$TEMP_FILENAME" )"
 		RETURN_STATUS="$?"
 	else
 		clear
@@ -347,36 +348,37 @@ function exeinfo_exe_location(){
 		echo ""
 		read -e -p "input .exe file path: " -i "$APPIMAGE_CACHE_DIR" TEMP_EXEPATH
 		RETURN_STATUS="$?"
-		TEMP_EXEPATH="$(readlink -f "$TEMP_EXEPATH")"
-		if [[ -z "$TEMP_EXEPATH" ]];
-		then
-			clear
-			return
-		elif [[ ! -f "$TEMP_EXEPATH" ]];
-		then
-			clear
-			echo "########################################"
-			echo "ERROR: invalid file name: $TEMP_EXEPATH" >&2
-			echo "########################################"
-			echo ""
-			TEMP_EXEPATH=""
-			return
-		fi
+	fi
+
+	if [[ -z "$TEMP_EXEPATH" ]];
+	then
+		clear
+		return
+	elif [[ ! -f "$TEMP_EXEPATH" ]];
+	then
+		clear
+		echo "########################################"
+		echo "ERROR: invalid file name: $TEMP_EXEPATH" >&2
+		echo "########################################"
+		echo ""
+		TEMP_EXEPATH=""
+		return
 	fi
 
 	clear
 	# if clicked "ok"
+	TEMP_EXEPATH="$(readlink -f "$TEMP_EXEPATH")"
 	if [[ $RETURN_STATUS -eq 0 && -n $TEMP_EXEPATH ]];
 	then
 		# check if .exe file in appdir or in appdir.cache
-        if [[ "${TEMP_EXEPATH#"$(readlink -m "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp")"}" != "$TEMP_EXEPATH" ]];
+        if [[ "${TEMP_EXEPATH#"$(readlink -f "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp")"}" != "$TEMP_EXEPATH" ]];
 		then
 			# .exe file in AppDir.cache or in *.appimage.cache directory
-            TEMP_EXE_LROOT=$(readlink -m "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp")
-        elif [[ "${TEMP_EXEPATH#"$(readlink -m "$APPDIR/opt/${MYAPP_NAME}/myapp")"}" != "$TEMP_EXEPATH" ]];
+            TEMP_EXE_LROOT=$(readlink -f "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp")
+        elif [[ "${TEMP_EXEPATH#"$(readlink -f "$APPDIR/opt/${MYAPP_NAME}/myapp")"}" != "$TEMP_EXEPATH" ]];
 		then
 			# .exe file in AppDir, running AppRun directly from AppDir at this moment.
-            TEMP_EXE_LROOT=$(readlink -m "$APPDIR/opt/${MYAPP_NAME}/myapp")
+            TEMP_EXE_LROOT=$(readlink -f "$APPDIR/opt/${MYAPP_NAME}/myapp")
 		else
 			[[ $EXEINFO_GEN_METHOD == "kdialog" ]] && kdialog --error "you selected *.exe file outside of appimage dir."
 			[[ $EXEINFO_GEN_METHOD == "zenity" ]] && zenity --width=300 --height=100 --error --text="you selected *.exe file outside of appimage dir."
@@ -416,7 +418,10 @@ function exeinfo_exe_location(){
 	fi
 	[[ -n $TEMP_EXE_LROOT && -n $TEMP_EXEPATH ]] && TEMP_EXE_LDIR=$(apprun_realpath "$TEMP_EXE_LROOT" "$(dirname "$TEMP_EXEPATH")")
 	[[ -n $TEMP_EXEPATH ]] && TEMP_EXENAME=$(basename "$TEMP_EXEPATH")
+
+	# only keep $TEMP_EXENAME, $TEMP_EXE_LDIR, $TEMP_EXE_WROOT, $TEMP_EXE_WDIR
 	unset TEMP
+    unset TEMP_FILENAME
 	unset TEMP_END
 	unset TEMP_EXEPATH
 	unset TEMP_EXE_LROOT
@@ -425,6 +430,10 @@ function exeinfo_exe_location(){
 
 
 function exeinfo_savedata_location(){
+	#exeinfo_user_dirs
+
+	export HOME="$HOME_FAKE"
+
 	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
 	then
 		TEMP_SAVEDATAPATH=$(kdialog --geometry 800x600 --title "select the directory where to save the savedata files" --getexistingdirectory "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp" )
@@ -450,71 +459,41 @@ function exeinfo_savedata_location(){
 		echo ""
 		read -e -p "input savedata directory path: " -i "$APPIMAGE_CACHE_DIR" TEMP_SAVEDATAPATH
 		RETURN_STATUS="$?"
-		TEMP_SAVEDATAPATH="$(readlink -f "$TEMP_SAVEDATAPATH")"
-		if [[ -n "$TEMP_SAVEDATAPATH" && ! -d "$TEMP_SAVEDATAPATH" ]];
-		then
-			clear
-			echo "########################################"
-			echo "ERROR: invalid directory name: $TEMP_SAVEDATAPATH" >&2
-			echo "########################################"
-			echo ""
-			TEMP_SAVEDATAPATH=""
-			return
-		fi
+	fi
+
+	if [[ -n "$TEMP_SAVEDATAPATH" && ! -d "$TEMP_SAVEDATAPATH" ]];
+	then
+		clear
+		echo "########################################"
+		echo "ERROR: invalid directory name: $TEMP_SAVEDATAPATH" >&2
+		echo "########################################"
+		echo ""
+		TEMP_SAVEDATAPATH=""
+		return
 	fi
 
 	clear
 
-	#if [[ $RETURN_STATUS -eq 0 ]] && (echo "$TEMP_SAVEDATAPATH" | grep --quiet "steamuser");
-	#then
-	#	TEMP_SAVEDATA_KEEP_SEARCH_FLAG=""
-	#	if (echo "$TEMP_SAVEDATAPATH" | grep --quiet "${APPIMAGE_CACHE_DIR}/usr/share/myapp/myapp_prefix/proton.win64/pfx/drive_c/users/steamuser");
-	#	then
-	#		TEMP_SAVEDATA_IN_HOME=1
-	#		TEMP_SAVEDATA_DIR=$(apprun_realpath "${APPIMAGE_CACHE_DIR}/usr/share/myapp/myapp_prefix/proton.win64/pfx/drive_c/users/steamuser" "$TEMP_SAVEDATAPATH")
-	#	#elif (echo "$TEMP_SAVEDATAPATH" | grep --quiet "${APPIMAGE_CACHE_DIR}/usr/share/myapp/myapp_prefix/proton.win32/pfx/drive_c/users/steamuser");
-	#	#then
-	#	#	TEMP_SAVEDATA_IN_HOME=1
-	#	#	TEMP_SAVEDATA_DIR=$(apprun_realpath "${APPIMAGE_CACHE_DIR}/usr/share/myapp/myapp_prefix/proton.win32/pfx/drive_c/users/steamuser" "$TEMP_SAVEDATAPATH")
-	#	elif (echo "$TEMP_SAVEDATAPATH" | grep --quiet "${APPDIR}/usr/share/myapp/myapp_prefix/proton.win64/pfx/drive_c/users/steamuser");
-	#	then
-	#		TEMP_SAVEDATA_IN_HOME=1
-	#		TEMP_SAVEDATA_DIR=$(apprun_realpath "${APPDIR}/usr/share/myapp/myapp_prefix/proton.win64/pfx/drive_c/users/steamuser" "$TEMP_SAVEDATAPATH")
-	#	#elif (echo "$TEMP_SAVEDATAPATH" | grep --quiet "${APPDIR}/usr/share/myapp/myapp_prefix/proton.win32/pfx/drive_c/users/steamuser");
-	#	#then
-	#	#	TEMP_SAVEDATA_IN_HOME=1
-	#	#	TEMP_SAVEDATA_DIR=$(apprun_realpath "${APPDIR}/usr/share/myapp/myapp_prefix/proton.win32/pfx/drive_c/users/steamuser" "$TEMP_SAVEDATAPATH")
-	#	else
-	#		TEMP_SAVEDATA_KEEP_SEARCH_FLAG=1
-	#	fi
-	#fi
-
-	#if [[ $TEMP_SAVEDATA_KEEP_SEARCH_FLAG -eq 1 && $RETURN_STATUS -eq 0 && -n $TEMP_SAVEDATAPATH ]];
+	# TODO: when unionfs write RO branch, which's path includes symlinks, unionfs will go passthrough the symlink
+	# and write the data into RO branch, instead of writing the RW branch.
+	# As a result, it failed to match $HOME_FAKE with $TEMP_SAVEDATAPATH. 
+	# As a workaround, I separate $TEMP_SAVEDATAPATH and $TEMP_SAVEDATAPATH_REAL
+	TEMP_SAVEDATAPATH_REAL="$(readlink -f "$TEMP_SAVEDATAPATH")"
+	TEMP_APPIMAGE_CACHE_DIR_TO_MYAPP="$(readlink -f "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp")"
+	TEMP_APPDIR_TO_MYAPP="$(readlink -f "${APPDIR}/opt/${MYAPP_NAME}/myapp")"
 	if [[ $RETURN_STATUS -eq 0 && -n $TEMP_SAVEDATAPATH ]];
 	then
-		export HOME="$HOME_FAKE"
-		exeinfo_user_dirs
-		if [[ "${TEMP_SAVEDATAPATH#"${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp"}" != "$TEMP_SAVEDATAPATH" ]];
+		if [[ "${TEMP_SAVEDATAPATH_REAL#"${TEMP_APPIMAGE_CACHE_DIR_TO_MYAPP}"}" != "$TEMP_SAVEDATAPATH_REAL" ]];
 		then
 			TEMP_SAVEDATA_IN_HOME=0
-			TEMP_SAVEDATA_DIR='$MNT_MYAPPSTORGE/'"$(apprun_realpath "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp" "$TEMP_SAVEDATAPATH")"
-		elif [[ "${TEMP_SAVEDATAPATH#"${APPDIR}/opt/${MYAPP_NAME}/myapp"}" != "$TEMP_SAVEDATAPATH" ]];
+			TEMP_SAVEDATA_DIR='${MNT_MYAPPSTORGE}/'"$(apprun_realpath "$TEMP_APPIMAGE_CACHE_DIR_TO_MYAPP" "$TEMP_SAVEDATAPATH_REAL")"
+		elif [[ "${TEMP_SAVEDATAPATH_REAL#"${TEMP_APPDIR_TO_MYAPP}"}" != "$TEMP_SAVEDATAPATH_REAL" ]];
 		then
 			TEMP_SAVEDATA_IN_HOME=0
-			TEMP_SAVEDATA_DIR='$MNT_MYAPPSTORGE/'"$(apprun_realpath "${APPDIR}/opt/${MYAPP_NAME}/myapp" "$TEMP_SAVEDATAPATH")"
-		elif [[ "${TEMP_SAVEDATAPATH#"${APPIMAGE_CACHE_DIR}/home/public_user/"}" != "$TEMP_SAVEDATAPATH" ]];
+			TEMP_SAVEDATA_DIR='${MNT_MYAPPSTORGE}/'"$(apprun_realpath "$TEMP_APPDIR_TO_MYAPP" "$TEMP_SAVEDATAPATH_REAL")"
+		elif [[ "${TEMP_SAVEDATAPATH%/home/public_user/*}" != "$TEMP_SAVEDATAPATH" ]];
 		then
 			TEMP_SAVEDATA_IN_HOME=1
-			#TEMP_SAVEDATA_DIR=$(apprun_realpath "${APPIMAGE_CACHE_DIR}/home/public_user" "$TEMP_SAVEDATAPATH")
-			TEMP_SAVEDATAPATH=$(apprun_realpath "${APPIMAGE_CACHE_DIR}/home/public_user" "$TEMP_SAVEDATAPATH")
-			TEMP_SAVEDATAPATH="$HOME/$TEMP_SAVEDATAPATH"
-			TEMP_SAVEDATA_DIR="$(exeinfo_convert_xdg_path "$TEMP_SAVEDATAPATH")"
-		elif [[ "${TEMP_SAVEDATAPATH#"${APPDIR}/home/public_user"}" != "$TEMP_SAVEDATAPATH" ]];
-		then
-			TEMP_SAVEDATA_IN_HOME=1
-			#TEMP_SAVEDATA_DIR=$(apprun_realpath "${APPDIR}/home/public_user" "$TEMP_SAVEDATAPATH")
-			TEMP_SAVEDATAPATH=$(apprun_realpath "${APPIMAGE_CACHE_DIR}/home/public_user" "$TEMP_SAVEDATAPATH")
-			TEMP_SAVEDATAPATH="$HOME/$TEMP_SAVEDATAPATH"
 			TEMP_SAVEDATA_DIR="$(exeinfo_convert_xdg_path "$TEMP_SAVEDATAPATH")"
 		else
 			[[ $EXEINFO_GEN_METHOD == "kdialog" ]] && kdialog --error "you selected savedata directory outside of appimage dir."
@@ -526,10 +505,16 @@ function exeinfo_savedata_location(){
 			echo ""
 			TEMP_SAVEDATAPATH=""
 		fi
-		export HOME="$HOME_REAL"
 	fi
+
+	export HOME="$HOME_REAL"
+
+	# only keep $TEMP_SAVEDATA_DIR, $TEMP_SAVEDATA_IN_HOME
 	unset RETURN_STATUS
 	unset TEMP_SAVEDATAPATH
+	unset TEMP_SAVEDATAPATH_REAL
+	unset TEMP_APPIMAGE_CACHE_DIR_TO_MYAPP
+	unset TEMP_APPDIR_TO_MYAPP
 }
 
 function exeinfo_locale(){
@@ -708,7 +693,7 @@ EOF
 	echo "saved into $APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile"
 	if [[ -n "$TEMP_MYAPPLANG" ]];
 	then
-		cat "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile" > "$APPIMAGE_CACHE_DIR/usr/share/myapp/myapp_exeinfo/exeinfo_profile.$TEMP_MYAPPLANG"
+		cat "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile" > "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile.$TEMP_MYAPPLANG"
 		echo "saved into $APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile.$TEMP_MYAPPLANG"
 	fi
 	EXIT_MAIN_MENU=1
