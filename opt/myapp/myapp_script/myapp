@@ -296,8 +296,14 @@ while [[ -n "$1" ]] ; do
 			elif [[ ! $MYAPPDEBUG -eq 1 ]];
 			then
 				echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: not MYAPPDEBUG mode now. prevent to pass any unknown option." >&2
-				echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: unknown options: $next_parameters $@" >&2
-				exit
+				echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: unknown options, ignored: $next_parameters $@" >&2
+                # TODO: bugs: vimspector+vscode-bash-debug always append a "undefined" argument.
+                # which will cause exit here.
+                # refer:
+                # https://github.com/puremourning/vimspector/issues/766
+				#exit
+                shift $#
+                break
 			else
 				# then $next_parameters will be passed to wine
 				[[ -z $next_parameters ]] && next_parameters="$@" || next_parameters="$next_parameters $@"
@@ -319,8 +325,13 @@ while [[ -n "$1" ]] ; do
 				shift
 			else
 				echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: not MYAPPDEBUG mode now. prevent to pass any unknow option." >&2
-				echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: unknown options: $1" >&2
-				exit
+				echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: unknown options, ignored: $1" >&2
+                # TODO: bugs: vimspector+vscode-bash-debug always append a "undefined" argument.
+                # which will cause exit here.
+                # refer:
+                # https://github.com/puremourning/vimspector/issues/766
+				#exit
+                shift
 			fi
 			;;
 	esac
@@ -632,7 +643,7 @@ function savedata_replace(){
 	echo "start >>>>>>>> [${FUNCNAME[0]}]" >&3
 
 	HOME="$HOME_FAKE"
-	exeinfo_user_dirs
+	#exeinfo_user_dirs
 	exeinfo_load_file
 	#if [[ $SAVEDATA_IN_HOME -eq 0 ]];
 	#then
