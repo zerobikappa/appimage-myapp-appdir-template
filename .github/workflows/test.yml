@@ -23,7 +23,8 @@ jobs:
             binutils \
             xz-utils \
             fuse \
-            libfuse2
+            libfuse2 \
+            file
 
       - name: checkout current repo code
         uses: actions/checkout@v3
