@@ -38,7 +38,7 @@ jobs:
 
           which ar
           ls -l
-          ar x unionfs-fuse*amd64.deb
+          ar xv unionfs-fuse*amd64.deb
           tar Jxvf data.tar.xz
           mv -f usr/bin/unionfs appimage-myapp-appdir-template/usr/bin/
           ARCH=x86_64 ./appimagetool.AppImage appimage-myapp-appdir-template
