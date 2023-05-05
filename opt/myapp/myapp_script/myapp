@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=1654679387
+MYAPPRUN_VERSION=2.0.1
 
 #############################################
 ## prevent running by root/sudo for security concern
@@ -71,25 +71,18 @@ debug_set
 #############################################
 ## env settings
 SELF=$(readlink -f "$0")
-# moved script from HERE(AppDir) to HERE/usr/bin, therefore use $APPDIR to replace $HERE
+# moved script from HERE(AppDir) to HERE/opt/${MYAPP_NAME}/myapp_script/, therefore use $APPDIR to replace $HERE
 #HERE=${SELF%/*}
-[[ -z $APPDIR ]] && APPDIR=${SELF%/usr/bin/*}
+[[ -z $APPDIR ]] && APPDIR=${SELF%/opt/*}
 
-## if you already install unionfs in your system, it should be newer version than that I bundled in appimage, prefer to use system unionfs
-#if [[ -x "$(command -v unionfs)" ]];
-#then
-#	UNIONFS_BIN="$(command -v unionfs)"
-#	debug_print_env UNIONFS_BIN >&3 2>&4
-#else
-#	UNIONFS_BIN="$APPDIR/usr/bin/unionfs"
-#	debug_print_env UNIONFS_BIN >&3 2>&4
-#fi
-UNIONFS_BIN="$APPDIR/usr/bin/unionfs"
+# TODO: cannot use new unionfs because same commandline options was changed.
+# WALKAROUND: ship old version unionfs in appimage package.
+UNIONFS_BIN="${APPDIR}/usr/bin/unionfs"
 debug_print_env UNIONFS_BIN >&3 2>&4
 
 # keep a backup of $PATH location. Because later I will compare the version number of local winetricks and builtin winetricks.
 export PATH_OLD="$PATH"
-export PATH="${APPDIR}/usr/bin/:${APPDIR}/usr/sbin/:${APPDIR}/usr/games/:${APPDIR}/bin/:${APPDIR}/sbin/${PATH:+:$PATH}"
+export PATH="${SELF%/*}/:${APPDIR}/usr/bin/:${APPDIR}/usr/sbin/:${APPDIR}/usr/games/:${APPDIR}/bin/:${APPDIR}/sbin/${PATH:+:$PATH}"
 export PATH_NEW="$PATH"
 
 export LD_LIBRARY_PATH="${APPDIR}/usr/lib/:${APPDIR}/usr/lib/i386-linux-gnu/:${APPDIR}/usr/lib/x86_64-linux-gnu/:${APPDIR}/usr/lib32/:${APPDIR}/usr/lib64/:${APPDIR}/lib/:${APPDIR}/lib/i386-linux-gnu/:${APPDIR}/lib/x86_64-linux-gnu/:${APPDIR}/lib32/:${APPDIR}/lib64/${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
@@ -139,14 +132,6 @@ run option:
 	will be redirect to this directory to prevent
 	changing files in local $HOME.
 
-  --proton
-	default use local wine to run, but you can add
-	this option to use local Steam Proton instead.
-	if you install different version of Steam Proton,
-	it will choose the latest stable version.
-	if no stable version was found,
-	it will try to use the experimental version.
-
   -h, --help
 	show this help, then exit
 
@@ -194,9 +179,9 @@ function print_version(){
 		echo "***AppImageKit Version***"
 		$APPIMAGE --appimage-version
 	fi
-	if [[ -f "$APPDIR"/usr/share/myapp/myapp_exeinfo/exeinfo_profile ]];
+	if [[ -f "${SELF}"/../myapp_exeinfo/exeinfo_profile ]];
 	then
-		source "$APPDIR"/usr/share/myapp/myapp_exeinfo/exeinfo_profile
+		source "${SELF}"/../myapp_exeinfo/exeinfo_profile
 	fi
 	[[ -z $EXENAME ]] && EXENAME="(empty)(not set in AppDir)"
 	APPLICATION_NAME=$(cat "$APPDIR"/*.desktop | grep -i "name=") && APPLICATION_NAME=${APPLICATION_NAME#*"="}
@@ -212,7 +197,7 @@ function print_version(){
   optional language:
       LANG=$MYAPPLANG(default)
 EOF
-	find "$APPDIR/usr/share/myapp/myapp_exeinfo" -mindepth 1 -maxdepth 1 -name "exeinfo_profile.*" -print0 | sort -z | while read -d $'\0' OPTIONAL_EXEINFO_PROFILE;
+	find "${SELF}/../myapp_exeinfo" -mindepth 1 -maxdepth 1 -name "exeinfo_profile.*" -print0 | sort -z | while read -d $'\0' OPTIONAL_EXEINFO_PROFILE;
 	do
 		TEMP_KEY_WORD="$(cat "$OPTIONAL_EXEINFO_PROFILE" | grep '^[[:blank:]]*[^[:blank:]#]' | grep "MYAPPLANG=")"
 		TEMP_KEY_WORD="${TEMP_KEY_WORD#*'MYAPPLANG='}"
@@ -303,9 +288,6 @@ while [[ -n "$1" ]] ; do
 			echo ""
 			echo "created cache directory: $APPIMAGE.cache"
 			exit ;;
-		--proton)
-			LOAD_PROTON=1
-			shift ;;
 		--)
 			shift
 			if [[ -z "$*" && -z "$next_parameters" ]];
@@ -314,8 +296,14 @@ while [[ -n "$1" ]] ; do
 			elif [[ ! $MYAPPDEBUG -eq 1 ]];
 			then
 				echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: not MYAPPDEBUG mode now. prevent to pass any unknown option." >&2
-				echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: unknown options: $next_parameters $@" >&2
-				exit
+				echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: unknown options, ignored: $next_parameters $@" >&2
+                # TODO: bugs: vimspector+vscode-bash-debug always append a "undefined" argument.
+                # which will cause exit here.
+                # refer:
+                # https://github.com/puremourning/vimspector/issues/766
+				#exit
+                shift $#
+                break
 			else
 				# then $next_parameters will be passed to wine
 				[[ -z $next_parameters ]] && next_parameters="$@" || next_parameters="$next_parameters $@"
@@ -337,8 +325,13 @@ while [[ -n "$1" ]] ; do
 				shift
 			else
 				echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: not MYAPPDEBUG mode now. prevent to pass any unknow option." >&2
-				echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: unknown options: $1" >&2
-				exit
+				echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: unknown options, ignored: $1" >&2
+                # TODO: bugs: vimspector+vscode-bash-debug always append a "undefined" argument.
+                # which will cause exit here.
+                # refer:
+                # https://github.com/puremourning/vimspector/issues/766
+				#exit
+                shift
 			fi
 			;;
 	esac
@@ -384,11 +377,14 @@ fi
 ##############################################
 ## setup unionfs temp directory for this app
 
-RO_MYAPPSTORGE="$APPDIR/usr/share/myapp"
+RO_MYAPPSTORGE="${SELF%/myapp_script/*}"
+RO_MYAPPSTORGE=$( readlink -m "${RO_MYAPPSTORGE}" )
 
-MNT_MYAPPSTORGE="/tmp/$(basename "$APPDIR").unionfs/usr/share/myapp"
+MNT_MYAPPSTORGE="/tmp/$(basename "$APPDIR").unionfs/opt/${MYAPP_NAME}/myapp"
+MNT_MYAPPSTORGE=$( readlink -m "${MNT_MYAPPSTORGE}" )
 
-TMP_MYAPPSTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/usr/share/myapp"
+TMP_MYAPPSTORGE_OVERLAY="$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp"
+TMP_MYAPPSTORGE_OVERLAY=$( readlink -m "${TMP_MYAPPSTORGE_OVERLAY}" )
 
 
 RO_HOMESTORGE="/home/$USER/"
@@ -444,12 +440,7 @@ fi
 
 
 ##############################################
-if [[ $LOAD_PROTON -eq 1 ]];
-then
-	source "$APPDIR"/usr/bin/myapp-plugin-proton
-else
-	source "$APPDIR"/usr/bin/myapp-plugin-wine
-fi
+source "$APPDIR"/opt/"${MYAPP_NAME}"/myapp/myapp_script/myapp-plugin-wine
 wine_set_env
 MYAPPDEBUG_COLOR=1 debug_print_env "APPDIR" "WINEPREFIX"
 ##############################################
@@ -458,7 +449,7 @@ MYAPPDEBUG_COLOR=1 debug_print_env "APPDIR" "WINEPREFIX"
 ##############################################
 # I defined some function to generate .exe file name, path, and other information.
 # I saved these function in below script file and load it as plugin
-source "$APPDIR"/usr/bin/myapp-plugin-exeinfo
+source "$APPDIR"/opt/"${MYAPP_NAME}"/myapp/myapp_script/myapp-plugin-exeinfo
 
 # load exeinfo_profile, may depends on $WINEARCH, (if savedata in c drive,) should set the $WINEARCH first
 # it may also depends on $XDG_DOCUMENTS_DIR, if you add this env verb in exeinfo_profile
@@ -474,7 +465,8 @@ if [[ -z $EXENAME ]];
 then
 	[[ ! $TEST_WINETRICKS_FLAG -eq 1 ]] && echo "EXENAME not found in config file. auto set --test-winetricks , redirect to launch winetricks"
 	TEST_WINETRICKS_FLAG=1
-	EXENAME="$APPDIR/usr/bin/winetricks"
+	#EXENAME="$APPDIR/usr/bin/winetricks"
+	EXENAME="$WINETRICKS_BIN"
 fi
 
 # if --exeinfo-gen or --test-winetricks is set, then -s and -w will be ignored.
@@ -567,13 +559,13 @@ function atexit() {
 	kill -9 $PID_MYAPPSTORGE
 	kill -9 $PID_HOMESTORGE
 	sleep 1
-	umount "/tmp/$(basename "$APPDIR").unionfs/usr/share/myapp"
+	umount "/tmp/$(basename "$APPDIR").unionfs/opt/${MYAPP_NAME}/myapp"
 	umount "/tmp/$(basename "$APPDIR").unionfs/home/public_user"
 	echo "[${FUNCNAME[0]}:70%] removing /tmp/$(basename "$APPDIR").unionfs"
 	rm -rf "/tmp/$(basename "$APPDIR").unionfs"
 	# if not clean up unionfs hide files, may encounter some read file error next time.
 	echo "[${FUNCNAME[0]}:90%] removing unionfs hidden files"
-	rm -rf "$APPIMAGE_CACHE_DIR/usr/share/myapp"/.unionfs* >/dev/null 2>&1
+	rm -rf "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp"/.unionfs* >/dev/null 2>&1
 	rm -rf "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
 
 	echo "[${FUNCNAME[0]}:100%] ended"
@@ -651,7 +643,7 @@ function savedata_replace(){
 	echo "start >>>>>>>> [${FUNCNAME[0]}]" >&3
 
 	HOME="$HOME_FAKE"
-	exeinfo_user_dirs
+	#exeinfo_user_dirs
 	exeinfo_load_file
 	#if [[ $SAVEDATA_IN_HOME -eq 0 ]];
 	#then
@@ -785,7 +777,7 @@ function myapp_launch(){
 		fi
 	fi
 }
-myapp_launch
+myapp_launch "$@"
 
 
 ##############################################
