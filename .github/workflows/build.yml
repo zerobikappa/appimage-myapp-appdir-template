@@ -18,7 +18,7 @@ jobs:
       - name: Install packages
         run: |
           apt-get update -y
-          apt-get install -y wget binutils
+          apt-get install -y wget binutils xz
 
       - name: checkout current repo code
         uses: actions/checkout@v3
