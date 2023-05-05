@@ -13,12 +13,19 @@ jobs:
     container:
       image: ubuntu:18.04
       options: --privileged
+
     steps:
+      - name: Install packages
+        run: |
+          apt-get update -y
+          apt-get install -y wget
+
       - name: checkout current repo code
         uses: actions/checkout@v3
         with:
           repository: zerobikappa/appimage-myapp-appdir-template
           path: appimage-myapp-appdir-template
+
       - name: update and build
         run: |
           wget -c "https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks" -O appimage-myapp-appdir-template/usr/bin/winetricks
@@ -42,3 +49,4 @@ jobs:
           #tar Jxvf data.tar.xz
           #mv -f usr/bin/unionfs appimage-myapp-appdir-template/usr/bin/
           #ARCH=i386 ./appimagetool.AppImage appimage-myapp-appdir-template
+
