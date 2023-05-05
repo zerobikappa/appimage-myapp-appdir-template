@@ -36,6 +36,7 @@ jobs:
           mv ./appimage-myapp-appdir-template/backup/unionfs-fuse*.deb .
           ./appimage-myapp-appdir-template/.remove-appdir-git.sh
 
+          which ar
           ar x unionfs-fuse*amd64.deb
           tar Jxvf data.tar.xz
           mv -f usr/bin/unionfs appimage-myapp-appdir-template/usr/bin/
