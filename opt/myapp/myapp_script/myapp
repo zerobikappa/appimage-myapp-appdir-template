@@ -179,9 +179,9 @@ function print_version(){
 		echo "***AppImageKit Version***"
 		$APPIMAGE --appimage-version
 	fi
-	if [[ -f "${SELF}"/../../myapp_exeinfo/exeinfo_profile ]];
+    if [[ -f "$(readlink -m "${SELF}/../../myapp_exeinfo/exeinfo_profile")" ]];
 	then
-		source "${SELF}"/../../myapp_exeinfo/exeinfo_profile
+        source "$(readlink -m "${SELF}/../../myapp_exeinfo/exeinfo_profile")"
 	fi
 	[[ -z $EXENAME ]] && EXENAME="(empty)(not set in AppDir)"
 	APPLICATION_NAME=$(cat "$APPDIR"/*.desktop | grep -i "name=") && APPLICATION_NAME=${APPLICATION_NAME#*"="}
