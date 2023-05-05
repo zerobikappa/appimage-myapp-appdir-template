@@ -9,7 +9,9 @@ HERE=${SELF%/*}
 echo "$USER"
 #############################################
 ## prevent running by root/sudo
-if [[ $(id -u) -eq 0 ]];
+## TODO: github docker always run in root permission, and the $USER env is empty.
+## As a workaround, test if $USER is empty so that we still can run below command.
+if [[ $(id -u) -eq 0 && -n "$USER" ]];
 then
 	echo "[AppRun]: prevent running by root/sudo"
 	echo "[AppRun]: you should not using root/sudo to run this application"
