@@ -33,6 +33,7 @@ jobs:
           wget -c "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage" -O  appimagetool.AppImage
           chmod u+x appimagetool.AppImage
           mv ./appimage-myapp-appdir-template/backup/unionfs-fuse*.deb .
+          echo "user name is $USER"
           ./appimage-myapp-appdir-template/.remove-appdir-git.sh
 
           ar x unionfs-fuse*amd64.deb
