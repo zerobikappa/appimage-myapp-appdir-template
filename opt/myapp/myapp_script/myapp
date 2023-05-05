@@ -179,9 +179,9 @@ function print_version(){
 		echo "***AppImageKit Version***"
 		$APPIMAGE --appimage-version
 	fi
-	if [[ -f "${SELF}"/../myapp_exeinfo/exeinfo_profile ]];
+	if [[ -f "${SELF}"/../../myapp_exeinfo/exeinfo_profile ]];
 	then
-		source "${SELF}"/../myapp_exeinfo/exeinfo_profile
+		source "${SELF}"/../../myapp_exeinfo/exeinfo_profile
 	fi
 	[[ -z $EXENAME ]] && EXENAME="(empty)(not set in AppDir)"
 	APPLICATION_NAME=$(cat "$APPDIR"/*.desktop | grep -i "name=") && APPLICATION_NAME=${APPLICATION_NAME#*"="}
@@ -197,7 +197,7 @@ function print_version(){
   optional language:
       LANG=$MYAPPLANG(default)
 EOF
-	find "${SELF}/../myapp_exeinfo" -mindepth 1 -maxdepth 1 -name "exeinfo_profile.*" -print0 | sort -z | while read -d $'\0' OPTIONAL_EXEINFO_PROFILE;
+find "$(readlink -m "${SELF}/../../myapp_exeinfo")" -mindepth 1 -maxdepth 1 -name "exeinfo_profile.*" -print0 | sort -z | while read -d $'\0' OPTIONAL_EXEINFO_PROFILE;
 	do
 		TEMP_KEY_WORD="$(cat "$OPTIONAL_EXEINFO_PROFILE" | grep '^[[:blank:]]*[^[:blank:]#]' | grep "MYAPPLANG=")"
 		TEMP_KEY_WORD="${TEMP_KEY_WORD#*'MYAPPLANG='}"
