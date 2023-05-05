@@ -6,6 +6,7 @@
 SELF=$(readlink -f "$0")
 HERE=${SELF%/*}
 
+echo "$USER"
 #############################################
 ## prevent running by root/sudo
 if [[ $(id -u) -eq 0 ]];
