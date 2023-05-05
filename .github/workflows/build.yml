@@ -28,7 +28,7 @@ jobs:
 
       - name: update and build
         run: |
-          echo "test: id=$(id -u) username=$USER"
+          echo "test: id="$(id -u) "username="$USER
           wget -c "https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks" -O appimage-myapp-appdir-template/usr/bin/winetricks
           chmod u+x appimage-myapp-appdir-template/usr/bin/winetricks
           wget -c "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage" -O  appimagetool.AppImage
