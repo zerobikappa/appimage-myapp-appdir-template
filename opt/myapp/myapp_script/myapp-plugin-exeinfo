@@ -453,7 +453,7 @@ function exeinfo_savedata_location(){
 		echo "  or"
 		echo "  (game folder under app dir:) ${APPDIR}/opt/${MYAPP_NAME}/myapp/"
 		echo "  or"
-		echo "  (fake home:) ${APPIMAGE_CACHE_DIR}/home/public_user/"
+		echo "  (fake home:) ${HOME_FAKE}"
 		echo "##################################################"
 		echo ""
 		read -e -p "input savedata directory path: " -i "$APPIMAGE_CACHE_DIR" TEMP_SAVEDATAPATH
