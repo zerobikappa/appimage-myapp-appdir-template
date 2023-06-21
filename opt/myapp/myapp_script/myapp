@@ -5,7 +5,9 @@
 MYAPPRUN_VERSION=2.0.3
 if [[ "$0" != "${BASH_SOURCE[0]}" ]];
 then
+    echo "export \$MYAPPRUN_VERSION into env."
     export MYAPPRUN_VERSION=${MYAPPRUN_VERSION}
+    echo "MYAPPRUN_VERSION=${MYAPPRUN_VERSION}"
     return
 fi
 
