@@ -57,19 +57,17 @@ jobs:
           #mv -f usr/bin/unionfs appimage-myapp-appdir-template/usr/bin/
           #ARCH=i386 ./appimagetool.AppImage appimage-myapp-appdir-template
 
-          ls
-          echo pwd=$(pwd)
-          echo GITHUB_WORKSPACE=${GITHUB_WORKSPACE}
-#          . ${GITHUB_WORKSPACE}/appimage-myapp-appdir-template/opt/myapp/myapp_script/myapp
-#
-#      - name: auto release
-#        uses: "marvinpinto/action-automatic-releases@latest"
-#        with:
-#          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-#          title: "${MYAPPRUN_VERSION}"
-#          prerelease: true
-#          files: |
-#            myapp-template-x86_64.AppImage
+          grep -m 1 MYAPPRUN_VERSION ${GITHUB_WORKSPACE}/appimage-myapp-appdir-template/opt/myapp/myapp_script/myapp >> "$GITHUB_ENV"
+
+      - name: auto release
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "${{ env.MYAPPRUN_VERSION }}"
+          title: "${{ env.MYAPPRUN_VERSION }}"
+          prerelease: false
+          files: |
+            myapp-template-x86_64.AppImage
 
       - name: auto release
         uses: "marvinpinto/action-automatic-releases@latest"
