@@ -6,7 +6,7 @@ MYAPPRUN_VERSION=2.0.3
 if [[ "$0" != "${BASH_SOURCE[0]}" ]];
 then
     export MYAPPRUN_VERSION=${MYAPPRUN_VERSION}
-    exit
+    return
 fi
 
 #############################################
