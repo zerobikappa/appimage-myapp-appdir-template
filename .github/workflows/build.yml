@@ -56,7 +56,17 @@ jobs:
           #tar Jxvf data.tar.xz
           #mv -f usr/bin/unionfs appimage-myapp-appdir-template/usr/bin/
           #ARCH=i386 ./appimagetool.AppImage appimage-myapp-appdir-template
-          #
+
+          source ./appimage-myapp-appdir-template/opt/myapp/myapp_script/myapp
+
+      - name: auto release
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          title: "${MYAPPRUN_VERSION}"
+          prerelease: true
+          files: |
+            myapp-template-x86_64.AppImage
       - name: auto release
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
