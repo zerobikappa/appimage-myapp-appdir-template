@@ -75,53 +75,53 @@ function apprun_realpath(){
 
 }
 
-#function exeinfo_user_dirs(){
-#	# if user-dirs.dirs exists, it would replace the default setting
-#	if [[ -f "$XDG_CONFIG_HOME/user-dirs.dirs" ]];
-#	then
-#		source "$XDG_CONFIG_HOME/user-dirs.dirs"
-#	elif [[ -f "$HOME/.config/user-dirs.dirs" ]];
-#	then
-#		source "$HOME/.config/user-dirs.dirs"
-#	else
-#		echo "cannot find user-dirs.dirs setting, using default setting"
-#		XDG_DESKTOP_DIR="$HOME/Desktop"
-#		XDG_DOWNLOAD_DIR="$HOME/Downloads"
-#		XDG_TEMPLATES_DIR="$HOME/Templates"
-#		XDG_PUBLICSHARE_DIR="$HOME/Public"
-#		XDG_DOCUMENTS_DIR="$HOME/Documents"
-#		XDG_MUSIC_DIR="$HOME/Music"
-#		XDG_PICTURES_DIR="$HOME/Pictures"
-#		XDG_VIDEOS_DIR="$HOME/Videos"
-#	fi
-#
-#	FAKE_DESKTOP_DIR_NAME="$(basename "$XDG_DESKTOP_DIR")"
-#	FAKE_DOWNLOAD_DIR_NAME="$(basename "$XDG_DOWNLOAD_DIR")"
-#	FAKE_TEMPLATES_DIR_NAME="$(basename "$XDG_TEMPLATES_DIR")"
-#	FAKE_PUBLICSHARE_DIR_NAME="$(basename "$XDG_PUBLICSHARE_DIR")"
-#	FAKE_DOCUMENTS_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")"
-#	# maybe you can cat "/etc/xdg/user-dirs.defaults" for why I write below lines
-#	if [[ "${XDG_MUSIC_DIR#"$XDG_DOCUMENTS_DIR"}" != "$XDG_MUSIC_DIR" ]];
-#	then
-#		FAKE_MUSIC_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")/$(basename "$XDG_MUSIC_DIR")"
-#	else
-#		FAKE_MUSIC_DIR_NAME="$(basename "$XDG_MUSIC_DIR")"
-#	fi
-#
-#	if [[ "${XDG_PICTURES_DIR#"$XDG_DOCUMENTS_DIR"}" != "$XDG_PICTURES_DIR" ]];
-#	then
-#		FAKE_PICTURES_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")/$(basename "$XDG_PICTURES_DIR")"
-#	else
-#		FAKE_PICTURES_DIR_NAME="$(basename "$XDG_PICTURES_DIR")"
-#	fi
-#
-#	if [[ "${XDG_VIDEOS_DIR#"$XDG_DOCUMENTS_DIR"}" != "$XDG_VIDEOS_DIR" ]];
-#	then
-#		FAKE_VIDEOS_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")/$(basename "$XDG_VIDEOS_DIR")"
-#	else
-#		FAKE_VIDEOS_DIR_NAME="$(basename "$XDG_VIDEOS_DIR")"
-#	fi
-#}
+function exeinfo_user_dirs(){
+	# if user-dirs.dirs exists, it would replace the default setting
+	if [[ -f "$XDG_CONFIG_HOME/user-dirs.dirs" ]];
+	then
+		source "$XDG_CONFIG_HOME/user-dirs.dirs"
+	elif [[ -f "$HOME/.config/user-dirs.dirs" ]];
+	then
+		source "$HOME/.config/user-dirs.dirs"
+	else
+		echo "cannot find user-dirs.dirs setting, using default setting"
+		XDG_DESKTOP_DIR="$HOME/Desktop"
+		XDG_DOWNLOAD_DIR="$HOME/Downloads"
+		XDG_TEMPLATES_DIR="$HOME/Templates"
+		XDG_PUBLICSHARE_DIR="$HOME/Public"
+		XDG_DOCUMENTS_DIR="$HOME/Documents"
+		XDG_MUSIC_DIR="$HOME/Music"
+		XDG_PICTURES_DIR="$HOME/Pictures"
+		XDG_VIDEOS_DIR="$HOME/Videos"
+	fi
+
+	FAKE_DESKTOP_DIR_NAME="$(basename "$XDG_DESKTOP_DIR")"
+	FAKE_DOWNLOAD_DIR_NAME="$(basename "$XDG_DOWNLOAD_DIR")"
+	FAKE_TEMPLATES_DIR_NAME="$(basename "$XDG_TEMPLATES_DIR")"
+	FAKE_PUBLICSHARE_DIR_NAME="$(basename "$XDG_PUBLICSHARE_DIR")"
+	FAKE_DOCUMENTS_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")"
+	# maybe you can cat "/etc/xdg/user-dirs.defaults" for why I write below lines
+	if [[ "${XDG_MUSIC_DIR#"$XDG_DOCUMENTS_DIR"}" != "$XDG_MUSIC_DIR" ]];
+	then
+		FAKE_MUSIC_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")/$(basename "$XDG_MUSIC_DIR")"
+	else
+		FAKE_MUSIC_DIR_NAME="$(basename "$XDG_MUSIC_DIR")"
+	fi
+
+	if [[ "${XDG_PICTURES_DIR#"$XDG_DOCUMENTS_DIR"}" != "$XDG_PICTURES_DIR" ]];
+	then
+		FAKE_PICTURES_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")/$(basename "$XDG_PICTURES_DIR")"
+	else
+		FAKE_PICTURES_DIR_NAME="$(basename "$XDG_PICTURES_DIR")"
+	fi
+
+	if [[ "${XDG_VIDEOS_DIR#"$XDG_DOCUMENTS_DIR"}" != "$XDG_VIDEOS_DIR" ]];
+	then
+		FAKE_VIDEOS_DIR_NAME="$(basename "$XDG_DOCUMENTS_DIR")/$(basename "$XDG_VIDEOS_DIR")"
+	else
+		FAKE_VIDEOS_DIR_NAME="$(basename "$XDG_VIDEOS_DIR")"
+	fi
+}
 
 function exeinfo_convert_xdg_path(){
 	# when write into exeinfo_profile
@@ -430,9 +430,8 @@ function exeinfo_exe_location(){
 
 
 function exeinfo_savedata_location(){
-	#exeinfo_user_dirs
-
 	export HOME="$HOME_FAKE"
+	exeinfo_user_dirs
 
 	if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
 	then
@@ -508,6 +507,7 @@ function exeinfo_savedata_location(){
 	fi
 
 	export HOME="$HOME_REAL"
+    exeinfo_user_dirs
 
 	# only keep $TEMP_SAVEDATA_DIR, $TEMP_SAVEDATA_IN_HOME
 	unset RETURN_STATUS

@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=2.0.1
+MYAPPRUN_VERSION=2.0.2
 
 #############################################
 ## prevent running by root/sudo for security concern
