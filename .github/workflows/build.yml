@@ -58,7 +58,7 @@ jobs:
           #ARCH=i386 ./appimagetool.AppImage appimage-myapp-appdir-template
 
           ls
-          source appimage-myapp-appdir-template/opt/myapp/myapp_script/myapp
+          . appimage-myapp-appdir-template/opt/myapp/myapp_script/myapp
 
       - name: auto release
         uses: "marvinpinto/action-automatic-releases@latest"
