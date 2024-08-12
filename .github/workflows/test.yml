@@ -27,7 +27,7 @@ jobs:
             file
 
       - name: checkout current repo code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: zerobikappa/appimage-myapp-appdir-template
           path: appimage-myapp-appdir-template
