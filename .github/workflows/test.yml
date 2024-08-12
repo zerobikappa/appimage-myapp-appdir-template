@@ -10,9 +10,9 @@ on: [workflow_dispatch]
 jobs:
   pre-release:
     runs-on: "ubuntu-latest"
-    container:
-      image: ubuntu:18.04
-      options: --privileged
+    #container:
+    #  image: ubuntu:18.04
+    #  options: --privileged
 
     steps:
       - name: Install packages
