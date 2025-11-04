@@ -11,4 +11,4 @@ APPIMAGE=$APPIMAGE \
 APPDIR=$APPDIR \
 OWD=$OWD \
 ARGV0=$ARGV0 \
-"$HERE"/opt/myapp/myapp_script/myapp "$@"
+"$HERE"/opt/myapp/myapp_script/main.sh "$@"

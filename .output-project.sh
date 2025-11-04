@@ -77,7 +77,7 @@ APPIMAGE=\$APPIMAGE \\
 APPDIR=\$APPDIR \\
 OWD=\$OWD \\
 ARGV0=\$ARGV0 \\
-"\$HERE"/opt/"$MYAPP_NAME"/myapp/myapp_script/myapp "\$@"
+"\$HERE"/opt/"$MYAPP_NAME"/myapp/myapp_script/main.sh "\$@"
 EOF
 
     chmod 0755 "${HERE}/output/AppRun"
@@ -90,6 +90,6 @@ EOF
     mkdir -p "${HERE}/output/usr/share/metainfo"
     mkdir -p "${HERE}/output/usr/share/pixmaps"
     cp -ruv "${HERE}"/opt/myapp/* "${HERE}/output/opt/${MYAPP_NAME}/myapp/"
-    ln -sfv /opt/"${MYAPP_NAME}"/myapp/myapp_script/myapp "${HERE}/output/usr/bin/${MYAPP_NAME}"
+    ln -sfv /opt/"${MYAPP_NAME}"/myapp/myapp_script/main.sh "${HERE}/output/usr/bin/${MYAPP_NAME}"
 fi
 
