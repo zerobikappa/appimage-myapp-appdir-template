@@ -115,9 +115,18 @@ function print_version(){
     fi
     # Only detect exeinfo_profile under $APPDIR. 
     # exeinfo_profile under $APPIMAGE_CACHE_DIR was ignored.
-    if [[ -f "$(readlink -m "${APPDIR}/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile")" ]];
+    # Prevent using $MYAPP_NAME, because user may input this env variable in commandline.
+    # Guess MYAPP_NAME value from the path of exeinfo_profile.
+    local READ_MYAPP_NAME
+    READ_MYAPP_NAME="$(find "${APPDIR}/opt" -name "exeinfo_profile" | grep "myapp_exeinfo")"
+    READ_MYAPP_NAME="${READ_MYAPP_NAME%/myapp_exeinfo/exeinfo_profile}"
+    READ_MYAPP_NAME="${READ_MYAPP_NAME##*/opt/}"
+    if [[ -n "${READ_MYAPP_NAME}" ]];
     then
-        source "$(readlink -m "${APPDIR}/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile")"
+        if [[ -f "$(readlink -m "${APPDIR}/opt/${READ_MYAPP_NAME}/myapp_exeinfo/exeinfo_profile")" ]];
+        then
+            source "$(readlink -m "${APPDIR}/opt/${READ_MYAPP_NAME}/myapp_exeinfo/exeinfo_profile")"
+        fi
     fi
     [[ -z $EXENAME ]] && EXENAME="(empty)(not set in AppDir)"
     APPLICATION_NAME=$(cat "$APPDIR"/*.desktop | grep -i "name=") && APPLICATION_NAME=${APPLICATION_NAME#*"="}
@@ -136,18 +145,21 @@ EOF
 
 # Only detect exeinfo_profile under $APPDIR. 
 # exeinfo_profile under $APPIMAGE_CACHE_DIR was ignored.
-find "$(readlink -m "${APPDIR}/opt/${MYAPP_NAME}/myapp_exeinfo")" -mindepth 1 -maxdepth 1 -name "exeinfo_profile.*" -print0 | sort -z | while read -d $'\0' OPTIONAL_EXEINFO_PROFILE;
-    do
-        local TEMP_KEY_WORD
-        TEMP_KEY_WORD="$(cat "$OPTIONAL_EXEINFO_PROFILE" | grep '^[[:blank:]]*[^[:blank:]#]' | grep "MYAPPLANG=")"
-        TEMP_KEY_WORD="${TEMP_KEY_WORD#*'MYAPPLANG='}"
-        TEMP_KEY_WORD="${TEMP_KEY_WORD##\"}"
-        TEMP_KEY_WORD="${TEMP_KEY_WORD%%\"}"
-        [[ -z "$TEMP_KEY_WORD" ]] && continue
-        echo '      LANG='"$TEMP_KEY_WORD"
-    done
-    unset TEMP_KEY_WORD
-    echo ""
+if [[ -n "$READ_MYAPP_NAME" ]];
+then
+    find "$(readlink -m "${APPDIR}/opt/${READ_MYAPP_NAME}/myapp_exeinfo")" -mindepth 1 -maxdepth 1 -name "exeinfo_profile.*" -print0 | sort -z | while read -d $'\0' OPTIONAL_EXEINFO_PROFILE;
+        do
+            local TEMP_KEY_WORD
+            TEMP_KEY_WORD="$(cat "$OPTIONAL_EXEINFO_PROFILE" | grep '^[[:blank:]]*[^[:blank:]#]' | grep "MYAPPLANG=")"
+            TEMP_KEY_WORD="${TEMP_KEY_WORD#*'MYAPPLANG='}"
+            TEMP_KEY_WORD="${TEMP_KEY_WORD##\"}"
+            TEMP_KEY_WORD="${TEMP_KEY_WORD%%\"}"
+            [[ -z "$TEMP_KEY_WORD" ]] && continue
+            echo '      LANG='"$TEMP_KEY_WORD"
+        done
+fi
+unset TEMP_KEY_WORD
+echo ""
 }
 ##############################################
 
