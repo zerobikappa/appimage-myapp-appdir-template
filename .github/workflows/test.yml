@@ -11,7 +11,7 @@ jobs:
   pre-release:
     runs-on: "ubuntu-latest"
     container:
-      image: ubuntu:20.04
+      image: ubuntu:22.04
       options: --privileged
 
     steps:
@@ -24,10 +24,11 @@ jobs:
             xz-utils \
             fuse \
             libfuse2 \
-            file
+            file \
+            unionfs-fuse
 
       - name: checkout current repo code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: zerobikappa/appimage-myapp-appdir-template
           path: appimage-myapp-appdir-template
@@ -42,9 +43,10 @@ jobs:
           mv ./appimage-myapp-appdir-template/backup/unionfs-fuse*.deb .
           ./appimage-myapp-appdir-template/.remove-appdir-git.sh
 
-          ar xv unionfs-fuse*amd64.deb
-          tar Jxvf data.tar.xz
-          mv -f usr/bin/unionfs appimage-myapp-appdir-template/usr/bin/
+          #ar xv unionfs-fuse*amd64.deb
+          #tar Jxvf data.tar.xz
+          #mv -f usr/bin/unionfs appimage-myapp-appdir-template/usr/bin/
+          cp "$(command -v unionfs)" appimage-myapp-appdir-template/usr/bin/
           ARCH=x86_64 ./appimagetool.AppImage appimage-myapp-appdir-template
 
           #ar x unionfs-fuse*arm64.deb

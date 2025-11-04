@@ -317,6 +317,7 @@ function wine_run_winetricks(){
     wait
     echo "[${FUNCNAME[0]}:70%] restore completed, wait shutdown prefix"
     wine_wait_shutdown >&3 2>&4
+    MYAPPDEBUG_COLOR=1 debug_print_env "HOME" "XDG_CONFIG_HOME" "WINETRICKS_BIN"
     echo "[${FUNCNAME[0]}:100%] launch"
     #"$APPDIR"/usr/bin/winetricks "$@"
     "$WINETRICKS_BIN" "$@" >&3 2>&4
@@ -371,6 +372,7 @@ function wine_run_exe(){
     cd "$MNT_MYAPP/$EXE_LDIR" || exit 2 # Use the app installed location. Some .exe may not run if not cd into excute directory
 
     #"$APPDIR"/usr/bin/winetricks sandbox >/dev/null 2>&1 && wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@"     # must use dos-style path instead of unix-style path if winetricks sandbox was set.
+    MYAPPDEBUG_COLOR=1 debug_print_env "HOME" "XDG_CONFIG_HOME"
     echo "[${FUNCNAME[0]}:100%] launch"
     wine "${EXE_WROOT}:\\${EXE_WDIR}\\$EXENAME" "$@" >&3 2>&4
 
