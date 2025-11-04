@@ -34,12 +34,12 @@ source ./myapp-debug.sh 2>/dev/null
 #   $UPPERDIR_HOME
 #   $MNT_HOME
 function mpPlugin_fusetool_setVar(){
-    LOWERDIR_MYAPP="${APPDIR}/opt/${MYAPP_NAME}/myapp"
+    LOWERDIR_MYAPP="${APPDIR}/opt/${MYAPP_NAME}"
     LOWERDIR_MYAPP=$( readlink -m "${LOWERDIR_MYAPP}" )
-    UPPERDIR_MYAPP="${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp"
+    UPPERDIR_MYAPP="${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}"
     UPPERDIR_MYAPP=$( readlink -m "${UPPERDIR_MYAPP}" )
     # the ".unionfs" extension was defined by AppimageKit
-    MNT_MYAPP="/tmp/$(basename "$APPDIR").unionfs/opt/${MYAPP_NAME}/myapp"
+    MNT_MYAPP="/tmp/$(basename "$APPDIR").unionfs/opt/${MYAPP_NAME}"
     MNT_MYAPP=$( readlink -m "${MNT_MYAPP}" )
 
     LOWERDIR_HOME="/home/$USER/"
@@ -112,13 +112,13 @@ function mpPlugin_fusetool_unmount(){
     kill -9 "$PID_MYAPP"
     kill -9 "$PID_HOME"
     sleep 1
-    umount "/tmp/$(basename "$APPDIR").unionfs/opt/${MYAPP_NAME}/myapp"
+    umount "/tmp/$(basename "$APPDIR").unionfs/opt/${MYAPP_NAME}"
     umount "/tmp/$(basename "$APPDIR").unionfs/home/public_user"
     echo "[${FUNCNAME[0]}:] removing /tmp/$(basename "$APPDIR").unionfs"
     rm -rf "/tmp/$(basename "$APPDIR").unionfs"
     # if not clean up unionfs hide files, may encounter some read file error next time.
     echo "[${FUNCNAME[0]}:] removing unionfs hidden files"
-    rm -rf "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp"/.unionfs* >/dev/null 2>&1
+    rm -rf "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}"/.unionfs* >/dev/null 2>&1
     rm -rf "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
 }
 #############################################

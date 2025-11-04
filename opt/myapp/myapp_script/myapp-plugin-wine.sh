@@ -171,7 +171,7 @@ function wine_restore_prefix(){
     [[ -z "$WINEPREFIX" ]] && echo "[$(basename "${BASH_SOURCE[0]}"):${FUNCNAME[0]}] ERROR: \$WINEPREFIX not set, could not restore wine prefix." >&2 && exit 1
 
     mkdir -p "$MNT_MYAPP/myapp_prefix/wine.$WINEARCH"
-    [[ ! -d "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp/drive_d" ]] && mkdir -p "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp/drive_d"
+    [[ ! -d "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/drive_d" ]] && mkdir -p "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/drive_d"
 
     # only setup wineprefix and do nothing
     [[ ! -d $WINEPREFIX ]] && wine cmd /C exit >&3 2>&4

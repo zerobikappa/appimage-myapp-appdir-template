@@ -257,25 +257,25 @@ function exeinfo_convert_xdg_path(){
 #       LANG env variable for this game.
 function exeinfo_load_file(){
     unset EXEINFO_CURRENT_PROFILE
-    if [[ -f "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile.$LANG" ]];
+    if [[ -f "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile.$LANG" ]];
     then
-        EXEINFO_CURRENT_PROFILE="${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile.$LANG"
-    elif [[ -f "${APPDIR}/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile.$LANG" ]];
+        EXEINFO_CURRENT_PROFILE="${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile.$LANG"
+    elif [[ -f "${APPDIR}/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile.$LANG" ]];
     then
-        EXEINFO_CURRENT_PROFILE="${APPDIR}/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile.$LANG"
-    elif [[ -f "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile" ]];
+        EXEINFO_CURRENT_PROFILE="${APPDIR}/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile.$LANG"
+    elif [[ -f "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile" ]];
     then
-        EXEINFO_CURRENT_PROFILE="${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile"
-    elif [[ -f "${APPDIR}/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile" ]];
+        EXEINFO_CURRENT_PROFILE="${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile"
+    elif [[ -f "${APPDIR}/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile" ]];
     then
-        EXEINFO_CURRENT_PROFILE="${APPDIR}/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile"
+        EXEINFO_CURRENT_PROFILE="${APPDIR}/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile"
     else
         echo "cannot find exeinfo_profile for your LANG:$LANG"
         echo "also cannot find default exeinfo_profile"
         return
     fi
     # remove duplicate '/' in the result path in case ${MYAPP_NAME} is empty value.
-    EXEINFO_CURRENT_PROFILE=$(readlink -m "$EXEINFO_CURRENT_PROFILE")
+    #EXEINFO_CURRENT_PROFILE=$(readlink -m "$EXEINFO_CURRENT_PROFILE")
 
     # only for test
     if (cat "$EXEINFO_CURRENT_PROFILE" |grep '^[[:blank:]]*[^[:blank:]#]' |grep --quiet -e '$WINEARCH' -e '${WINEARCH}' -e '${WINEARCH:.*}' -e '${WINEARCH%.*}' -e '${WINEARCH#.*}');
@@ -492,7 +492,7 @@ function exeinfo_exe_location(){
     local RETURN_STATUS
     if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
     then
-        TEMP_FILENAME=$(readlink -m "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp")
+        TEMP_FILENAME=$(readlink -m "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}")
         TEMP_EXEPATH="$(kdialog --geometry 800x600 --title "select the .exe file" --getopenfilename "$TEMP_FILENAME" )"
         RETURN_STATUS="$?"
     elif [[ $EXEINFO_GEN_METHOD == "zenity" ]];
@@ -537,14 +537,14 @@ function exeinfo_exe_location(){
     if [[ $RETURN_STATUS -eq 0 && -n $TEMP_EXEPATH ]];
     then
         # check if .exe file in appdir or in appdir.cache
-        if [[ "${TEMP_EXEPATH#"$(readlink -f "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp")"}" != "$TEMP_EXEPATH" ]];
+        if [[ "${TEMP_EXEPATH#"$(readlink -f "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}")"}" != "$TEMP_EXEPATH" ]];
         then
             # .exe file in AppDir.cache or in *.appimage.cache directory
-            TEMP_EXE_LROOT=$(readlink -f "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp")
-        elif [[ "${TEMP_EXEPATH#"$(readlink -f "$APPDIR/opt/${MYAPP_NAME}/myapp")"}" != "$TEMP_EXEPATH" ]];
+            TEMP_EXE_LROOT=$(readlink -f "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}")
+        elif [[ "${TEMP_EXEPATH#"$(readlink -f "$APPDIR/opt/${MYAPP_NAME}")"}" != "$TEMP_EXEPATH" ]];
         then
             # .exe file in AppDir, running AppRun directly from AppDir at this moment.
-            TEMP_EXE_LROOT=$(readlink -f "$APPDIR/opt/${MYAPP_NAME}/myapp")
+            TEMP_EXE_LROOT=$(readlink -f "$APPDIR/opt/${MYAPP_NAME}")
         else
             [[ $EXEINFO_GEN_METHOD == "kdialog" ]] && kdialog --error "you selected *.exe file outside of appimage dir."
             [[ $EXEINFO_GEN_METHOD == "zenity" ]] && zenity --width=300 --height=100 --error --text="you selected *.exe file outside of appimage dir."
@@ -620,11 +620,11 @@ function exeinfo_savedata_location(){
 
     if [[ $EXEINFO_GEN_METHOD == "kdialog" ]];
     then
-        TEMP_SAVEDATAPATH=$(kdialog --geometry 800x600 --title "select the directory where to save the savedata files" --getexistingdirectory "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp" )
+        TEMP_SAVEDATAPATH=$(kdialog --geometry 800x600 --title "select the directory where to save the savedata files" --getexistingdirectory "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}" )
         RETURN_STATUS="$?"
     elif [[ $EXEINFO_GEN_METHOD == "zenity" ]];
     then
-        TEMP_SAVEDATAPATH="$(zenity --width=800 --height=600 --file-selection --directory --title="select the directory where to save the savedata files" --filename="$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp" )"
+        TEMP_SAVEDATAPATH="$(zenity --width=800 --height=600 --file-selection --directory --title="select the directory where to save the savedata files" --filename="$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}" )"
         RETURN_STATUS="$?"
     else
         clear
@@ -634,9 +634,9 @@ function exeinfo_savedata_location(){
         echo "##################################################"
         echo "  select savedata directory location(use <tab> key for prompt)"
         echo "  it should be under:"
-        echo "  (game folder under cache dir:) ${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp/"
+        echo "  (game folder under cache dir:) ${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/"
         echo "  or"
-        echo "  (game folder under app dir:) ${APPDIR}/opt/${MYAPP_NAME}/myapp/"
+        echo "  (game folder under app dir:) ${APPDIR}/opt/${MYAPP_NAME}/"
         echo "  or"
         echo "  (fake home:) ${HOME_FAKE}"
         echo "##################################################"
@@ -663,8 +663,8 @@ function exeinfo_savedata_location(){
     # As a result, it failed to match $HOME_FAKE with $TEMP_SAVEDATAPATH. 
     # As a workaround, I separate $TEMP_SAVEDATAPATH and $TEMP_SAVEDATAPATH_REAL
     TEMP_SAVEDATAPATH_REAL="$(readlink -f "$TEMP_SAVEDATAPATH")"
-    TEMP_APPIMAGE_CACHE_DIR_TO_MYAPP="$(readlink -f "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}/myapp")"
-    TEMP_APPDIR_TO_MYAPP="$(readlink -f "${APPDIR}/opt/${MYAPP_NAME}/myapp")"
+    TEMP_APPIMAGE_CACHE_DIR_TO_MYAPP="$(readlink -f "${APPIMAGE_CACHE_DIR}/opt/${MYAPP_NAME}")"
+    TEMP_APPDIR_TO_MYAPP="$(readlink -f "${APPDIR}/opt/${MYAPP_NAME}")"
     if [[ $RETURN_STATUS -eq 0 && -n $TEMP_SAVEDATAPATH ]];
     then
         if [[ "${TEMP_SAVEDATAPATH_REAL#"${TEMP_APPIMAGE_CACHE_DIR_TO_MYAPP}"}" != "$TEMP_SAVEDATAPATH_REAL" ]];
@@ -910,8 +910,8 @@ EOF
         clear
         return
     fi
-    mkdir -p "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp/myapp_exeinfo"
-    cat << EOF > "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile"
+    mkdir -p "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp_exeinfo"
+    cat << EOF > "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile"
 EXE_LDIR="$TEMP_EXE_LDIR"
 EXE_WROOT="$TEMP_EXE_WROOT"
 EXE_WDIR="$TEMP_EXE_WDIR"
@@ -920,11 +920,11 @@ SAVEDATA_IN_HOME="$TEMP_SAVEDATA_IN_HOME"
 SAVEDATA_DIR="$TEMP_SAVEDATA_DIR"
 MYAPPLANG="$TEMP_MYAPPLANG"
 EOF
-    echo "saved into $APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile"
+    echo "saved into $APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile"
     if [[ -n "$TEMP_MYAPPLANG" ]];
     then
-        cat "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile" > "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile.$TEMP_MYAPPLANG"
-        echo "saved into $APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile.$TEMP_MYAPPLANG"
+        cat "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile" > "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile.$TEMP_MYAPPLANG"
+        echo "saved into $APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile.$TEMP_MYAPPLANG"
     fi
     EXIT_MAIN_MENU=1
 

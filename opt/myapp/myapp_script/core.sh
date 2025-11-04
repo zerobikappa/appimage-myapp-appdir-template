@@ -115,9 +115,9 @@ function print_version(){
     fi
     # Only detect exeinfo_profile under $APPDIR. 
     # exeinfo_profile under $APPIMAGE_CACHE_DIR was ignored.
-    if [[ -f "$(readlink -m "${APPDIR}/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile")" ]];
+    if [[ -f "$(readlink -m "${APPDIR}/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile")" ]];
     then
-        source "$(readlink -m "${APPDIR}/opt/${MYAPP_NAME}/myapp/myapp_exeinfo/exeinfo_profile")"
+        source "$(readlink -m "${APPDIR}/opt/${MYAPP_NAME}/myapp_exeinfo/exeinfo_profile")"
     fi
     [[ -z $EXENAME ]] && EXENAME="(empty)(not set in AppDir)"
     APPLICATION_NAME=$(cat "$APPDIR"/*.desktop | grep -i "name=") && APPLICATION_NAME=${APPLICATION_NAME#*"="}
@@ -136,7 +136,7 @@ EOF
 
 # Only detect exeinfo_profile under $APPDIR. 
 # exeinfo_profile under $APPIMAGE_CACHE_DIR was ignored.
-find "$(readlink -m "${APPDIR}/opt/${MYAPP_NAME}/myapp/myapp_exeinfo")" -mindepth 1 -maxdepth 1 -name "exeinfo_profile.*" -print0 | sort -z | while read -d $'\0' OPTIONAL_EXEINFO_PROFILE;
+find "$(readlink -m "${APPDIR}/opt/${MYAPP_NAME}/myapp_exeinfo")" -mindepth 1 -maxdepth 1 -name "exeinfo_profile.*" -print0 | sort -z | while read -d $'\0' OPTIONAL_EXEINFO_PROFILE;
     do
         local TEMP_KEY_WORD
         TEMP_KEY_WORD="$(cat "$OPTIONAL_EXEINFO_PROFILE" | grep '^[[:blank:]]*[^[:blank:]#]' | grep "MYAPPLANG=")"
@@ -347,13 +347,19 @@ function core_handle_param(){
 ##############################################
 ## setup *.cache directory
 # required env:
-#   if run from appdir: N/A
+#   if run from appdir:
+#       $APPDIR
 #   if run appimage:
+#       $APPDIR
 #       $APPIMAGE
 #       $ARGV0
 #
+# Optional env:
+#   $MYAPP_NAME
+#
 # export env:
 #   $APPIMAGE_CACHE_DIR
+#   $MYAPP_NAME (if $MYAPP_NAME is not valid.)
 function core_cache_dir_setup(){
     if [[ -d ${APPIMAGE}.cache ]];
     then
@@ -374,6 +380,18 @@ function core_cache_dir_setup(){
         mkdir -p "/tmp/$(basename "$APPIMAGE").cache"
         APPIMAGE_CACHE_DIR="/tmp/$(basename "$APPIMAGE").cache"
         export APPIMAGE_CACHE_DIR
+    fi
+
+    if [[ -z "$MYAPP_NAME" ]];
+    then
+        echo 'MYAPP_NAME not set, change to default name "myapp".' >&2
+        MYAPP_NAME="myapp"
+    else
+        if [[ ! -d "$APPDIR/opt/$MYAPP_NAME" ]] && [[ ! -d "$APPIMAGE_CACHE_DIR/opt/$MYAPP_NAME" ]];
+        then
+            echo "directory $MYAPP_NAME not set, change to default MYAPP_NAME='myapp'." >&2
+            MYAPP_NAME="myapp"
+        fi
     fi
 
 

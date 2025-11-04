@@ -77,19 +77,35 @@ APPIMAGE=\$APPIMAGE \\
 APPDIR=\$APPDIR \\
 OWD=\$OWD \\
 ARGV0=\$ARGV0 \\
-"\$HERE"/opt/"$MYAPP_NAME"/myapp/myapp_script/main.sh "\$@"
+"\$HERE"/opt/"$MYAPP_NAME"/myapp_script/main.sh "\$@"
 EOF
 
     chmod 0755 "${HERE}/output/AppRun"
     cp -ruv "${HERE}"/*.png "${HERE}/output/"
     cp -ruv "${HERE}"/*.desktop "${HERE}/output/"
     cp -ruv "${HERE}"/usr "${HERE}/output/"
-    mkdir -p "${HERE}/output/opt/${MYAPP_NAME}/myapp"
+    mkdir -p "${HERE}/output/opt/${MYAPP_NAME}"
     mkdir -p "${HERE}/output/usr/bin"
     mkdir -p "${HERE}/output/usr/share/applications"
     mkdir -p "${HERE}/output/usr/share/metainfo"
     mkdir -p "${HERE}/output/usr/share/pixmaps"
-    cp -ruv "${HERE}"/opt/myapp/* "${HERE}/output/opt/${MYAPP_NAME}/myapp/"
-    ln -sfv /opt/"${MYAPP_NAME}"/myapp/myapp_script/main.sh "${HERE}/output/usr/bin/${MYAPP_NAME}"
+
+    if [[ -d "${HERE}/opt/${MYAPP_NAME}" ]];
+    then
+        echo "${HERE}/opt/${MYAPP_NAME}"
+        echo "copy to -->"
+        echo "${HERE}/output/opt/${MYAPP_NAME}"
+        cp -ruv "${HERE}/opt/${MYAPP_NAME}"/* "${HERE}/output/opt/${MYAPP_NAME}/"
+    elif [[ -d "${HERE}/opt/myapp" ]];
+    then
+        echo "${HERE}/opt/myapp"
+        echo "copy to -->"
+        echo "${HERE}/output/opt/${MYAPP_NAME}"
+    else
+        echo "Failed to copy." >&2
+        echo "Cannot find ${HERE}/opt/myapp or ${HERE}/opt/${MYAPP_NAME}" >&2
+    fi
+
+    ln -sfv /opt/"${MYAPP_NAME}"/myapp_script/main.sh "${HERE}/output/usr/bin/${MYAPP_NAME}"
 fi
 
