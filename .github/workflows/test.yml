@@ -25,6 +25,7 @@ jobs:
             fuse \
             libfuse2 \
             file \
+            unzip \
             unionfs-fuse
 
       - name: checkout current repo code
@@ -40,22 +41,17 @@ jobs:
           chmod u+x appimage-myapp-appdir-template/usr/bin/winetricks
           wget -c "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage" -O  appimagetool.AppImage
           chmod u+x appimagetool.AppImage
-          mv ./appimage-myapp-appdir-template/backup/unionfs-fuse*.deb .
+          wget -c "https://github.com/adobe-fonts/source-han-sans/releases/download/2.004R/SourceHanSans.ttc.zip"
+          unzip SourceHanSans.ttc.zip
+          mv SourceHanSans.ttc appimage-myapp-appdir-template/opt/myapp/myapp_fonts/sourrcehansans.ttc
           ./appimage-myapp-appdir-template/.remove-appdir-git.sh
 
-          #ar xv unionfs-fuse*amd64.deb
-          #tar Jxvf data.tar.xz
-          #mv -f usr/bin/unionfs appimage-myapp-appdir-template/usr/bin/
           cp "$(command -v unionfs)" appimage-myapp-appdir-template/usr/bin/
           ARCH=x86_64 ./appimagetool.AppImage appimage-myapp-appdir-template
 
-          #ar x unionfs-fuse*arm64.deb
-          #tar Jxvf data.tar.xz
-          #mv -f usr/bin/unionfs appimage-myapp-appdir-template/usr/bin/
           #ARCH=aarch64 ./appimagetool.AppImage appimage-myapp-appdir-template
 
-          #ar x unionfs-fuse*i386.deb
-          #tar Jxvf data.tar.xz
-          #mv -f usr/bin/unionfs appimage-myapp-appdir-template/usr/bin/
           #ARCH=i386 ./appimagetool.AppImage appimage-myapp-appdir-template
+
+          grep -m 1 MYAPPRUN_VERSION ${GITHUB_WORKSPACE}/appimage-myapp-appdir-template/opt/myapp/myapp_script/main.sh >> "$GITHUB_ENV"
 
