@@ -187,7 +187,7 @@ function wine_restore_prefix(){
     # D: drive is moved outside of $WINEPREFIX
     # you can feel free to delete your WINEPREFIX and just package D: drive into appimage
     ln -sfn ../../../../drive_d "$WINEPREFIX/dosdevices/d:"
-    #refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/myapp_patch_reg
+    #refer path: .../${MYAPP_NAME}/myapp_prefix/wine.win64/pfx/drive_c/myapp_patch_reg
     [[ ! -L "$MNT_MYAPP/myapp_patch_reg" ]] && ln -sfn ../../../../myapp_patch_reg "$WINEPREFIX/drive_c/myapp_patch_reg"
 
     # Font directory is moved outside of $WINEPREFIX
@@ -196,8 +196,7 @@ function wine_restore_prefix(){
     if [[ ! -L "$WINEPREFIX/drive_c/windows/Fonts" ]];
     then
         rm -rf "$WINEPREFIX/drive_c/windows/Fonts"
-        #refer path: .../myapp/myapp_fonts
-        #refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/windows/Fonts
+        #refer path: .../{MYAPP_NAME}/myapp_prefix/wine.win64/pfx/drive_c/windows/Fonts
         ln -sfnv ../../../../../myapp_fonts "$WINEPREFIX/drive_c/windows/Fonts"
     fi
 
@@ -207,9 +206,8 @@ function wine_restore_prefix(){
         mv -f "$WINEPREFIX/drive_c/users/$USER/AppData/Roaming" "$MNT_HOME/AppData"
         rm -rf "$WINEPREFIX/drive_c/users/$USER/AppData/Roaming"
     fi
-    #refer path: .../myapp/myapp_fonts
-    #refer path: .../myapp/myapp_prefix/wine.win64/pfx/drive_c/windows/Fonts
-    ln -sfnv ../../../../../../../../../../home/public_user/AppData/Roaming "$WINEPREFIX/drive_c/users/$USER/AppData/Roaming"
+    #refer path: .../${MNT_MYAPP}/opt/${MYAPP_NAME}/myapp_prefix/wine.win64/pfx/drive_c/users/$USER/AppData/Roaming
+    ln -sfnv ../../../../../../../../../home/public_user/AppData/Roaming "$WINEPREFIX/drive_c/users/$USER/AppData/Roaming"
 
     echo "end >>>>>>>> [${FUNCNAME[0]}]" >&3
 }
