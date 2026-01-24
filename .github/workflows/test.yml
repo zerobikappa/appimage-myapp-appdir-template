@@ -22,10 +22,10 @@ jobs:
             wget \
             binutils \
             xz-utils \
-            fuse \
             libfuse2 \
             file \
             unzip \
+            unionfs-fuse \
             fuse-overlayfs
 
       - name: checkout current repo code
