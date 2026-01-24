@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=3.1.1
+MYAPPRUN_VERSION=3.2.1
 export MYAPPRUN_VERSION
 
 
@@ -73,7 +73,8 @@ debug_set
 
 # TODO: cannot use new unionfs because same commandline options was changed.
 # WALKAROUND: ship old version unionfs in appimage package.
-UNIONFS_BIN="${APPDIR}/usr/bin/unionfs"
+#UNIONFS_BIN="${APPDIR}/usr/bin/unionfs"
+UNIONFS_BIN="${APPDIR}/usr/bin/fuse-overlayfs"
 debug_print_env UNIONFS_BIN >&3 2>&4
 
 
