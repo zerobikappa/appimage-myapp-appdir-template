@@ -71,10 +71,7 @@ prevent_root
 
 debug_set
 
-# TODO: cannot use new unionfs because same commandline options was changed.
-# WALKAROUND: ship old version unionfs in appimage package.
-#UNIONFS_BIN="${APPDIR}/usr/bin/unionfs"
-UNIONFS_BIN="${APPDIR}/usr/bin/fuse-overlayfs"
+mpPlugin_fusetool_setBin
 debug_print_env UNIONFS_BIN >&3 2>&4
 
 

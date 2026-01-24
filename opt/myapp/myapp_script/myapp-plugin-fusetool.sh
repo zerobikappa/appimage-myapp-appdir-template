@@ -1,1 +1,1 @@
-myapp-plugin-overlayfs-fuse.sh
+myapp-plugin-unionfs-fuse.sh

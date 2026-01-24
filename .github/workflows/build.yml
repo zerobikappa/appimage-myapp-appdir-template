@@ -46,7 +46,7 @@ jobs:
           mv SourceHanSans.ttc appimage-myapp-appdir-template/opt/myapp/myapp_fonts/sourrcehansans.ttc
           ./appimage-myapp-appdir-template/.remove-appdir-git.sh
 
-          cp "$(command -v fuse-overlayfs)" appimage-myapp-appdir-template/usr/bin/
+          cp "$(command -v unionfs)" appimage-myapp-appdir-template/usr/bin/
           ARCH=x86_64 ./appimagetool.AppImage appimage-myapp-appdir-template
 
           #ARCH=aarch64 ./appimagetool.AppImage appimage-myapp-appdir-template

@@ -15,6 +15,17 @@ fi
 source ./myapp-debug.sh 2>/dev/null
 ##############################################
 
+#############################################
+## Set fuse bin.
+# Export env:
+#   $UNIONFS_BIN
+function mpPlugin_fusetool_setBin(){
+    # TODO: cannot use new unionfs because same commandline options was changed.
+    # WALKAROUND: ship old version unionfs in appimage package.
+    UNIONFS_BIN="${APPDIR}/usr/bin/fuse-overlayfs"
+}
+#############################################
+
 
 #############################################
 ## Prepare fuse mount point env variables.
