@@ -94,7 +94,7 @@ function mpPlugin_fusetool_mount(){
     rm -rf "$WORKDIR_MYAPP"
     mkdir -p "$MNT_MYAPP" "$UPPERDIR_MYAPP" "$WORKDIR_MYAPP"
 
-    "$UNIONFS_BIN" -o lowerdir="$LOWERDIR_MYAPP",upperdir="$UPPERDIR_MYAPP",workdir="$WORKDIR_MYAPP" "$MNT_MYAPP" || exit 1
+    "$UNIONFS_BIN" -o squash_to_uid=$UID,lowerdir="$LOWERDIR_MYAPP",upperdir="$UPPERDIR_MYAPP",workdir="$WORKDIR_MYAPP" "$MNT_MYAPP" || exit 1
     
     rm -rf "$WORKDIR_HOME"
     mkdir -p "$MNT_HOME" "$UPPERDIR_HOME" "$WORKDIR_HOME"
@@ -102,9 +102,9 @@ function mpPlugin_fusetool_mount(){
     if [[ -d "$APPDIR/home/public_user" ]];
     then
         # should also refer home/public_user directory in $APPDIR, if user also add this directory into appimage
-        "$UNIONFS_BIN" -o lowerdir="$APPDIR/home/public_user":"$LOWERDIR_HOME",upperdir="$UPPERDIR_HOME",workdir="$WORKDIR_HOME" "$MNT_HOME" || exit 1
+        "$UNIONFS_BIN" -o squash_to_uid=$UID,lowerdir="$APPDIR/home/public_user":"$LOWERDIR_HOME",upperdir="$UPPERDIR_HOME",workdir="$WORKDIR_HOME" "$MNT_HOME" || exit 1
     else
-        "$UNIONFS_BIN" -o lowerdir="$LOWERDIR_HOME",upperdir="$UPPERDIR_HOME",workdir="$WORKDIR_HOME" "$MNT_HOME" || exit 1
+        "$UNIONFS_BIN" -o squash_to_uid=$UID,lowerdir="$LOWERDIR_HOME",upperdir="$UPPERDIR_HOME",workdir="$WORKDIR_HOME" "$MNT_HOME" || exit 1
     fi
     
     PID_MYAPP="$(pgrep -a fuse-overlayfs | grep "$MNT_MYAPP" | awk '{print $1}')"
@@ -130,7 +130,9 @@ function mpPlugin_fusetool_unmount(){
     kill -9 "$PID_MYAPP"
     kill -9 "$PID_HOME"
     sleep 1
+    echo "[${FUNCNAME[0]}:] umount /tmp/$(basename "$APPDIR").unionfs/opt/${MYAPP_NAME}"
     umount "/tmp/$(basename "$APPDIR").unionfs/opt/${MYAPP_NAME}"
+    echo "[${FUNCNAME[0]}:] umount /tmp/$(basename "$APPDIR").unionfs/home/public_user"
     umount "/tmp/$(basename "$APPDIR").unionfs/home/public_user"
     echo "[${FUNCNAME[0]}:] removing /tmp/$(basename "$APPDIR").unionfs"
     rm -rf "/tmp/$(basename "$APPDIR").unionfs"

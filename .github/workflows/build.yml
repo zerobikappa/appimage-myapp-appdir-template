@@ -25,6 +25,7 @@ jobs:
             libfuse2 \
             file \
             unzip \
+            patchelf \
             unionfs-fuse \
             fuse-overlayfs
 
@@ -47,6 +48,8 @@ jobs:
           ./appimage-myapp-appdir-template/.remove-appdir-git.sh
 
           cp "$(command -v unionfs)" appimage-myapp-appdir-template/usr/bin/
+          cp "$(command -v fuse-overlayfs)" appimage-myapp-appdir-template/usr/bin/
+          patchelf --replace-needed libfuse3.so.3 libfuse3.so appimage-myapp-appdir-template/usr/bin/fuse-overlayfs
           ARCH=x86_64 ./appimagetool.AppImage appimage-myapp-appdir-template
 
           #ARCH=aarch64 ./appimagetool.AppImage appimage-myapp-appdir-template
