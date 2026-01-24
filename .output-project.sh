@@ -101,6 +101,7 @@ EOF
         echo "${HERE}/opt/myapp"
         echo "copy to -->"
         echo "${HERE}/output/opt/${MYAPP_NAME}"
+        cp -ruv "${HERE}/opt/myapp"/* "${HERE}/output/opt/${MYAPP_NAME}/"
     else
         echo "Failed to copy." >&2
         echo "Cannot find ${HERE}/opt/myapp or ${HERE}/opt/${MYAPP_NAME}" >&2
