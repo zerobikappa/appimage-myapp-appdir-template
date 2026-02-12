@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=3.2.2
+MYAPPRUN_VERSION=3.3.2
 export MYAPPRUN_VERSION
 
 

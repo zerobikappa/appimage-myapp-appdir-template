@@ -165,35 +165,6 @@ echo ""
 
 
 ##############################################
-## option check, determine if the input argument
-## is a long option, short option,
-## or a normal argument.
-#
-# required argument:
-#   a string without any whitespace. Not support
-#   multiple arguments.
-#
-# output:
-#   string "long": It is a long option with prefix "--".
-#   string "short": It is a short option with prefix "-".
-#   string "none": It is a normal argument.
-function option_check(){
-    # do not place any debug output here, because this function use "echo" command to return result.
-
-    if [[ ${1::2} == "--" ]];
-    then
-        echo "long"
-    elif [[ ${1::1} == "-" ]];
-    then
-        echo "short"
-    else
-        echo "none"
-    fi
-}
-##############################################
-
-
-##############################################
 ## handle the arguments, which were
 ## appended after appimage file or AppRun.sh
 ## when run appimage file or AppRun.sh from
@@ -218,18 +189,46 @@ function option_check(){
 function core_handle_param(){
     #parameters=$(getopt -o swth --long save-data,walkthrough,browser:,test-winetricks,help -n "$0" -- "$@")    # NOTUSED: because $(getopt) cannot ignore unknown options
     
-    local parameters
-    parameters=$(echo "$@"|tr "=" " ")
+    local -a temp_parameters
+    temp_parameters=()
     # in this script, if I initialize a variable to empty,
     # that means I want to avoid some unexpected error,
     # in case user pass an initial value in command line
-    declare -g next_parameters
-    export next_parameters=""
+    declare -ga next_parameters
+    next_parameters=()
 
-    eval set -- "$parameters"
+    local temp_para
+    local temp_para_type
+    local temp_string
     
     while [[ -n "$1" ]] ; do
-        case "$1" in
+        # temp_para_type
+        #   ll: long option with a secondary argument
+        #   l: long option without any other argument
+        #   s: short option
+        #   n: normal argument
+        temp_para_type=""
+        temp_para=""
+        if [[ ${1::2} == "--" ]];
+        then
+            if [[ "$1" == *"="* ]];
+            then
+                temp_para="${1%%=*}"
+                temp_para_type="ll"
+            else
+                temp_para="$1"
+                temp_para_type="l"
+            fi
+        elif [[ ${1::1} == "-" ]];
+        then
+            temp_para="$1"
+            temp_para_type="s"
+        else
+            temp_para="$1"
+            temp_para_type="n"
+        fi
+
+        case "$temp_para" in
             -h| --help)
                 print_help
                 exit ;;
@@ -246,9 +245,17 @@ function core_handle_param(){
                 shift ;;
             --browser)
                 #i3-sensible-browser will choose $BROWSER to open walkthrough first
-                [[ $(option_check "$2") != "none" ]] && echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: invalid option $1" >&2 && exit 1
-                BROWSER="$2"
-                shift 2;;
+                if [[ "$temp_para_type" == "ll" ]];
+                then
+                    BROWSER="${1#*=}"
+                    if [[ "$BROWSER" == "" ]];
+                    then
+                        echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: invalid option $1" >&2
+                    fi
+                else
+                    echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: invalid option $1" >&2
+                fi
+                shift ;;
             -t| --test-winetricks)
                 declare -g TEST_WINETRICKS_FLAG
                 TEST_WINETRICKS_FLAG=1
@@ -257,27 +264,12 @@ function core_handle_param(){
                 declare -g EXEINFO_GEN_FLAG
                 declare -g EXEINFO_GEN_METHOD
                 EXEINFO_GEN_FLAG=1
-                if [[ $2 == "zenity" ]];
-                then
-                    EXEINFO_GEN_METHOD="zenity"
-                    shift 2
-                elif [[ $2 == "kdialog" ]];
-                then
-                    EXEINFO_GEN_METHOD="kdialog"
-                    shift 2
-                elif [[ $2 == "gui" ]];
+                EXEINFO_GEN_METHOD="${1#*=}"
+                if ! [[ "$EXEINFO_GEN_METHOD" =~ ^(zenity|kdialog|cli|gui)$ ]];
                 then
                     EXEINFO_GEN_METHOD="gui"
-                    shift 2
-                elif [[ $2 == "cli" ]];
-                then
-                    EXEINFO_GEN_METHOD="cli"
-                    shift 2
-                else
-                    EXEINFO_GEN_METHOD="gui"
-                    shift
                 fi
-                ;;
+                shift ;;
             -p| --portable-cache)
                 mkdir -p "$APPIMAGE".cache/home/public_user/
                 echo ""
@@ -285,13 +277,13 @@ function core_handle_param(){
                 exit ;;
             --)
                 shift
-                if [[ -z "$*" && -z "$next_parameters" ]];
+                if [[ -z "$*" && -z "${next_parameters[*]}" ]];
                 then
                     break
                 elif [[ ! $MYAPPDEBUG -eq 1 ]];
                 then
                     echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: not MYAPPDEBUG mode now. prevent to pass any unknown option." >&2
-                    echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: unknown options, ignored: $next_parameters $@" >&2
+                    echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: unknown options, ignored: ${next_parameters[*]} $*" >&2
                     # TODO: bugs: vimspector+vscode-bash-debug always append a "undefined" argument.
                     # which will cause exit here.
                     # refer:
@@ -301,22 +293,26 @@ function core_handle_param(){
                     break
                 else
                     # then $next_parameters will be passed to wine
-                    [[ -z $next_parameters ]] && next_parameters="$@" || next_parameters="$next_parameters $@"
+                    next_parameters+=("$@")
                     shift $#
                     break
                 fi
                 ;;
             *)
-                if [[ "$(option_check "$1")" == "short" && ${#1} -gt 2 ]];
+                if [[ "$temp_para_type" == "s" && ${#1} -gt 2 ]];
                 then
-                    parameters="$(getopt -o 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -n "$0" -- "$1")"
-                    parameters="${parameters%%' --'*}"
+                    temp_string="$(getopt -o 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -n "$0" -- "$1")"
+                    temp_string="${temp_string%%' --'*}"
+                    temp_parameters=()
+                    for i in $temp_string; do
+                        temp_parameters+=("$i")
+                    done
                     shift
-                    parameters="$parameters $@"
-                    eval set -- "$parameters"
+                    temp_parameters=("${temp_parameters[@]}" "$@")
+                    set -- "${temp_parameters[@]}"
                 elif [[ $MYAPPDEBUG -eq 1 ]];
                 then
-                    [[ -z $next_parameters ]] && next_parameters="$1" || next_parameters="$next_parameters $1"
+                    next_parameters+=("$1")
                     shift
                 else
                     echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: not MYAPPDEBUG mode now. prevent to pass any unknow option." >&2
