@@ -211,6 +211,16 @@ function core_handle_param(){
     local temp_para_type
     local temp_string
     
+    declare -g SAVEDATA_FLAG=0
+    declare -g WALKTHROUGH_FLAG=0
+    declare -g MYAPP_FUSE=""
+    declare -g MYAPP_FUSE_FLAG=0
+    declare -g UNIONFS_BIN=""
+    declare -g UNIONFS_BIN_FLAG=0
+    declare -g TEST_WINETRICKS_FLAG=0
+    declare -g EXEINFO_GEN_FLAG=0
+    declare -g EXEINFO_GEN_METHOD=""
+
     while [[ -n "$1" ]] ; do
         # temp_para_type
         #   ll: long option with a secondary argument
@@ -246,11 +256,9 @@ function core_handle_param(){
                 print_version
                 exit ;;
             -s| --savedata)
-                declare -g SAVEDATA_FLAG
                 SAVEDATA_FLAG=1
                 shift ;;
             -w| --walkthrough)
-                declare -g WALKTHROUGH_FLAG
                 WALKTHROUGH_FLAG=1
                 shift ;;
             --browser)
@@ -267,8 +275,6 @@ function core_handle_param(){
                 fi
                 shift ;;
             --fuse)
-                declare -g MYAPP_FUSE
-                declare -g MYAPP_FUSE_FLAG
                 MYAPP_FUSE_FLAG=1
                 if [[ "$temp_para_type" == "ll" ]];
                 then
@@ -284,8 +290,6 @@ function core_handle_param(){
                 fi
                 shift ;;
             --fuse-bin)
-                declare -g UNIONFS_BIN
-                declare -g UNIONFS_BIN_FLAG
                 UNIONFS_BIN_FLAG=1
                 if [[ "$temp_para_type" == "ll" ]];
                 then
@@ -307,12 +311,9 @@ function core_handle_param(){
                 fi
                 shift ;;
             -t| --test-winetricks)
-                declare -g TEST_WINETRICKS_FLAG
                 TEST_WINETRICKS_FLAG=1
                 shift ;;
             --exeinfo-gen)
-                declare -g EXEINFO_GEN_FLAG
-                declare -g EXEINFO_GEN_METHOD
                 EXEINFO_GEN_FLAG=1
                 EXEINFO_GEN_METHOD="${1#*=}"
                 if ! [[ "$EXEINFO_GEN_METHOD" =~ ^(zenity|kdialog|cli|gui)$ ]];
