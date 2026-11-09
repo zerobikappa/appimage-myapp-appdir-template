@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=3.3.2
+MYAPPRUN_VERSION=3.3.3
 export MYAPPRUN_VERSION
 
 
@@ -65,22 +65,10 @@ source "${HERE}"/core.sh
 source "${HERE}"/myapp-debug.sh
 source "${HERE}"/myapp-plugin-wine.sh
 source "${HERE}"/myapp-plugin-exeinfo.sh
-if [[ "${MYAPP_FUSE}" == "OVERLAYFS" ]];
-then
-    source "${HERE}"/myapp-plugin-overlayfs-fuse.sh
-elif [[ "${MYAPP_FUSE}" == "UNIONFS" ]];
-then
-    source "${HERE}"/myapp-plugin-unionfs-fuse.sh
-else
-    source "${HERE}"/myapp-plugin-fusetool.sh
-fi
 
 prevent_root
 
 debug_set
-
-mpPlugin_fusetool_setBin
-debug_print_env UNIONFS_BIN >&3 2>&4
 
 
 ##############################################
@@ -94,6 +82,18 @@ fi
 ##############################################
 
 core_handle_param "$@"
+
+if [[ "${MYAPP_FUSE}" == "overlayfs" ]];
+then
+    source "${HERE}"/myapp-plugin-overlayfs-fuse.sh
+elif [[ "${MYAPP_FUSE}" == "unionfs" ]];
+then
+    source "${HERE}"/myapp-plugin-unionfs-fuse.sh
+else
+    source "${HERE}"/myapp-plugin-fusetool.sh
+fi
+mpPlugin_fusetool_setBin
+debug_print_env UNIONFS_BIN >&3 2>&4
 
 
 [[ $MYAPPDEBUG -eq 1 ]] && debug_print_env next_parameters

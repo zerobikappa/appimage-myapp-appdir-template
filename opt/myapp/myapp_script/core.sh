@@ -52,6 +52,16 @@ run option:
     walkthrough. for example, "--browser=firefox"
     means using firefox to open walkthrough.html
 
+  --fuse=[unionfs|overlayfs]
+        =unionfs :use unionfs to create FUSE file system.
+        =overlayfs :use fuse-overlayfs to create FUSE file system.
+        default is "overlayfs"
+
+  --fuse-bin=UNIONFS_BIN_PATH
+     only effect when --fuse is set.
+     prevent using unionfs|fuse-overlayfs binary bundled in Appimage.
+     use another binary instead.
+
   -p, --portable-cache
     create ${APPIMAGE}.cache directory then exit.
     when running appimage, $HOME and $XDG_CONFIG_HOME
@@ -256,6 +266,46 @@ function core_handle_param(){
                     echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: invalid option $1" >&2
                 fi
                 shift ;;
+            --fuse)
+                declare -g MYAPP_FUSE
+                declare -g MYAPP_FUSE_FLAG
+                MYAPP_FUSE_FLAG=1
+                if [[ "$temp_para_type" == "ll" ]];
+                then
+                    MYAPP_FUSE="${1#*=}"
+                    if ! [[ "$MYAPP_FUSE" =~ ^(unionfs|overlayfs)$ ]];
+                    then
+                        echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: invalid option $1" >&2
+                        exit 1
+                    fi
+                else
+                    echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: invalid option $1" >&2
+                    exit 1
+                fi
+                shift ;;
+            --fuse-bin)
+                declare -g UNIONFS_BIN
+                declare -g UNIONFS_BIN_FLAG
+                UNIONFS_BIN_FLAG=1
+                if [[ "$temp_para_type" == "ll" ]];
+                then
+                    UNIONFS_BIN="${1#*=}"
+                    if ! [[ -e "$UNIONFS_BIN" ]];
+                    then
+                        echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: invalid option $1" >&2
+                        echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: $UNIONFS_BIN not exists." >&2
+                        exit 1
+                    elif ! [[ -x "$UNIONFS_BIN" ]];
+                    then
+                        echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: invalid option $1" >&2
+                        echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: $UNIONFS_BIN is not executable." >&2
+                        exit 1
+                    fi
+                else
+                    echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: invalid option $1" >&2
+                    exit 1
+                fi
+                shift ;;
             -t| --test-winetricks)
                 declare -g TEST_WINETRICKS_FLAG
                 TEST_WINETRICKS_FLAG=1
@@ -335,6 +385,15 @@ function core_handle_param(){
     # ./yourappimagename -s    the "-s" option will be catched by my script to run "load savedata"
     # ./yourappimagename -- -s    the "-s" option will pass to wine
 
+    # --fuse-bin requires --fuse
+    if [[ $UNIONFS_BIN_FLAG -eq 1 ]];
+    then
+        if ! [[ $MYAPP_FUSE_FLAG -eq 1 ]];
+        then
+            echo "[$(basename "${BASH_SOURCE[0]}")] ERROR: --fuse-bin was set but --fuse was not set." >&2
+            exit 1
+        fi
+    fi
 
     # if --exeinfo-gen or --test-winetricks is set, then -s and -w will be ignored.
     if [[ $TEST_WINETRICKS_FLAG -eq 1 || $EXEINFO_GEN_FLAG -eq 1 ]];
