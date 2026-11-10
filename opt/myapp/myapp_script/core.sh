@@ -768,6 +768,7 @@ function myapp_launch(){
         [[ -n $MYAPPLANG ]] && LANG=$MYAPPLANG || echo "MYAPPLANG not set, using current LANG:$LANG"
         export HOME="$HOME_FAKE"
         export XDG_CONFIG_HOME="$HOME_FAKE/.config"
+        exeinfo_user_dirs
         echo "*****using $WINEARCH"
         if [[ $TEST_WINETRICKS_FLAG -eq 1 ]];
         then
