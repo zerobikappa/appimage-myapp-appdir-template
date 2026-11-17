@@ -9,10 +9,23 @@ on: [workflow_dispatch]
 
 jobs:
   pre-release:
-    runs-on: "ubuntu-latest"
-    container:
-      image: ubuntu:22.04
-      options: --privileged
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ARCH: x86_64
+            RUNS_ON: ubuntu-24.04
+          - ARCH: i686
+            RUNS_ON: ubuntu-24.04
+          - ARCH: aarch64
+            RUNS_ON: ubuntu-24.04-arm
+          - ARCH: armhf
+            RUNS_ON: ubuntu-24.04-arm
+    name: Build ${{ matrix.ARCH }}
+    runs-on: ${{ matrix.RUNS_ON }}
+
+    env:
+      ARCH: ${{ matrix.ARCH }}
 
     steps:
       - name: Install packages
@@ -50,7 +63,7 @@ jobs:
           cp "$(command -v unionfs)" appimage-myapp-appdir-template/usr/bin/
           cp "$(command -v fuse-overlayfs)" appimage-myapp-appdir-template/usr/bin/
           patchelf --replace-needed libfuse3.so.3 libfuse3.so appimage-myapp-appdir-template/usr/bin/fuse-overlayfs
-          ARCH=x86_64 ./appimagetool.AppImage appimage-myapp-appdir-template
+          ARCH=$ARCH ./appimagetool.AppImage appimage-myapp-appdir-template
 
           #ARCH=aarch64 ./appimagetool.AppImage appimage-myapp-appdir-template
 
