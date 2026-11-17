@@ -174,7 +174,9 @@ function wine_restore_prefix(){
     [[ ! -d "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/drive_d" ]] && mkdir -p "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}/drive_d"
 
     # only setup wineprefix and do nothing
-    [[ ! -d $WINEPREFIX ]] && wine cmd /C exit >&3 2>&4
+    #[[ ! -d $WINEPREFIX ]] && wine cmd /C exit >&3 2>&4
+    # update wine container desktop integration
+    wineboot -u
 
     # not necessary to update WINEPREFIX automatically every time
     echo "disable" > "$WINEPREFIX/.update-timestamp"

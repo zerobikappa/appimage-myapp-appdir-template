@@ -508,8 +508,8 @@ function atexit() {
         #go back to $APPDIR, then remove temp file
         cd "$APPDIR" || exit 2
     
-        echo "[${FUNCNAME[0]}:10%] restore wine drive symlink entries..."
-        wine_restore_prefix >&3 2>&4
+        #echo "[${FUNCNAME[0]}:10%] restore wine drive symlink entries..."
+        #wine_restore_prefix >&3 2>&4
         echo "[${FUNCNAME[0]}:30%] wait shutdown prefix..."
         wine_wait_shutdown >&3 2>&4
         # "wineserver -k" was included in wine_wait_shutdown, but still make second attempt here if previous step was interrupted.
@@ -628,7 +628,7 @@ function savedata_replace(){
     echo "start >>>>>>>> [${FUNCNAME[0]}]" >&3
 
     HOME="$HOME_FAKE"
-    #exeinfo_user_dirs
+    exeinfo_user_dirs
     exeinfo_load_file
     #if [[ $SAVEDATA_IN_HOME -eq 0 ]];
     #then

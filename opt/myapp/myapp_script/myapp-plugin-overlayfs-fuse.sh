@@ -144,6 +144,11 @@ function mpPlugin_fusetool_unmount(){
     echo "[${FUNCNAME[0]}:] removing unionfs hidden files"
     rm -rf "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}"/.unionfs* >/dev/null 2>&1
     rm -rf "$APPIMAGE_CACHE_DIR/home/public_user"/.unionfs* >/dev/null 2>&1
+    # fuse-overlayfs hidden files
+    find "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}" -type f -name "*.wh.*" -exec rm -f "{}" \; >/dev/null 2>&1
+    find "$APPIMAGE_CACHE_DIR/opt/${MYAPP_NAME}" -type c -exec rm -f "{}" \; >/dev/null 2>&1
+    find "$APPIMAGE_CACHE_DIR/home/public_user" -type f -name "*.wh.*" -exec rm -f "{}" \; >/dev/null 2>&1
+    find "$APPIMAGE_CACHE_DIR/home/public_user" -type c -exec rm -f "{}" \; >/dev/null 2>&1
 }
 #############################################
 
