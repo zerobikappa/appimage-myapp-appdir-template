@@ -63,7 +63,7 @@ jobs:
           cp "$(command -v unionfs)" appimage-myapp-appdir-template/usr/bin/
           cp "$(command -v fuse-overlayfs)" appimage-myapp-appdir-template/usr/bin/
           patchelf --replace-needed libfuse3.so.3 libfuse3.so appimage-myapp-appdir-template/usr/bin/fuse-overlayfs
-          ARCH=$ARCH ./appimagetool.AppImage appimage-myapp-appdir-template
+          ARCH=$ARCH ./appimagetool.AppImage -n appimage-myapp-appdir-template
 
           #ARCH=aarch64 ./appimagetool.AppImage appimage-myapp-appdir-template
 
