@@ -17,6 +17,17 @@ SELF=$(readlink -f "$0")
 HERE=${SELF%/*}
 #############################################
 
+if [ -n "$MYAPP_NAME" ];
+then
+    echo "MYAPP_NAME=$MYAPP_NAME" > "$HERE/temp_var.config"
+else
+    if [ -f "$HERE/temp_var.config" ];
+    then
+        source "$HERE/temp_var.config"
+        echo "load from temp_var.config, MYAPP_NAME=$MYAPP_NAME"
+    fi
+fi
+
 if [ -z "$MYAPP_NAME" ];
 then
     echo "project name \$MYAPP_NAME not set, plsease specify a project name and run this script."
