@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=3.3.6
+MYAPPRUN_VERSION=3.4.0
 export MYAPPRUN_VERSION
 
 
@@ -56,6 +56,7 @@ export QT_PLUGIN_PATH="${APPDIR}/usr/lib/qt4/plugins/:${APPDIR}/usr/lib/i386-lin
 # only for code analysis with coc.vim
 source ./core.sh 2>/dev/null
 source ./myapp-debug.sh 2>/dev/null
+source ./myapp-plugin-imageshow.sh 2>/dev/null
 source ./myapp-plugin-wine.sh 2>/dev/null
 source ./myapp-plugin-fusetool.sh 2>/dev/null
 source ./myapp-plugin-exeinfo.sh 2>/dev/null
@@ -63,6 +64,7 @@ source ./myapp-plugin-exeinfo.sh 2>/dev/null
 # actual source
 source "${HERE}"/core.sh
 source "${HERE}"/myapp-debug.sh
+source "${HERE}"/myapp-plugin-imageshow.sh
 source "${HERE}"/myapp-plugin-wine.sh
 source "${HERE}"/myapp-plugin-exeinfo.sh
 

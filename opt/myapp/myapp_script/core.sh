@@ -13,6 +13,7 @@ fi
 # only for code analysis with coc.vim
 source ./myapp-debug.sh 2>/dev/null
 source ./myapp-plugin-exeinfo.sh 2>/dev/null
+source ./myapp-plugin-imageshow.sh 2>/dev/null
 source ./myapp-plugin-wine.sh 2>/dev/null
 source ./myapp-plugin-unionfs-fuse.sh 2>/dev/null
 #############################################
@@ -113,6 +114,9 @@ EOF
 #     $APPDIR
 function print_version(){
 
+    imageshow_test_terminal
+    imageshow_show_coverimage
+
     if [[ -d $APPIMAGE ]];
     then
         #APPIMAGEKIT_VERSION="AppImageKit Version: (empty)(directly running from AppDir)"
@@ -127,6 +131,8 @@ function print_version(){
     # exeinfo_profile under $APPIMAGE_CACHE_DIR was ignored.
     # Prevent using $MYAPP_NAME, because user may input this env variable in commandline.
     # Guess MYAPP_NAME value from the path of exeinfo_profile.
+    #
+    # TODO: if installed game into /opt, this command cannot function correctly, need to create a function to pre-handle $MYAPP_NAME.
     local READ_MYAPP_NAME
     READ_MYAPP_NAME="$(find "${APPDIR}/opt" -name "exeinfo_profile" | grep "myapp_exeinfo")"
     READ_MYAPP_NAME="${READ_MYAPP_NAME%/myapp_exeinfo/exeinfo_profile}"
