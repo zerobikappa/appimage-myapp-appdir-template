@@ -119,5 +119,8 @@ EOF
     fi
 
     ln -sfv /opt/"${MYAPP_NAME}"/myapp_script/main.sh "${HERE}/output/usr/bin/${MYAPP_NAME}"
+
+    #required by appimagetool
+    chmod -R a+rX "${HERE}/output"
 fi
 
