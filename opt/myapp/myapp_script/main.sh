@@ -2,7 +2,7 @@
 
 # AppRun Script version
 # date -u +%s
-MYAPPRUN_VERSION=3.4.0
+MYAPPRUN_VERSION=3.4.1
 export MYAPPRUN_VERSION
 
 
@@ -183,7 +183,7 @@ trap preexit SIGHUP SIGINT SIGQUIT SIGTERM
 ##############################################
 
 
-myapp_launch "$next_parameters"
+myapp_launch "${next_parameters[@]}"
 
 if [[ ! $EXEINFO_GEN_FLAG -eq 1 ]];
 then
